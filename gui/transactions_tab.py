@@ -54,21 +54,23 @@ class TransactionsTab:
         scrollbar = ttk.Scrollbar(tree_frame)
         scrollbar.pack(side='right', fill='y')
         
-        self.tree = ttk.Treeview(tree_frame, columns=('Date', 'Description', 'Amount', 'Category', 'Account'), 
+        self.tree = ttk.Treeview(tree_frame, columns=('Date', 'Description', 'Amount', 'Category', 'Account', 'Notes'),
                                  show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
-        
+
         self.tree.heading('Date', text='Date', command=lambda: self.sort_by_column('Date'))
         self.tree.heading('Description', text='Description', command=lambda: self.sort_by_column('Description'))
         self.tree.heading('Amount', text='Amount', command=lambda: self.sort_by_column('Amount'))
         self.tree.heading('Category', text='Category', command=lambda: self.sort_by_column('Category'))
         self.tree.heading('Account', text='Account', command=lambda: self.sort_by_column('Account'))
-        
+        self.tree.heading('Notes', text='Notes')
+
         self.tree.column('Date', width=100)
-        self.tree.column('Description', width=300)
-        self.tree.column('Amount', width=100)
-        self.tree.column('Category', width=150)
-        self.tree.column('Account', width=150)
+        self.tree.column('Description', width=100)
+        self.tree.column('Amount', width=30)
+        self.tree.column('Category', width=60)
+        self.tree.column('Account', width=60)
+        self.tree.column('Notes', width=250)
 
         self.tree.bind('<Double-Button-1>', self.on_double_click)
 
@@ -103,13 +105,14 @@ class TransactionsTab:
             amount_str = f"${trans['amount']:.2f}"
             if trans['amount'] < 0:
                 amount_str = f"-${abs(trans['amount']):.2f}"
-            
+
             self.tree.insert('', 'end', values=(
                 trans['date'],
                 trans['description'],
                 amount_str,
                 trans['category'] or '',
-                trans['account'] or ''
+                trans['account'] or '',
+                trans['notes'] or ''
             ), tags=(trans['id'],))
     
     def toggle_date_filter(self):
@@ -189,10 +192,10 @@ class TransactionsTab:
             return
 
         column_index = int(column.replace('#', '')) - 1
-        column_names = ['Date', 'Description', 'Amount', 'Category', 'Account']
+        column_names = ['Date', 'Description', 'Amount', 'Category', 'Account', 'Notes']
         column_name = column_names[column_index]
 
-        if column_name not in ['Description', 'Amount', 'Category', 'Account']:
+        if column_name not in ['Description', 'Amount', 'Category', 'Account', 'Notes']:
             return
 
         entry_id = self.tree.item(row_id)['tags'][0]
