@@ -17,10 +17,10 @@ class TemplateManagerDialog:
 
         info_label = tk.Label(self.dialog,
                              text="Templates are used to quickly add recurring assets to each month.\nClick 'Apply Template' in the Net Worth tab to add these to the current month.",
-                             font=('Arial', 9), fg='blue', justify='left')
+                             font=('Roboto', 9), fg='white', justify='left')
         info_label.pack(padx=10, pady=10, anchor='w')
 
-        tree_frame = tk.Frame(self.dialog)
+        tree_frame = ttk.Frame(self.dialog)
         tree_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         scrollbar = ttk.Scrollbar(tree_frame)
@@ -40,13 +40,13 @@ class TemplateManagerDialog:
 
         self.tree.pack(fill='both', expand=True)
 
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.pack(pady=10)
 
-        tk.Button(button_frame, text="Add Template", command=self.add_template).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Edit Template", command=self.edit_template).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Delete Template", command=self.delete_template).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Close", command=self.dialog.destroy).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Template", style='Accent.TButton', command=self.add_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Template", command=self.edit_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Template", command=self.delete_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Close", command=self.dialog.destroy).pack(side='left', padx=5)
 
         self.refresh_templates()
 
@@ -103,25 +103,25 @@ class TemplateDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        tk.Label(self.dialog, text="Asset Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Asset Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.asset_var = tk.StringVar(value=template['asset_name'] if template else '')
-        tk.Entry(self.dialog, textvariable=self.asset_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.asset_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Asset Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Asset Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.type_var = tk.StringVar(value=template['asset_type'] if template else 'Cash')
         type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var)
         type_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
         type_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=template['notes'] if template and template['notes'] else '')
-        tk.Entry(self.dialog, textvariable=self.notes_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.grid(row=3, column=0, columnspan=2, pady=20)
 
-        tk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
 
@@ -148,7 +148,7 @@ class TemplateDialog:
 class NetWorthTab:
     def __init__(self, parent, db: DatabaseManager):
         self.db = db
-        self.frame = tk.Frame(parent)
+        self.frame = ttk.Frame(parent)
 
         now = datetime.now()
         self.current_month = now.month
@@ -158,39 +158,39 @@ class NetWorthTab:
         self.refresh_data()
 
     def setup_ui(self):
-        month_selector_frame = tk.Frame(self.frame)
+        month_selector_frame = ttk.Frame(self.frame)
         month_selector_frame.pack(fill='x', padx=10, pady=10)
 
-        tk.Label(month_selector_frame, text="Month:", font=('Arial', 10, 'bold')).pack(side='left', padx=5)
+        ttk.Label(month_selector_frame, text="Month:", font=('Arial', 10, 'bold')).pack(side='left', padx=5)
 
-        tk.Button(month_selector_frame, text="◀", command=self.previous_month).pack(side='left', padx=2)
+        ttk.Button(month_selector_frame, text="◀", width=3, command=self.previous_month).pack(side='left', padx=2)
 
-        self.month_label = tk.Label(month_selector_frame, text="", font=('Arial', 12, 'bold'), width=20)
-        self.month_label.pack(side='left', padx=10)
+        self.month_label = tk.Label(month_selector_frame, text="", font=('Roboto', 12, 'bold'), width=16, anchor='center')
+        self.month_label.pack(side='left', padx=2)
 
-        tk.Button(month_selector_frame, text="▶", command=self.next_month).pack(side='left', padx=2)
+        ttk.Button(month_selector_frame, text="▶", width=3, command=self.next_month).pack(side='left', padx=10)
 
-        tk.Button(month_selector_frame, text="Current Month", command=self.go_to_current_month).pack(side='left', padx=10)
+        ttk.Button(month_selector_frame, text="Current Month", command=self.go_to_current_month).pack(side='left', padx=10)
 
         self.update_month_label()
 
-        summary_frame = tk.LabelFrame(self.frame, text="Net Worth Summary", font=('Arial', 12, 'bold'))
+        summary_frame = ttk.Labelframe(self.frame, text="Net Worth Summary")
         summary_frame.pack(fill='x', padx=10, pady=10)
 
         self.total_label = tk.Label(summary_frame, text="Total Net Worth: $0.00",
-                                    font=('Arial', 16, 'bold'), fg='green')
+                                    font=('Roboto', 16, 'bold'), fg='#217346')
         self.total_label.pack(pady=10)
 
-        breakdown_frame = tk.Frame(summary_frame)
+        breakdown_frame = ttk.Frame(summary_frame)
         breakdown_frame.pack(fill='x', padx=20, pady=10)
 
         self.breakdown_text = tk.Text(breakdown_frame, height=5, width=50, state='disabled')
         self.breakdown_text.pack()
 
-        entries_frame = tk.LabelFrame(self.frame, text="Net Worth Entries for Selected Month")
+        entries_frame = ttk.Labelframe(self.frame, text="Net Worth Entries for Selected Month")
         entries_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        tree_frame = tk.Frame(entries_frame)
+        tree_frame = ttk.Frame(entries_frame)
         tree_frame.pack(fill='both', expand=True, padx=5, pady=5)
 
         scrollbar = ttk.Scrollbar(tree_frame)
@@ -216,15 +216,15 @@ class NetWorthTab:
 
         self.tree.pack(fill='both', expand=True)
 
-        button_frame = tk.Frame(entries_frame)
+        button_frame = ttk.Frame(entries_frame)
         button_frame.pack(pady=10)
-
-        tk.Button(button_frame, text="Add Entry", command=self.add_entry).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Edit Entry", command=self.edit_entry).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Delete Entry", command=self.delete_entry).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Apply Template", command=self.apply_template, bg='lightblue').pack(side='left', padx=5)
-        tk.Button(button_frame, text="Manage Templates", command=self.manage_templates, bg='lightgreen').pack(side='left', padx=5)
-        tk.Button(button_frame, text="Refresh", command=self.refresh_data).pack(side='left', padx=5)
+        
+        ttk.Button(button_frame, text="Apply Template", style='Accent.TButton', command=self.apply_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Manage Templates", command=self.manage_templates).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Entry", command=self.add_entry).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Entry", command=self.edit_entry).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Entry", command=self.delete_entry).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Refresh", command=self.refresh_data).pack(side='left', padx=5)
 
     def update_month_label(self):
         month_name = datetime(self.current_year, self.current_month, 1).strftime('%B %Y')
@@ -395,7 +395,7 @@ class NetWorthTab:
             current_value = str(current_value).replace('$', '').replace(',', '')
 
         edit_var = tk.StringVar(value=current_value)
-        edit_entry = tk.Entry(self.tree, textvariable=edit_var)
+        edit_entry = ttk.Entry(self.tree, textvariable=edit_var)
         edit_entry.place(x=x, y=y, width=width, height=height)
         edit_entry.focus_set()
         edit_entry.select_range(0, tk.END)
@@ -485,36 +485,36 @@ class NetWorthDialog:
 
         date_obj = datetime.strptime(default_date, '%Y-%m-%d')
 
-        tk.Label(self.dialog, text="Date:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Date:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.date_picker = DateEntry(self.dialog, width=18, background='darkblue',
                                     foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
                                     maxdate=datetime.now(), year=date_obj.year,
                                     month=date_obj.month, day=date_obj.day)
         self.date_picker.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Asset Name:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Asset Name:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.asset_var = tk.StringVar(value=entry['asset_name'] if entry else '')
-        tk.Entry(self.dialog, textvariable=self.asset_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.asset_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Asset Type:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Asset Type:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.type_var = tk.StringVar(value=entry['asset_type'] if entry else 'Cash')
         type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var)
         type_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
         type_combo.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Value:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Value:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
         self.value_var = tk.StringVar(value=str(entry['value']) if entry else '')
-        tk.Entry(self.dialog, textvariable=self.value_var).grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.value_var).grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Notes:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Notes:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=entry['notes'] if entry and entry['notes'] else '')
-        tk.Entry(self.dialog, textvariable=self.notes_var).grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=4, column=1, padx=10, pady=10, sticky='ew')
 
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.grid(row=5, column=0, columnspan=2, pady=20)
 
-        tk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
 
@@ -558,21 +558,21 @@ class ApplyTemplateDialog:
 
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"Apply Templates to {datetime(year, month, 1).strftime('%B %Y')}")
-        self.dialog.geometry("500x400")
+        self.dialog.geometry("500x600")
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        info_label = tk.Label(self.dialog,
-                             text="Enter values for each asset to add to this month:",
-                             font=('Arial', 10, 'bold'))
+        info_label = ttk.Label(self.dialog,
+                             text="Enter values for each asset to add to this month:"
+                             )
         info_label.pack(padx=10, pady=10)
 
-        canvas_frame = tk.Frame(self.dialog)
+        canvas_frame = ttk.Frame(self.dialog)
         canvas_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         canvas = tk.Canvas(canvas_frame)
         scrollbar = ttk.Scrollbar(canvas_frame, orient='vertical', command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas)
+        scrollable_frame = ttk.Frame(canvas)
 
         scrollable_frame.bind(
             "<Configure>",
@@ -586,26 +586,26 @@ class ApplyTemplateDialog:
         scrollbar.pack(side='right', fill='y')
 
         for i, template in enumerate(templates):
-            frame = tk.Frame(scrollable_frame, relief='groove', borderwidth=1)
-            frame.pack(fill='x', padx=5, pady=5)
+            frame = ttk.Frame(scrollable_frame, relief='ridge', borderwidth=1)
+            frame.pack(fill='x', padx=5, pady=5, )
 
-            tk.Label(frame, text=template['asset_name'], font=('Arial', 10, 'bold')).grid(row=0, column=0, padx=10, pady=5, sticky='w')
-            tk.Label(frame, text=f"({template['asset_type'] or 'No Type'})", fg='gray').grid(row=0, column=1, padx=5, pady=5, sticky='w')
+            ttk.Label(frame, text=template['asset_name']).grid(row=0, column=0, padx=10, pady=5, sticky='w')
+            ttk.Label(frame, text=f"({template['asset_type'] or 'No Type'})").grid(row=0, column=1, padx=5, pady=5, sticky='w')
 
-            tk.Label(frame, text="Value:").grid(row=1, column=0, padx=10, pady=5, sticky='w')
+            ttk.Label(frame, text="Current Value:").grid(row=1, column=0, padx=10, pady=5, sticky='w')
             value_var = tk.StringVar(value='0')
             self.value_vars[template['id']] = value_var
-            entry = tk.Entry(frame, textvariable=value_var, width=20)
+            entry = ttk.Entry(frame, textvariable=value_var, width=20)
             entry.grid(row=1, column=1, padx=5, pady=5, sticky='w')
 
             if template['notes']:
-                tk.Label(frame, text=f"Note: {template['notes']}", fg='blue', font=('Arial', 8)).grid(row=2, column=0, columnspan=2, padx=10, pady=2, sticky='w')
+                ttk.Label(frame, text=f"Note: {template['notes']}").grid(row=2, column=0, columnspan=2, padx=10, pady=2, sticky='w')
 
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.pack(pady=10)
 
-        tk.Button(button_frame, text="Apply All", command=self.apply, width=12, bg='lightgreen').pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=12).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Apply All", style='Accent.TButton', command=self.apply, width=12).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=12).pack(side='left', padx=5)
 
     def apply(self):
         try:

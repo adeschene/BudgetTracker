@@ -5,18 +5,17 @@ from database.db_manager import DatabaseManager
 class BudgetTab:
     def __init__(self, parent, db: DatabaseManager):
         self.db = db
-        self.frame = tk.Frame(parent)
+        self.frame = ttk.Frame(parent)
         
         self.setup_ui()
     
     def setup_ui(self):
-        info_frame = tk.Frame(self.frame)
+        info_frame = ttk.Frame(self.frame)
         info_frame.pack(fill='x', padx=10, pady=10)
         
-        tk.Label(info_frame, text="Set monthly budget targets for each expense category", 
-                font=('Arial', 10)).pack()
+        ttk.Label(info_frame, text="Set monthly budget targets for each expense category").pack()
         
-        tree_frame = tk.Frame(self.frame)
+        tree_frame = ttk.Frame(self.frame)
         tree_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         scrollbar = ttk.Scrollbar(tree_frame)
@@ -30,18 +29,18 @@ class BudgetTab:
         self.tree.heading('Monthly Target', text='Monthly Target')
         self.tree.heading('Notes', text='Notes')
         
-        self.tree.column('Category', width=200)
-        self.tree.column('Monthly Target', width=150)
+        self.tree.column('Category', width=100, anchor='center')
+        self.tree.column('Monthly Target', width=150, anchor='center')
         self.tree.column('Notes', width=300)
         
         self.tree.pack(fill='both', expand=True)
         
-        button_frame = tk.Frame(self.frame)
+        button_frame = ttk.Frame(self.frame)
         button_frame.pack(pady=10)
         
-        tk.Button(button_frame, text="Add Budget", command=self.add_budget).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Edit Budget", command=self.edit_budget).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Delete Budget", command=self.delete_budget).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Budget", style='Accent.TButton', command=self.add_budget).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Budget", command=self.edit_budget).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Budget", command=self.delete_budget).pack(side='left', padx=5)
         
         self.refresh_budgets()
     
@@ -99,29 +98,29 @@ class BudgetDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
         
-        tk.Label(self.dialog, text="Category:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Category:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.category_var = tk.StringVar(value=budget['category'] if budget else '')
         
         if budget:
-            tk.Label(self.dialog, text=budget['category'], font=('Arial', 10, 'bold')).grid(row=0, column=1, padx=10, pady=10, sticky='w')
+            ttk.Label(self.dialog, text=budget['category']).grid(row=0, column=1, padx=10, pady=10, sticky='w')
         else:
             categories = [cat['name'] for cat in self.db.get_categories() if cat['type'] == 'expense']
             category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=categories)
             category_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(self.dialog, text="Monthly Target:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Monthly Target:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.target_var = tk.StringVar(value=str(budget['monthly_target']) if budget else '0')
-        tk.Entry(self.dialog, textvariable=self.target_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.target_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=budget['notes'] if budget and budget['notes'] else '')
-        tk.Entry(self.dialog, textvariable=self.notes_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
         
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.grid(row=3, column=0, columnspan=2, pady=20)
         
-        tk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
         
         self.dialog.columnconfigure(1, weight=1)
     

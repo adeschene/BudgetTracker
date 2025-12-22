@@ -13,7 +13,7 @@ class MainWindow:
     def __init__(self, root):
         self.root = root
         self.root.title("Personal Budget Tracker")
-        self.root.geometry("1200x700")
+        self.root.geometry("1200x800")
         
         self.db = DatabaseManager()
         self.csv_importer = CSVImporter(self.db)
@@ -99,7 +99,7 @@ class ImportDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        tk.Label(self.dialog, text="Import Template:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Import Template:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.template_var = tk.StringVar()
         template_combo = ttk.Combobox(self.dialog, textvariable=self.template_var, state='readonly')
         templates = self.db.get_import_templates()
@@ -107,16 +107,16 @@ class ImportDialog:
         template_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
         self.has_header_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(self.dialog, text="File has header row", variable=self.has_header_var).grid(row=1, column=0, columnspan=2, pady=5)
+        ttk.Checkbutton(self.dialog, text="File has header row", variable=self.has_header_var).grid(row=1, column=0, columnspan=2, pady=5)
 
         self.auto_categorize_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(self.dialog, text="Auto-categorize transactions", variable=self.auto_categorize_var).grid(row=2, column=0, columnspan=2, pady=5)
+        ttk.Checkbutton(self.dialog, text="Auto-categorize transactions", variable=self.auto_categorize_var).grid(row=2, column=0, columnspan=2, pady=5)
 
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.grid(row=3, column=0, columnspan=2, pady=20)
 
-        tk.Button(button_frame, text="Import", command=self.do_import, width=10).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Import", command=self.do_import, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
 
@@ -154,7 +154,7 @@ class CategoryManager:
         self.window.geometry("500x400")
         self.window.transient(parent)
         
-        frame = tk.Frame(self.window)
+        frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         self.tree = ttk.Treeview(frame, columns=('Name', 'Type', 'Keywords'), show='headings')
@@ -163,11 +163,11 @@ class CategoryManager:
         self.tree.heading('Keywords', text='Keywords')
         self.tree.pack(fill='both', expand=True)
         
-        button_frame = tk.Frame(self.window)
+        button_frame = ttk.Frame(self.window)
         button_frame.pack(pady=10)
         
-        tk.Button(button_frame, text="Add Category", command=self.add_category).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Close", command=self.window.destroy).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Category", command=self.add_category).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Close", command=self.window.destroy).pack(side='left', padx=5)
         
         self.refresh_categories()
     
@@ -184,24 +184,24 @@ class CategoryManager:
         dialog.title("Add Category")
         dialog.geometry("300x200")
         
-        tk.Label(dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         name_var = tk.StringVar()
-        tk.Entry(dialog, textvariable=name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(dialog, textvariable=name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         type_var = tk.StringVar(value='expense')
         ttk.Combobox(dialog, textvariable=type_var, values=['income', 'expense']).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(dialog, text="Keywords:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(dialog, text="Keywords:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         keywords_var = tk.StringVar()
-        tk.Entry(dialog, textvariable=keywords_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(dialog, textvariable=keywords_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
         
         def save():
             self.db.add_category(name_var.get(), type_var.get(), keywords_var.get())
             self.refresh_categories()
             dialog.destroy()
         
-        tk.Button(dialog, text="Save", command=save).grid(row=3, column=0, columnspan=2, pady=10)
+        ttk.Button(dialog, text="Save", command=save).grid(row=3, column=0, columnspan=2, pady=10)
         dialog.columnconfigure(1, weight=1)
 
 class AccountManager:
@@ -213,7 +213,7 @@ class AccountManager:
         self.window.geometry("500x400")
         self.window.transient(parent)
         
-        frame = tk.Frame(self.window)
+        frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         self.tree = ttk.Treeview(frame, columns=('Name', 'Type', 'Balance'), show='headings')
@@ -222,13 +222,13 @@ class AccountManager:
         self.tree.heading('Balance', text='Balance')
         self.tree.pack(fill='both', expand=True)
         
-        button_frame = tk.Frame(self.window)
+        button_frame = ttk.Frame(self.window)
         button_frame.pack(pady=10)
 
-        tk.Button(button_frame, text="Add Account", command=self.add_account).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Edit Account", command=self.edit_account).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Delete Account", command=self.delete_account).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Close", command=self.window.destroy).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Account", command=self.add_account).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Account", command=self.edit_account).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Account", command=self.delete_account).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Close", command=self.window.destroy).pack(side='left', padx=5)
 
         self.refresh_accounts()
 
@@ -284,23 +284,23 @@ class AccountDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        tk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.name_var = tk.StringVar(value=account['name'] if account else '')
-        tk.Entry(self.dialog, textvariable=self.name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.type_var = tk.StringVar(value=account['type'] if account else 'checking')
         ttk.Combobox(self.dialog, textvariable=self.type_var, values=['checking', 'savings', 'credit', 'investment']).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Balance:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Balance:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.balance_var = tk.StringVar(value=str(account['balance']) if account else '0')
-        tk.Entry(self.dialog, textvariable=self.balance_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.balance_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.grid(row=3, column=0, columnspan=2, pady=20)
 
-        tk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
 

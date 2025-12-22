@@ -8,7 +8,7 @@ class TransactionsTab:
     def __init__(self, parent, db: DatabaseManager, main_window=None):
         self.db = db
         self.main_window = main_window
-        self.frame = tk.Frame(parent)
+        self.frame = ttk.Frame(parent)
         self.sort_column = None
         self.sort_reverse = False
 
@@ -16,39 +16,39 @@ class TransactionsTab:
         self.refresh_transactions()
     
     def setup_ui(self):
-        top_frame = tk.Frame(self.frame)
+        top_frame = ttk.Frame(self.frame)
         top_frame.pack(fill='x', padx=10, pady=10)
 
-        tk.Label(top_frame, text="Filter by:").pack(side='left', padx=5)
+        ttk.Label(top_frame, text="Filter by:").pack(side='left', padx=5)
 
         self.use_date_filter_var = tk.BooleanVar(value=False)
-        date_filter_check = tk.Checkbutton(top_frame, text="Date Range:",
+        date_filter_check = ttk.Checkbutton(top_frame, text="Date Filter", style='Switch',
                                           variable=self.use_date_filter_var,
                                           command=self.toggle_date_filter)
         date_filter_check.pack(side='left', padx=5)
 
-        tk.Label(top_frame, text="Start:").pack(side='left', padx=5)
+        ttk.Label(top_frame, text="Start:").pack(side='left', padx=5)
         self.start_date_picker = DateEntry(top_frame, width=12, background='darkblue',
                                           foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
                                           state='disabled')
         self.start_date_picker.pack(side='left', padx=5)
 
-        tk.Label(top_frame, text="End:").pack(side='left', padx=5)
+        ttk.Label(top_frame, text="End:").pack(side='left', padx=5)
         self.end_date_picker = DateEntry(top_frame, width=12, background='darkblue',
                                         foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
                                         maxdate=datetime.now(), state='disabled')
         self.end_date_picker.pack(side='left', padx=5)
 
-        tk.Label(top_frame, text="Category:").pack(side='left', padx=5)
+        ttk.Label(top_frame, text="Category:").pack(side='left', padx=5)
         self.category_var = tk.StringVar()
         self.category_combo = ttk.Combobox(top_frame, textvariable=self.category_var, width=15)
         self.category_combo.pack(side='left', padx=5)
         self.update_category_list()
 
-        tk.Button(top_frame, text="Filter", command=self.refresh_transactions).pack(side='left', padx=5)
-        tk.Button(top_frame, text="Clear", command=self.clear_filters).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="Filter", command=self.refresh_transactions).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="Clear", command=self.clear_filters).pack(side='left', padx=5)
         
-        tree_frame = tk.Frame(self.frame)
+        tree_frame = ttk.Frame(self.frame)
         tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
         
         scrollbar = ttk.Scrollbar(tree_frame)
@@ -76,15 +76,15 @@ class TransactionsTab:
 
         self.tree.pack(fill='both', expand=True)
         
-        button_frame = tk.Frame(self.frame)
+        button_frame = ttk.Frame(self.frame)
         button_frame.pack(pady=10)
 
         if self.main_window:
-            tk.Button(button_frame, text="Import CSV", command=self.main_window.import_csv).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=5)
+            ttk.Button(button_frame, text="Import CSV", style='Accent.TButton', command=self.main_window.import_csv).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=5)
     
     def update_category_list(self):
         categories = self.db.get_categories()
@@ -100,12 +100,12 @@ class TransactionsTab:
         category = self.category_var.get() or None
 
         transactions = self.db.get_transactions(start_date, end_date, category)
-        
+
         for trans in transactions:
             amount_str = f"${trans['amount']:.2f}"
             if trans['amount'] < 0:
                 amount_str = f"-${abs(trans['amount']):.2f}"
-
+            
             self.tree.insert('', 'end', values=(
                 trans['date'],
                 trans['description'],
@@ -213,7 +213,7 @@ class TransactionsTab:
             current_value = str(current_value).replace('$', '').replace(',', '')
 
         edit_var = tk.StringVar(value=current_value)
-        edit_entry = tk.Entry(self.tree, textvariable=edit_var)
+        edit_entry = ttk.Entry(self.tree, textvariable=edit_var)
         edit_entry.place(x=x, y=y, width=width, height=height)
         edit_entry.focus_set()
         edit_entry.select_range(0, tk.END)
@@ -302,11 +302,11 @@ class TransactionDialog:
         
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Add Transaction" if not transaction else "Edit Transaction")
-        self.dialog.geometry("400x350")
+        self.dialog.geometry("400x400")
         self.dialog.transient(parent)
         self.dialog.grab_set()
         
-        tk.Label(self.dialog, text="Date:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Date:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         if transaction:
             date_obj = datetime.strptime(transaction['date'], '%Y-%m-%d')
         else:
@@ -317,37 +317,37 @@ class TransactionDialog:
                                     month=date_obj.month, day=date_obj.day)
         self.date_picker.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(self.dialog, text="Description:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Description:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.desc_var = tk.StringVar(value=transaction['description'] if transaction else '')
-        tk.Entry(self.dialog, textvariable=self.desc_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.desc_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(self.dialog, text="Amount:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Amount:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.amount_var = tk.StringVar(value=str(transaction['amount']) if transaction else '')
-        tk.Entry(self.dialog, textvariable=self.amount_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.amount_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(self.dialog, text="Category:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Category:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
         self.category_var = tk.StringVar(value=transaction['category'] if transaction else '')
         category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var)
         categories = self.db.get_categories()
         category_combo['values'] = [cat['name'] for cat in categories]
         category_combo.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(self.dialog, text="Account:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Account:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
         self.account_var = tk.StringVar(value=transaction['account'] if transaction else '')
         account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var)
         accounts = self.db.get_accounts()
         account_combo['values'] = [acc['name'] for acc in accounts]
         account_combo.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
         
-        tk.Label(self.dialog, text="Notes:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Notes:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=transaction['notes'] if transaction and transaction['notes'] else '')
-        tk.Entry(self.dialog, textvariable=self.notes_var).grid(row=5, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=5, column=1, padx=10, pady=10, sticky='ew')
         
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.grid(row=6, column=0, columnspan=2, pady=20)
         
-        tk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
         
         self.dialog.columnconfigure(1, weight=1)
     

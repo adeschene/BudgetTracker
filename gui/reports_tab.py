@@ -7,15 +7,15 @@ from database.db_manager import DatabaseManager
 class ReportsTab:
     def __init__(self, parent, db: DatabaseManager):
         self.db = db
-        self.frame = tk.Frame(parent)
+        self.frame = ttk.Frame(parent)
 
         self.setup_ui()
 
     def setup_ui(self):
-        control_frame = tk.Frame(self.frame)
+        control_frame = ttk.Frame(self.frame)
         control_frame.pack(fill='x', padx=10, pady=10)
 
-        tk.Label(control_frame, text="Report Period:").pack(side='left', padx=5)
+        ttk.Label(control_frame, text="Report Period:").pack(side='left', padx=5)
 
         self.period_var = tk.StringVar(value='This Month')
         period_combo = ttk.Combobox(control_frame, textvariable=self.period_var, width=15)
@@ -23,13 +23,13 @@ class ReportsTab:
         period_combo.pack(side='left', padx=5)
         period_combo.bind('<<ComboboxSelected>>', self.on_period_change)
 
-        tk.Label(control_frame, text="Start:").pack(side='left', padx=5)
+        ttk.Label(control_frame, text="Start:").pack(side='left', padx=5)
         self.start_date_picker = DateEntry(control_frame, width=12, background='darkblue',
                                           foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
                                           maxdate=datetime.now())
         self.start_date_picker.pack(side='left', padx=5)
 
-        tk.Label(control_frame, text="End:").pack(side='left', padx=5)
+        ttk.Label(control_frame, text="End:").pack(side='left', padx=5)
         self.end_date_picker = DateEntry(control_frame, width=12, background='darkblue',
                                         foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
                                         maxdate=datetime.now())
@@ -38,16 +38,16 @@ class ReportsTab:
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
 
-        tk.Button(control_frame, text="Generate Report", command=self.generate_report).pack(side='left', padx=5)
+        ttk.Button(control_frame, text="Generate Report", command=self.generate_report).pack(side='left', padx=5)
 
-        report_frame = tk.Frame(self.frame)
+        report_frame = ttk.Frame(self.frame)
         report_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         scrollbar = ttk.Scrollbar(report_frame)
         scrollbar.pack(side='right', fill='y')
 
         self.report_text = tk.Text(report_frame, wrap='word', yscrollcommand=scrollbar.set,
-                                   font=('Courier', 10))
+                                   font=('Roboto', 10))
         scrollbar.config(command=self.report_text.yview)
         self.report_text.pack(fill='both', expand=True)
 
@@ -108,9 +108,9 @@ class ReportsTab:
         total_expenses = sum(abs(t['amount']) for t in transactions if t['amount'] < 0)
         net_income = total_income - total_expenses
         
-        self.report_text.insert('end', "-" * 80 + "\n")
+        self.report_text.insert('end', "-" * 160 + "\n")
         self.report_text.insert('end', "INCOME & EXPENSES SUMMARY\n")
-        self.report_text.insert('end', "-" * 80 + "\n")
+        self.report_text.insert('end', "-" * 160 + "\n")
         self.report_text.insert('end', f"Total Income:        ${total_income:>15,.2f}\n")
         self.report_text.insert('end', f"Total Expenses:      ${total_expenses:>15,.2f}\n")
         self.report_text.insert('end', f"Net Income:          ${net_income:>15,.2f}\n\n")
@@ -118,9 +118,9 @@ class ReportsTab:
         spending_by_category = self.db.get_spending_by_category(start_date, end_date)
 
         if spending_by_category:
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             self.report_text.insert('end', "SPENDING BY CATEGORY\n")
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
 
             sorted_categories = sorted(spending_by_category.items(), key=lambda x: x[1], reverse=True)
 
@@ -132,11 +132,11 @@ class ReportsTab:
 
         budget_targets = self.db.get_budget_targets()
         if budget_targets:
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             self.report_text.insert('end', "BUDGET VS ACTUAL\n")
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             self.report_text.insert('end', f"{'Category':<30} {'Budget':>12}  {'Actual':>12}  {'Difference':>12}  {'Status':>8}\n")
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
 
             total_budget = 0
             total_actual = 0
@@ -159,16 +159,16 @@ class ReportsTab:
 
                 self.report_text.insert('end', f"{category:<30} ${budget_amount:>11,.2f}  ${actual_amount:>11,.2f}  ${difference:>11,.2f}  {status:>8}\n")
 
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             total_diff = total_budget - total_actual
             self.report_text.insert('end', f"{'TOTAL':<30} ${total_budget:>11,.2f}  ${total_actual:>11,.2f}  ${total_diff:>11,.2f}\n")
             self.report_text.insert('end', "\n")
 
         income_transactions = [t for t in transactions if t['amount'] > 0]
         if income_transactions:
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             self.report_text.insert('end', "INCOME BY CATEGORY\n")
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             
             income_by_category = {}
             for trans in income_transactions:
@@ -185,9 +185,9 @@ class ReportsTab:
         
         accounts = self.db.get_accounts()
         if accounts:
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             self.report_text.insert('end', "ACCOUNT BALANCES\n")
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             
             total_balance = sum(acc['balance'] for acc in accounts)
             
@@ -198,9 +198,9 @@ class ReportsTab:
         
         net_worth_summary = self.db.get_net_worth_summary(start_date, end_date)
         if net_worth_summary:
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             self.report_text.insert('end', "NET WORTH SUMMARY\n")
-            self.report_text.insert('end', "-" * 80 + "\n")
+            self.report_text.insert('end', "-" * 160 + "\n")
             
             total_net_worth = sum(net_worth_summary.values())
             

@@ -8,19 +8,19 @@ class ImportTemplateManager:
         
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Import Template Manager")
-        self.dialog.geometry("900x600")
+        self.dialog.geometry("1200x600")
         self.dialog.transient(parent)
         self.dialog.grab_set()
         
-        main_frame = tk.Frame(self.dialog)
+        main_frame = ttk.Frame(self.dialog)
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
-        left_frame = tk.Frame(main_frame)
+        left_frame = ttk.Frame(main_frame)
         left_frame.pack(side='left', fill='both', expand=True, padx=(0, 5))
         
-        tk.Label(left_frame, text="Import Templates", font=('Arial', 12, 'bold')).pack(pady=5)
+        tk.Label(left_frame, text="Import Templates", font=('Roboto', 12, 'bold')).pack(pady=5)
         
-        tree_frame = tk.Frame(left_frame)
+        tree_frame = ttk.Frame(left_frame)
         tree_frame.pack(fill='both', expand=True)
         
         scrollbar = ttk.Scrollbar(tree_frame)
@@ -33,25 +33,25 @@ class ImportTemplateManager:
         self.template_tree.heading('Template', text='Template Name')
         self.template_tree.heading('Account', text='Account')
         
-        self.template_tree.column('Template', width=200)
-        self.template_tree.column('Account', width=150)
+        self.template_tree.column('Template', width=150, anchor='center')
+        self.template_tree.column('Account', width=100, anchor='center')
         
         self.template_tree.pack(fill='both', expand=True)
         self.template_tree.bind('<<TreeviewSelect>>', self.on_template_select)
         
-        button_frame = tk.Frame(left_frame)
+        button_frame = ttk.Frame(left_frame)
         button_frame.pack(pady=10)
         
-        tk.Button(button_frame, text="Add Template", command=self.add_template).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Edit Template", command=self.edit_template).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Delete Template", command=self.delete_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Template", style='Accent.TButton', command=self.add_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Template", command=self.edit_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Template", command=self.delete_template).pack(side='left', padx=5)
         
-        right_frame = tk.Frame(main_frame)
+        right_frame = ttk.Frame(main_frame)
         right_frame.pack(side='right', fill='both', expand=True, padx=(5, 0))
         
-        tk.Label(right_frame, text="Description Rules", font=('Arial', 12, 'bold')).pack(pady=5)
+        tk.Label(right_frame, text="Description Rules", font=('Roboto', 12, 'bold')).pack(pady=5)
         
-        rules_tree_frame = tk.Frame(right_frame)
+        rules_tree_frame = ttk.Frame(right_frame)
         rules_tree_frame.pack(fill='both', expand=True)
         
         rules_scrollbar = ttk.Scrollbar(rules_tree_frame)
@@ -66,23 +66,23 @@ class ImportTemplateManager:
         self.rules_tree.heading('Replacement', text='Replacement')
         self.rules_tree.heading('Category', text='Category')
         
-        self.rules_tree.column('Order', width=40)
-        self.rules_tree.column('Pattern', width=150)
-        self.rules_tree.column('Replacement', width=150)
-        self.rules_tree.column('Category', width=100)
+        self.rules_tree.column('Order', width=20, anchor='center')
+        self.rules_tree.column('Pattern', width=300)
+        self.rules_tree.column('Replacement', width=200, anchor='center')
+        self.rules_tree.column('Category', width=100, anchor='center')
         
         self.rules_tree.pack(fill='both', expand=True)
         
-        rules_button_frame = tk.Frame(right_frame)
+        rules_button_frame = ttk.Frame(right_frame)
         rules_button_frame.pack(pady=10)
         
-        tk.Button(rules_button_frame, text="Add Rule", command=self.add_rule).pack(side='left', padx=5)
-        tk.Button(rules_button_frame, text="Edit Rule", command=self.edit_rule).pack(side='left', padx=5)
-        tk.Button(rules_button_frame, text="Delete Rule", command=self.delete_rule).pack(side='left', padx=5)
-        tk.Button(rules_button_frame, text="Move Up", command=self.move_rule_up).pack(side='left', padx=5)
-        tk.Button(rules_button_frame, text="Move Down", command=self.move_rule_down).pack(side='left', padx=5)
+        ttk.Button(rules_button_frame, text="Add Rule", style='Accent.TButton', command=self.add_rule).pack(side='left', padx=5)
+        ttk.Button(rules_button_frame, text="Edit Rule", command=self.edit_rule).pack(side='left', padx=5)
+        ttk.Button(rules_button_frame, text="Delete Rule", command=self.delete_rule).pack(side='left', padx=5)
+        ttk.Button(rules_button_frame, text="Move Up", command=self.move_rule_up).pack(side='left', padx=5)
+        ttk.Button(rules_button_frame, text="Move Down", command=self.move_rule_down).pack(side='left', padx=5)
         
-        tk.Button(self.dialog, text="Close", command=self.dialog.destroy).pack(pady=10)
+        ttk.Button(self.dialog, text="Close", command=self.dialog.destroy).pack(pady=10)
         
         self.refresh_templates()
     
@@ -242,81 +242,81 @@ class TemplateDialog:
 
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Edit Template" if template else "Add Template")
-        self.dialog.geometry("500x650")
+        self.dialog.geometry("500x700")
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        tk.Label(self.dialog, text="Template Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Template Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.name_var = tk.StringVar(value=template['template_name'] if template else '')
-        tk.Entry(self.dialog, textvariable=self.name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Account:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Account:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.account_var = tk.StringVar(value=template['account_name'] if template else '')
         accounts = [acc['name'] for acc in self.db.get_accounts()]
         account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var, values=accounts)
         account_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Date Column:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Date Column:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.date_col_var = tk.StringVar(value=template['date_column'] if template else 'Date')
-        tk.Entry(self.dialog, textvariable=self.date_col_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.date_col_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Description Column:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Description Column:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
         self.desc_col_var = tk.StringVar(value=template['description_column'] if template else 'Description')
-        tk.Entry(self.dialog, textvariable=self.desc_col_var).grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.desc_col_var).grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Description 2 Column (optional):").grid(row=4, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Description 2 Column (optional):").grid(row=4, column=0, padx=10, pady=10, sticky='w')
         self.desc2_col_var = tk.StringVar(value=template['description2_column'] if template and template.get('description2_column') else '')
-        tk.Entry(self.dialog, textvariable=self.desc2_col_var).grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.desc2_col_var).grid(row=4, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Description Delimiter:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Description Delimiter:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
         self.delimiter_var = tk.StringVar(value=template['description_delimiter'] if template and template.get('description_delimiter') else ' - ')
         delimiter_frame = tk.Frame(self.dialog)
         delimiter_frame.grid(row=5, column=1, padx=10, pady=10, sticky='ew')
-        tk.Entry(delimiter_frame, textvariable=self.delimiter_var, width=10).pack(side='left')
+        ttk.Entry(delimiter_frame, textvariable=self.delimiter_var, width=4).pack(side='left')
         tk.Label(delimiter_frame, text="(used when Description 2 is set)", fg='gray').pack(side='left', padx=5)
 
-        tk.Label(self.dialog, text="Amount Column Mode:").grid(row=6, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Amount Column Mode:").grid(row=6, column=0, padx=10, pady=10, sticky='w')
         self.amount_mode_var = tk.StringVar(value='single')
-        mode_frame = tk.Frame(self.dialog)
+        mode_frame = ttk.Frame(self.dialog)
         mode_frame.grid(row=6, column=1, padx=10, pady=10, sticky='w')
-        tk.Radiobutton(mode_frame, text="Single Amount Column", variable=self.amount_mode_var, value='single', command=self.toggle_amount_mode).pack(side='left', padx=5)
-        tk.Radiobutton(mode_frame, text="Separate Debit/Credit", variable=self.amount_mode_var, value='split', command=self.toggle_amount_mode).pack(side='left', padx=5)
+        ttk.Radiobutton(mode_frame, text="Single Amount Column", variable=self.amount_mode_var, value='single', command=self.toggle_amount_mode).pack(side='left', padx=5)
+        ttk.Radiobutton(mode_frame, text="Separate Debit/Credit", variable=self.amount_mode_var, value='split', command=self.toggle_amount_mode).pack(side='left', padx=5)
 
-        tk.Label(self.dialog, text="Amount Column:").grid(row=7, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Amount Column:").grid(row=7, column=0, padx=10, pady=10, sticky='w')
         self.amount_col_var = tk.StringVar(value=template['amount_column'] if template and template.get('amount_column') else 'Amount')
-        self.amount_entry = tk.Entry(self.dialog, textvariable=self.amount_col_var)
+        self.amount_entry = ttk.Entry(self.dialog, textvariable=self.amount_col_var)
         self.amount_entry.grid(row=7, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Debit Column:").grid(row=8, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Debit Column:").grid(row=8, column=0, padx=10, pady=10, sticky='w')
         self.debit_col_var = tk.StringVar(value=template['debit_column'] if template and template.get('debit_column') else 'Debit')
-        self.debit_entry = tk.Entry(self.dialog, textvariable=self.debit_col_var, state='disabled')
+        self.debit_entry = ttk.Entry(self.dialog, textvariable=self.debit_col_var, state='disabled')
         self.debit_entry.grid(row=8, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Credit Column:").grid(row=9, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Credit Column:").grid(row=9, column=0, padx=10, pady=10, sticky='w')
         self.credit_col_var = tk.StringVar(value=template['credit_column'] if template and template.get('credit_column') else 'Credit')
-        self.credit_entry = tk.Entry(self.dialog, textvariable=self.credit_col_var, state='disabled')
+        self.credit_entry = ttk.Entry(self.dialog, textvariable=self.credit_col_var, state='disabled')
         self.credit_entry.grid(row=9, column=1, padx=10, pady=10, sticky='ew')
 
         if template and template.get('debit_column') and template.get('credit_column'):
             self.amount_mode_var.set('split')
             self.toggle_amount_mode()
 
-        tk.Label(self.dialog, text="Skip Rows:").grid(row=10, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Skip Rows:").grid(row=10, column=0, padx=10, pady=10, sticky='w')
         self.skip_rows_var = tk.IntVar(value=template['skip_rows'] if template else 0)
-        skip_frame = tk.Frame(self.dialog)
+        skip_frame = ttk.Frame(self.dialog)
         skip_frame.grid(row=10, column=1, padx=10, pady=10, sticky='ew')
-        tk.Spinbox(skip_frame, from_=0, to=100, textvariable=self.skip_rows_var, width=10).pack(side='left')
+        ttk.Spinbox(skip_frame, from_=0, to=100, textvariable=self.skip_rows_var, width=4).pack(side='left')
         tk.Label(skip_frame, text="(rows to skip before header)", fg='gray').pack(side='left', padx=5)
 
-        tk.Label(self.dialog, text="Notes:").grid(row=11, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Notes:").grid(row=11, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=template['notes'] if template and template['notes'] else '')
-        tk.Entry(self.dialog, textvariable=self.notes_var).grid(row=11, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=11, column=1, padx=10, pady=10, sticky='ew')
 
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.grid(row=12, column=0, columnspan=2, pady=20)
 
-        tk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
 
@@ -401,34 +401,34 @@ class RuleDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        tk.Label(self.dialog, text="Pattern (Regex):").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Pattern (Regex):").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.pattern_var = tk.StringVar(value=rule['pattern'] if rule else '')
-        tk.Entry(self.dialog, textvariable=self.pattern_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.pattern_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Replacement:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Replacement:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.replacement_var = tk.StringVar(value=rule['replacement'] if rule else '')
-        replacement_entry = tk.Entry(self.dialog, textvariable=self.replacement_var)
+        replacement_entry = ttk.Entry(self.dialog, textvariable=self.replacement_var)
         replacement_entry.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
-        tk.Label(self.dialog, text="Category (optional):").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Category (optional):").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.category_var = tk.StringVar(value=rule['category'] if rule and rule['category'] else '')
         categories = [cat['name'] for cat in self.db.get_categories()]
         category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=[''] + categories)
         category_combo.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
         self.ignore_var = tk.IntVar(value=rule['ignore'] if rule and 'ignore' in rule else 0)
-        ignore_check = tk.Checkbutton(self.dialog, text="Ignore matching transactions (don't import)", variable=self.ignore_var, command=self.toggle_ignore)
+        ignore_check = ttk.Checkbutton(self.dialog, text="Ignore matching transactions (don't import)", variable=self.ignore_var, command=self.toggle_ignore)
         ignore_check.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky='w')
 
         self.replacement_entry = replacement_entry
         self.category_combo = category_combo
         self.toggle_ignore()
 
-        button_frame = tk.Frame(self.dialog)
+        button_frame = ttk.Frame(self.dialog)
         button_frame.grid(row=4, column=0, columnspan=2, pady=20)
 
-        tk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
 

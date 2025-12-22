@@ -9,18 +9,18 @@ from database.db_manager import DatabaseManager
 class VisualizationsTab:
     def __init__(self, parent, db: DatabaseManager):
         self.db = db
-        self.frame = tk.Frame(parent)
+        self.frame = ttk.Frame(parent)
 
         self.setup_ui()
 
     def setup_ui(self):
-        control_frame = tk.Frame(self.frame)
+        control_frame = ttk.Frame(self.frame)
         control_frame.pack(fill='x', padx=10, pady=10)
 
-        tk.Label(control_frame, text="Net Worth Over Time", font=('Arial', 12, 'bold')).pack(side='left', padx=5)
-        tk.Button(control_frame, text="Refresh", command=self.refresh_charts).pack(side='right', padx=5)
+        tk.Label(control_frame, text="Net Worth Over Time", font=('Roboto', 12, 'bold')).pack(side='left', padx=5)
+        ttk.Button(control_frame, text="Refresh", style='Accent.TButton', command=self.refresh_charts).pack(side='right', padx=5)
 
-        net_worth_frame = tk.Frame(self.frame)
+        net_worth_frame = ttk.Frame(self.frame)
         net_worth_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
 
         self.figure1 = Figure(figsize=(10, 4), dpi=100)
@@ -29,19 +29,19 @@ class VisualizationsTab:
         self.canvas1 = FigureCanvasTkAgg(self.figure1, net_worth_frame)
         self.canvas1.get_tk_widget().pack(fill='both', expand=True)
 
-        expense_control_frame = tk.Frame(self.frame)
+        expense_control_frame = ttk.Frame(self.frame)
         expense_control_frame.pack(fill='x', padx=10, pady=10)
 
-        tk.Label(expense_control_frame, text="Expense Breakdown by Category", font=('Arial', 12, 'bold')).pack(side='left', padx=5)
+        tk.Label(expense_control_frame, text="Expense Breakdown by Category", font=('Roboto', 12, 'bold')).pack(side='left', padx=5)
 
-        tk.Label(expense_control_frame, text="Period:").pack(side='left', padx=(20, 5))
+        ttk.Label(expense_control_frame, text="Period:").pack(side='left', padx=(20, 5))
         self.period_var = tk.StringVar(value='This Month')
         period_combo = ttk.Combobox(expense_control_frame, textvariable=self.period_var, width=15, state='readonly')
         period_combo['values'] = ['This Month', 'Last Month', 'This Year', 'Last Year', 'All Time']
         period_combo.pack(side='left', padx=5)
         period_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_expense_chart())
 
-        expense_frame = tk.Frame(self.frame)
+        expense_frame = ttk.Frame(self.frame)
         expense_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
 
         self.figure2 = Figure(figsize=(10, 4), dpi=100)
