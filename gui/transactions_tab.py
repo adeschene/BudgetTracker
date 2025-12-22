@@ -65,12 +65,12 @@ class TransactionsTab:
         self.tree.heading('Account', text='Account', command=lambda: self.sort_by_column('Account'))
         self.tree.heading('Notes', text='Notes')
 
-        self.tree.column('Date', width=100)
+        self.tree.column('Date', width=60, anchor='center')
         self.tree.column('Description', width=100)
-        self.tree.column('Amount', width=30)
-        self.tree.column('Category', width=60)
-        self.tree.column('Account', width=60)
-        self.tree.column('Notes', width=250)
+        self.tree.column('Amount', width=60, anchor='center')
+        self.tree.column('Category', width=60, anchor='center')
+        self.tree.column('Account', width=60, anchor='center')
+        self.tree.column('Notes', width=100)
 
         self.tree.bind('<Double-Button-1>', self.on_double_click)
 
@@ -274,6 +274,8 @@ class TransactionsTab:
                 transaction['category'] = new_value
             elif field_name == 'Account':
                 transaction['account'] = new_value
+            elif field_name == 'Notes':
+                transaction['notes'] = new_value
 
             transaction_type = 'income' if transaction['amount'] > 0 else 'expense'
 
