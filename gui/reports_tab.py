@@ -44,9 +44,7 @@ class ReportsTab:
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
 
-        # Generate button disabled unless using custom timeframe
-        self.generate_button = ttk.Button(control_frame, text="Generate Report", style='Accent.TButton', command=self.generate_report, state='disabled')
-        self.generate_button.pack(side='left', padx=5)
+        self.generate_button = ttk.Button(control_frame, text="Generate Report", style='Accent.TButton', command=self.generate_report).pack(side='left', padx=5)
 
         report_frame = ttk.Frame(self.frame)
         report_frame.pack(fill='both', expand=True, padx=10, pady=10)
@@ -61,16 +59,14 @@ class ReportsTab:
 
         self.generate_report()
 
-    # Enable date pickers and generate button when using custom timeframe
+    # Enable date pickers when using custom timeframe
     def on_period_change(self, event=None):
         if self.period_var.get() == 'Custom':
             self.start_date_picker.config(state='normal')
             self.end_date_picker.config(state='normal')
-            self.generate_button.state(['!disabled'])
         else:
             self.start_date_picker.config(state='disabled')
             self.end_date_picker.config(state='disabled')
-            self.generate_button.state(['disabled'])
         self.generate_report()
 
     # Report timeframe picker logic
@@ -198,6 +194,7 @@ class ReportsTab:
             self.report_text.insert('end', "\n")
         
         net_worth_entries = self.db.get_net_worth_entries(start_date, end_date)
+        allowed_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Credit Card']
 
         if net_worth_entries:
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
@@ -205,25 +202,52 @@ class ReportsTab:
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             
             total_balance = 0
-            
+            totals_by_type = {}
+
             for account in net_worth_entries:
-                if account['asset_type'] == ['Cash', 'Checking', 'Savings', 'Investment']:
-                    total_balance += account['value']
-                    self.report_text.insert('end', f"{account['asset_name']:<30} ({account['asset_type']:<15}) ${account['value']:>12,.2f}\n")
-            
+                atype = account.get('asset_type') or 'Other'
+                value = account.get('value', 0)
+                totals_by_type[atype] = totals_by_type.get(atype, 0) + value
+
+                if atype not in allowed_types:
+                    continue
+
+                total_balance += value
+                self.report_text.insert('end', f"{account.get('asset_name','Unknown'):<30} ({atype:<15}) ${value:>12,.2f}\n")
+
             self.report_text.insert('end', f"\n{'Total:':<30} {'':<15} ${total_balance:>12,.2f}\n\n")
-        
-        if net_worth_entries:
+
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             self.report_text.insert('end', "NET WORTH SUMMARY\n")
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            
-            total_net_worth = sum(net_worth_entries.values())
-            
-            for asset_type, value in sorted(net_worth_entries.items(), key=lambda x: x[1], reverse=True):
-                self.report_text.insert('end', f"{asset_type:<30} ${value:>15,.2f}\n")
-            
-            self.report_text.insert('end', f"\n{'Total Net Worth:':<30} ${total_net_worth:>15,.2f}\n\n")
+
+            total_assets = 0
+            total_liabilities = 0
+            assets_by_type = {}
+            liabilities_by_type = {}
+
+            for asset_type, value in totals_by_type.items():
+                if value >= 0:
+                    total_assets += value
+                    assets_by_type[asset_type] = value
+                else:
+                    total_liabilities += abs(value)
+                    liabilities_by_type[asset_type] = value
+
+            if assets_by_type:
+                self.report_text.insert('end', "-- ASSETS --\n\n")
+                for asset_type, value in sorted(assets_by_type.items(), key=lambda x: x[1], reverse=True):
+                    self.report_text.insert('end', f"{asset_type:<30} ${value:>15,.2f}\n")
+                self.report_text.insert('end', f"\n{'-> Total Assets:':<30} ${total_assets:>15,.2f}\n\n")
+
+            if liabilities_by_type:
+                self.report_text.insert('end', "-- LIABILITIES --\n\n")
+                for liability_type, value in sorted(liabilities_by_type.items(), key=lambda x: abs(x[1]), reverse=True):
+                    self.report_text.insert('end', f"{liability_type:<30} ${value:>15,.2f}\n")
+                self.report_text.insert('end', f"\n{'-> Total Liabilities:':<30} ${-total_liabilities:>15,.2f}\n\n")
+
+            total_net_worth = total_assets - total_liabilities
+            self.report_text.insert('end', f"{'TOTAL NET WORTH:':<30} ${total_net_worth:>15,.2f}\n\n")
         
         self.report_text.insert('end', "=" * self.top_btm_separator_mult + "\n")
         self.report_text.insert('end', "END OF REPORT\n")

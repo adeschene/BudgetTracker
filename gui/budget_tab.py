@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
+from gui.shared_functions import center_window
 
 class BudgetTab:
     def __init__(self, parent, db: DatabaseManager):
@@ -93,10 +94,10 @@ class BudgetDialog:
         self.callback = callback
         
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Edit Budget" if budget else "Add Budget")
         self.dialog.geometry("400x250")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
         
         ttk.Label(self.dialog, text="Category:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.category_var = tk.StringVar(value=budget['category'] if budget else '')
@@ -123,7 +124,11 @@ class BudgetDialog:
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
         
         self.dialog.columnconfigure(1, weight=1)
-    
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+
     def save(self):
         try:
             target = float(self.target_var.get())

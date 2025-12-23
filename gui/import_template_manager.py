@@ -1,16 +1,17 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
+from gui.shared_functions import center_window
 
 class ImportTemplateManager:
     def __init__(self, parent, db: DatabaseManager):
         self.db = db
         
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Import Template Manager")
         self.dialog.geometry("1200x600")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
         
         main_frame = ttk.Frame(self.dialog)
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
@@ -85,6 +86,10 @@ class ImportTemplateManager:
         ttk.Button(self.dialog, text="Close", command=self.dialog.destroy).pack(pady=10)
         
         self.refresh_templates()
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
     
     def refresh_templates(self):
         for item in self.template_tree.get_children():
@@ -241,10 +246,10 @@ class TemplateDialog:
         self.callback = callback
 
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Edit Template" if template else "Add Template")
         self.dialog.geometry("500x700")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
 
         ttk.Label(self.dialog, text="Template Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.name_var = tk.StringVar(value=template['template_name'] if template else '')
@@ -320,6 +325,10 @@ class TemplateDialog:
 
         self.dialog.columnconfigure(1, weight=1)
 
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+    
     def toggle_amount_mode(self):
         """Enable/disable amount fields based on selected mode (single vs split)."""
         if self.amount_mode_var.get() == 'single':
@@ -396,10 +405,10 @@ class RuleDialog:
         self.callback = callback
 
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Edit Rule" if rule else "Add Rule")
         self.dialog.geometry("500x350")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
 
         ttk.Label(self.dialog, text="Pattern (Regex):").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.pattern_var = tk.StringVar(value=rule['pattern'] if rule else '')
@@ -431,6 +440,10 @@ class RuleDialog:
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
 
     def toggle_ignore(self):
         if self.ignore_var.get():

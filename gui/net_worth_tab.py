@@ -4,16 +4,17 @@ from datetime import datetime
 from calendar import monthrange
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
+from gui.shared_functions import center_window
 
 class TemplateManagerDialog:
     def __init__(self, parent, db: DatabaseManager):
         self.db = db
 
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Manage Asset Templates")
         self.dialog.geometry("700x500")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
 
         info_label = tk.Label(self.dialog,
                              text="Templates are used to quickly add recurring assets to each month.\nClick 'Apply Template' in the Net Worth tab to add these to the current month.",
@@ -49,6 +50,10 @@ class TemplateManagerDialog:
         ttk.Button(button_frame, text="Close", command=self.dialog.destroy).pack(side='left', padx=5)
 
         self.refresh_templates()
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
 
     def refresh_templates(self):
         for item in self.tree.get_children():
@@ -98,10 +103,10 @@ class TemplateDialog:
         self.callback = callback
 
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Add Template" if not template else "Edit Template")
         self.dialog.geometry("400x220")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
 
         ttk.Label(self.dialog, text="Asset Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.asset_var = tk.StringVar(value=template['asset_name'] if template else '')
@@ -124,6 +129,10 @@ class TemplateDialog:
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
 
     def save(self):
         if self.template:
@@ -471,10 +480,10 @@ class NetWorthDialog:
         self.callback = callback
 
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Add Net Worth Entry" if not entry else "Edit Net Worth Entry")
         self.dialog.geometry("400x350")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
 
         if entry:
             default_date = entry['date']
@@ -518,6 +527,10 @@ class NetWorthDialog:
 
         self.dialog.columnconfigure(1, weight=1)
 
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+
     def save(self):
         try:
             value = float(self.value_var.get())
@@ -557,10 +570,10 @@ class ApplyTemplateDialog:
         self.value_vars = {}
 
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title(f"Apply Templates to {datetime(year, month, 1).strftime('%B %Y')}")
         self.dialog.geometry("500x600")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
 
         info_label = ttk.Label(self.dialog,
                              text="Enter values for each asset to add to this month:"
@@ -606,6 +619,10 @@ class ApplyTemplateDialog:
 
         ttk.Button(button_frame, text="Apply All", style='Accent.TButton', command=self.apply, width=12).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=12).pack(side='left', padx=5)
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
 
     def apply(self):
         try:

@@ -8,12 +8,19 @@ from gui.net_worth_tab import NetWorthTab
 from gui.budget_tab import BudgetTab
 from gui.visualizations_tab import VisualizationsTab
 from gui.reports_tab import ReportsTab
+from gui.shared_functions import center_window
 
 class MainWindow:
     def __init__(self, root):
         self.root = root
         self.root.title("Personal Budget Tracker")
-        self.root.geometry("1200x800")
+        # Open window in the center of the screen
+        w, h = 1200, 800
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
         
         self.db = DatabaseManager()
         self.csv_importer = CSVImporter(self.db)
@@ -94,11 +101,11 @@ class ImportDialog:
         self.count = 0
 
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Import CSV")
         self.dialog.geometry("400x200")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
-
+        
         ttk.Label(self.dialog, text="Import Template:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.template_var = tk.StringVar()
         template_combo = ttk.Combobox(self.dialog, textvariable=self.template_var, state='readonly')
@@ -119,6 +126,11 @@ class ImportDialog:
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
+        
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+        self.dialog.grab_set()
 
     def do_import(self):
         template_name = self.template_var.get()
@@ -150,10 +162,11 @@ class CategoryManager:
         self.db = db
         
         self.window = tk.Toplevel(parent)
+        self.window.withdraw()
         self.window.title("Manage Categories")
-        self.window.geometry("500x400")
+        self.window.geometry("600x500")
         self.window.transient(parent)
-        
+
         frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
         
@@ -166,10 +179,14 @@ class CategoryManager:
         button_frame = ttk.Frame(self.window)
         button_frame.pack(pady=10)
         
-        ttk.Button(button_frame, text="Add Category", command=self.add_category).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Category", style='Accent.TButton', command=self.add_category).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Close", command=self.window.destroy).pack(side='left', padx=5)
         
         self.refresh_categories()
+        
+        self.window.update_idletasks()
+        center_window(self.window)
+        self.window.deiconify()
     
     def refresh_categories(self):
         for item in self.tree.get_children():
@@ -181,6 +198,7 @@ class CategoryManager:
     
     def add_category(self):
         dialog = tk.Toplevel(self.window)
+        dialog.withdraw()
         dialog.title("Add Category")
         dialog.geometry("300x200")
         
@@ -203,16 +221,21 @@ class CategoryManager:
         
         ttk.Button(dialog, text="Save", command=save).grid(row=3, column=0, columnspan=2, pady=10)
         dialog.columnconfigure(1, weight=1)
+        
+        dialog.update_idletasks()
+        center_window(dialog)
+        dialog.deiconify()
 
 class AccountManager:
     def __init__(self, parent, db):
         self.db = db
         
         self.window = tk.Toplevel(parent)
+        self.window.withdraw()
         self.window.title("Manage Accounts")
         self.window.geometry("450x500")
         self.window.transient(parent)
-        
+
         frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
         
@@ -230,6 +253,10 @@ class AccountManager:
         ttk.Button(button_frame, text="Close", command=self.window.destroy).pack(side='left', padx=5)
 
         self.refresh_accounts()
+        
+        self.window.update_idletasks()
+        center_window(self.window)
+        self.window.deiconify()
 
     def refresh_accounts(self):
         for item in self.tree.get_children():
@@ -278,10 +305,10 @@ class AccountDialog:
         self.callback = callback
 
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Add Account" if not account else "Edit Account")
         self.dialog.geometry("300x300")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
 
         ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.name_var = tk.StringVar(value=account['name'] if account else '')
@@ -302,6 +329,11 @@ class AccountDialog:
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
 
         self.dialog.columnconfigure(1, weight=1)
+        
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+        self.dialog.grab_set()
 
     def save(self):
         if self.account: # Editing existing account

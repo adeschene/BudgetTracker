@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
+from gui.shared_functions import center_window
 
 class TransactionsTab:
     def __init__(self, parent, db: DatabaseManager, main_window=None):
@@ -301,10 +302,10 @@ class TransactionDialog:
         self.callback = callback
         
         self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
         self.dialog.title("Add Transaction" if not transaction else "Edit Transaction")
         self.dialog.geometry("400x400")
         self.dialog.transient(parent)
-        self.dialog.grab_set()
         
         ttk.Label(self.dialog, text="Date:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         if transaction:
@@ -350,6 +351,10 @@ class TransactionDialog:
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
         
         self.dialog.columnconfigure(1, weight=1)
+
+        center_window(self.dialog)
+        self.dialog.deiconify()
+        self.dialog.grab_set()
     
     def save(self):
         try:
