@@ -1,3 +1,15 @@
+# DB and personal files
 budget_tracker.db
 budget_tracker_old.db
 TODO.txt
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
