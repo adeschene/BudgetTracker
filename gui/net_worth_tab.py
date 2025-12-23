@@ -219,7 +219,7 @@ class NetWorthTab:
         button_frame = ttk.Frame(entries_frame)
         button_frame.pack(pady=10)
         
-        ttk.Button(button_frame, text="Apply Template", style='Accent.TButton', command=self.apply_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Apply Templates", style='Accent.TButton', command=self.apply_template).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Manage Templates", command=self.manage_templates).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Add Entry", command=self.add_entry).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Edit Entry", command=self.edit_entry).pack(side='left', padx=5)

@@ -42,7 +42,6 @@ class DatabaseManager:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
                 type TEXT NOT NULL,
-                balance REAL DEFAULT 0,
                 last_updated TEXT
             )
         ''')
@@ -257,13 +256,31 @@ class DatabaseManager:
         conn.close()
         return categories
     
-    def add_account(self, name: str, account_type: str, balance: float = 0):
+    def add_account(self, name: str, account_type: str, create_template: bool = True):
         conn = self.get_connection()
         cursor = conn.cursor()
+        
+        # Create a new account in the database
         cursor.execute('''
-            INSERT OR IGNORE INTO accounts (name, type, balance, last_updated)
-            VALUES (?, ?, ?, ?)
-        ''', (name, account_type, balance, datetime.now().isoformat()))
+            INSERT OR IGNORE INTO accounts (name, type, last_updated)
+            VALUES (?, ?, ?)
+        ''', (name, account_type, datetime.now().isoformat()))
+
+        # Automatically add an asset template if the account is successfully created
+        if create_template and cursor.rowcount > 0:
+            asset_type_map = {
+                'checking': 'Checking',
+                'savings': 'Savings',
+                'credit': 'Credit Card',
+                'investment': 'Investment'
+            }
+            asset_type = asset_type_map.get(account_type, 'Other Asset')
+            
+            cursor.execute('''
+                INSERT OR IGNORE INTO asset_templates (asset_name, asset_type, notes)
+                VALUES (?, ?, ?)
+            ''', (name, asset_type, f'Auto-created from account'))
+
         conn.commit()
         conn.close()
     
@@ -275,16 +292,6 @@ class DatabaseManager:
         accounts = [dict(zip(columns, row)) for row in cursor.fetchall()]
         conn.close()
         return accounts
-    
-    def update_account_balance(self, account_name: str, balance: float):
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            UPDATE accounts SET balance = ?, last_updated = ?
-            WHERE name = ?
-        ''', (balance, datetime.now().isoformat(), account_name))
-        conn.commit()
-        conn.close()
     
     def add_net_worth_entry(self, date: str, asset_name: str, value: float,
                            asset_type: str = None, notes: str = None):

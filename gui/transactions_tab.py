@@ -81,10 +81,10 @@ class TransactionsTab:
 
         if self.main_window:
             ttk.Button(button_frame, text="Import CSV", style='Accent.TButton', command=self.main_window.import_csv).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=5)
+            ttk.Button(button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
+            ttk.Button(button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
+            ttk.Button(button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
+            ttk.Button(button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=5)
     
     def update_category_list(self):
         categories = self.db.get_categories()

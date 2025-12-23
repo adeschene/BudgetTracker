@@ -197,28 +197,30 @@ class ReportsTab:
             
             self.report_text.insert('end', "\n")
         
-        accounts = self.db.get_accounts()
-        if accounts:
+        net_worth_entries = self.db.get_net_worth_entries(start_date, end_date)
+
+        if net_worth_entries:
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             self.report_text.insert('end', "ACCOUNT BALANCES\n")
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             
-            total_balance = sum(acc['balance'] for acc in accounts)
+            total_balance = 0
             
-            for account in accounts:
-                self.report_text.insert('end', f"{account['name']:<30} ({account['type']:<15}) ${account['balance']:>12,.2f}\n")
+            for account in net_worth_entries:
+                if account['asset_type'] == ['Cash', 'Checking', 'Savings', 'Investment']:
+                    total_balance += account['value']
+                    self.report_text.insert('end', f"{account['asset_name']:<30} ({account['asset_type']:<15}) ${account['value']:>12,.2f}\n")
             
             self.report_text.insert('end', f"\n{'Total:':<30} {'':<15} ${total_balance:>12,.2f}\n\n")
         
-        net_worth_summary = self.db.get_net_worth_summary(start_date, end_date)
-        if net_worth_summary:
+        if net_worth_entries:
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             self.report_text.insert('end', "NET WORTH SUMMARY\n")
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             
-            total_net_worth = sum(net_worth_summary.values())
+            total_net_worth = sum(net_worth_entries.values())
             
-            for asset_type, value in sorted(net_worth_summary.items(), key=lambda x: x[1], reverse=True):
+            for asset_type, value in sorted(net_worth_entries.items(), key=lambda x: x[1], reverse=True):
                 self.report_text.insert('end', f"{asset_type:<30} ${value:>15,.2f}\n")
             
             self.report_text.insert('end', f"\n{'Total Net Worth:':<30} ${total_net_worth:>15,.2f}\n\n")
