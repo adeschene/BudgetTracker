@@ -148,16 +148,16 @@ class DatabaseManager:
     
     def _insert_default_categories(self, cursor):
         default_categories = [
-            ('Groceries', 'expense', 'grocery,supermarket,food'),
-            ('Dining', 'expense', 'restaurant,cafe,food,dining'),
-            ('Transportation', 'expense', 'gas,fuel,uber,lyft,transit'),
-            ('Utilities', 'expense', 'electric,water,gas,internet,phone'),
-            ('Entertainment', 'expense', 'movie,game,streaming,netflix'),
-            ('Shopping', 'expense', 'amazon,store,retail'),
-            ('Healthcare', 'expense', 'doctor,pharmacy,medical,health'),
-            ('Housing', 'expense', 'rent,mortgage,insurance'),
-            ('Salary', 'income', 'salary,paycheck,wage'),
-            ('Investment', 'income', 'dividend,interest,capital'),
+            ('Groceries', 'expense', 'grocery,supermarket,food, fred meyer, winco, costco, safeway, kroger, whole foods, trader joes, aldi'),
+            ('Dining', 'expense', 'restaurant,cafe,food,dining,dine,burger king, mcdonald\'s, starbucks, chipotle, panera bread, in-n-out, shake shack'),
+            ('Transportation', 'expense', 'gas,fuel,uber,lyft,transit,taxi,cab,bus,train,plane,flight,airplane,airline,trimet,hop fastpass,'),
+            ('Utilities', 'expense', 'electric,electricity,water,gas,internet,phone,cable,cable tv,sewer,garbage,garbage collection'),
+            ('Entertainment', 'expense', 'movie,game,streaming,netflix,youtube,spotify,amazon prime,netflix,hulu,disney+,apple tv+,hbo max'),
+            ('Shopping', 'expense', 'amazon,store,retail,shopping,online shopping'),
+            ('Healthcare', 'expense', 'doctor,pharmacy,medical,health,insurance,health insurance,healthcare,insurance premium'),
+            ('Housing', 'expense', 'rent,mortgage,home insurance,homeowners insurance,property tax,rental insurance,rental property'),
+            ('Salary', 'income', 'salary,paycheck,wage,pay,employment,payroll'),
+            ('Investment', 'income', 'dividend,interest,capital,stock,stock market,bond,bond market,real estate,real estate investment'),
             ('Other Income', 'income', ''),
             ('Other Expense', 'expense', '')
         ]
@@ -238,6 +238,26 @@ class DatabaseManager:
         cursor = conn.cursor()
         cursor.execute('INSERT OR IGNORE INTO categories (name, type, keywords) VALUES (?, ?, ?)',
                       (name, cat_type, keywords))
+        conn.commit()
+        conn.close()
+
+    def update_category(self, category_id: int, name: str, cat_type: str, keywords: str = ''):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute('UPDATE categories SET name = ?, type = ?, keywords = ? WHERE id = ?',
+                           (name, cat_type, keywords, category_id))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            conn.close()
+            raise
+        conn.close()
+
+    def delete_category(self, category_id: int):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM categories WHERE id = ?', (category_id,))
         conn.commit()
         conn.close()
     
