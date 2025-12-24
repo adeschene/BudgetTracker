@@ -14,42 +14,157 @@ class VisualizationsTab:
         self.setup_ui()
 
     def setup_ui(self):
+        # Shared controls above tabs
         control_frame = ttk.Frame(self.frame)
-        control_frame.pack(fill='x', padx=10, pady=10)
+        control_frame.pack(fill='x', padx=10, pady=6)
 
-        tk.Label(control_frame, text="Net Worth Over Time", font=('Roboto', 12, 'bold')).pack(side='left', padx=5)
-        ttk.Button(control_frame, text="Refresh", style='Accent.TButton', command=self.refresh_charts).pack(side='right', padx=5)
+        ttk.Label(control_frame, text='Period:').pack(side='left', padx=(4, 6))
+        self.period_var = tk.StringVar(value='This Month')
+        period_combo = ttk.Combobox(control_frame, textvariable=self.period_var, width=18, state='readonly')
+        period_combo['values'] = ['This Month', 'Last Month', 'This Year', 'Last Year', 'All Time']
+        period_combo.pack(side='left')
+        period_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_charts())
 
-        net_worth_frame = ttk.Frame(self.frame)
-        net_worth_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+        ttk.Button(control_frame, text='Refresh All', style='Accent.TButton', command=self.refresh_charts).pack(side='right', padx=5)
 
+        # Create notebook to hold multiple chart tabs
+        tabs = ttk.Notebook(self.frame)
+        tabs.pack(fill='both', expand=True, padx=10, pady=4)
+
+        # --- Net Worth Tab ---
+        net_tab = ttk.Frame(tabs)
+        tabs.add(net_tab, text='Net Worth')
+        net_worth_frame = ttk.Frame(net_tab)
+        net_worth_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure1 = Figure(figsize=(10, 4), dpi=100)
         self.ax1 = self.figure1.add_subplot(111)
-
         self.canvas1 = FigureCanvasTkAgg(self.figure1, net_worth_frame)
         self.canvas1.get_tk_widget().pack(fill='both', expand=True)
 
-        expense_control_frame = ttk.Frame(self.frame)
-        expense_control_frame.pack(fill='x', padx=10, pady=10)
-
-        tk.Label(expense_control_frame, text="Expense Breakdown by Category", font=('Roboto', 12, 'bold')).pack(side='left', padx=5)
-
-        ttk.Label(expense_control_frame, text="Period:").pack(side='left', padx=(20, 5))
-        self.period_var = tk.StringVar(value='This Month')
-        period_combo = ttk.Combobox(expense_control_frame, textvariable=self.period_var, width=15, state='readonly')
-        period_combo['values'] = ['This Month', 'Last Month', 'This Year', 'Last Year', 'All Time']
-        period_combo.pack(side='left', padx=5)
-        period_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_expense_chart())
-
-        expense_frame = ttk.Frame(self.frame)
-        expense_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
-
+        # --- Expense Breakdown Tab (pie) ---
+        expense_tab = ttk.Frame(tabs)
+        tabs.add(expense_tab, text='Expense Breakdown')
+        expense_frame = ttk.Frame(expense_tab)
+        expense_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure2 = Figure(figsize=(10, 4), dpi=100)
         self.ax2 = self.figure2.add_subplot(111)
-
         self.canvas2 = FigureCanvasTkAgg(self.figure2, expense_frame)
         self.canvas2.get_tk_widget().pack(fill='both', expand=True)
 
+        # --- Income Over Time Tab ---
+        income_tab = ttk.Frame(tabs)
+        tabs.add(income_tab, text='Income Over Time')
+        income_frame = ttk.Frame(income_tab)
+        income_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        self.figure3 = Figure(figsize=(10, 4), dpi=100)
+        self.ax3 = self.figure3.add_subplot(111)
+        self.canvas3 = FigureCanvasTkAgg(self.figure3, income_frame)
+        self.canvas3.get_tk_widget().pack(fill='both', expand=True)
+
+        # --- Expenses Over Time Tab ---
+        expenses_time_tab = ttk.Frame(tabs)
+        tabs.add(expenses_time_tab, text='Expenses Over Time')
+        expenses_time_frame = ttk.Frame(expenses_time_tab)
+        expenses_time_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        self.figure4 = Figure(figsize=(10, 4), dpi=100)
+        self.ax4 = self.figure4.add_subplot(111)
+        self.canvas4 = FigureCanvasTkAgg(self.figure4, expenses_time_frame)
+        self.canvas4.get_tk_widget().pack(fill='both', expand=True)
+
+        # --- Savings Over Time Tab ---
+        savings_tab = ttk.Frame(tabs)
+        tabs.add(savings_tab, text='Savings Over Time')
+        savings_frame = ttk.Frame(savings_tab)
+        savings_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        self.figure5 = Figure(figsize=(10, 4), dpi=100)
+        self.ax5 = self.figure5.add_subplot(111)
+        self.canvas5 = FigureCanvasTkAgg(self.figure5, savings_frame)
+        self.canvas5.get_tk_widget().pack(fill='both', expand=True)
+
+        # --- Category Drill Down Tab ---
+        cat_tab = ttk.Frame(tabs)
+        tabs.add(cat_tab, text='Category Drill Down')
+        cat_control = ttk.Frame(cat_tab)
+        cat_control.pack(fill='x', padx=5, pady=5)
+
+        ttk.Label(cat_control, text='Category:').pack(side='left', padx=(4, 6))
+        self.category_var = tk.StringVar()
+        self.category_combo = ttk.Combobox(cat_control, textvariable=self.category_var, width=30, state='readonly')
+        self.category_combo.pack(side='left')
+        self.category_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_category_drilldown_chart())
+
+        cat_frame = ttk.Frame(cat_tab)
+        cat_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        self.figure6 = Figure(figsize=(10, 4), dpi=100)
+        self.ax6 = self.figure6.add_subplot(111)
+        self.canvas6 = FigureCanvasTkAgg(self.figure6, cat_frame)
+        self.canvas6.get_tk_widget().pack(fill='both', expand=True)
+
+        # --- Keyword Drill Down Tab ---
+        kw_tab = ttk.Frame(tabs)
+        tabs.add(kw_tab, text='Keyword Drill Down')
+        kw_control = ttk.Frame(kw_tab)
+        kw_control.pack(fill='x', padx=5, pady=5)
+
+        ttk.Label(kw_control, text='Keyword:').pack(side='left', padx=(4, 6))
+        self.keyword_var = tk.StringVar()
+        self.keyword_entry = ttk.Entry(kw_control, textvariable=self.keyword_var, width=40)
+        self.keyword_entry.pack(side='left')
+        self.keyword_entry.bind('<Return>', lambda e: self.refresh_keyword_drilldown_chart())
+
+        # Exact match enabled by default; fuzzy match optional with configurable threshold
+        self.exact_match_var = tk.BooleanVar(value=True)
+        self.fuzzy_match_var = tk.BooleanVar(value=False)
+
+        def _on_fuzzy_toggle():
+            if self.fuzzy_match_var.get():
+                self.exact_match_var.set(False)
+                try:
+                    self.fuzzy_threshold_scale.configure(state='normal')
+                except Exception:
+                    pass
+            else:
+                self.exact_match_var.set(True)
+                try:
+                    self.fuzzy_threshold_scale.configure(state='disabled')
+                except Exception:
+                    pass
+
+        def _on_exact_toggle():
+            if self.exact_match_var.get():
+                self.fuzzy_match_var.set(False)
+                try:
+                    self.fuzzy_threshold_scale.configure(state='disabled')
+                except Exception:
+                    pass
+
+        ttk.Checkbutton(kw_control, text='Exact Match', variable=self.exact_match_var, command=_on_exact_toggle).pack(side='left', padx=(10, 5))
+        ttk.Checkbutton(kw_control, text='Use Fuzzy Match', variable=self.fuzzy_match_var, command=_on_fuzzy_toggle).pack(side='left', padx=(6, 5))
+
+        # Fuzzy threshold control (disabled unless fuzzy match enabled)
+        self.fuzzy_threshold_var = tk.DoubleVar(value=0.9)
+        self.fuzzy_threshold_scale = ttk.Scale(kw_control, from_=0.1, to=1.0, orient='horizontal', variable=self.fuzzy_threshold_var)
+        self.fuzzy_threshold_scale.pack(side='left', padx=(6, 5))
+        self.fuzzy_threshold_scale.configure(length=140, state='disabled')
+        self.fuzzy_threshold_label = ttk.Label(kw_control, text=f'Threshold: {self.fuzzy_threshold_var.get():.2f}')
+        self.fuzzy_threshold_label.pack(side='left', padx=(4, 0))
+
+        def _update_threshold_label(val):
+            try:
+                self.fuzzy_threshold_label.config(text=f'Threshold: {float(val):.2f}')
+            except Exception:
+                pass
+
+        self.fuzzy_threshold_scale.configure(command=_update_threshold_label)
+
+        kw_frame = ttk.Frame(kw_tab)
+        kw_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        self.figure7 = Figure(figsize=(10, 4), dpi=100)
+        self.ax7 = self.figure7.add_subplot(111)
+        self.canvas7 = FigureCanvasTkAgg(self.figure7, kw_frame)
+        self.canvas7.get_tk_widget().pack(fill='both', expand=True)
+
+        # Initial draw
         self.refresh_charts()
 
     def get_date_range(self):
@@ -78,6 +193,291 @@ class VisualizationsTab:
     def refresh_charts(self):
         self.refresh_net_worth_chart()
         self.refresh_expense_chart()
+        self.refresh_income_chart()
+        self.refresh_expenses_over_time_chart()
+        self.refresh_savings_chart()
+        self.refresh_category_drilldown_chart()
+        self.refresh_keyword_drilldown_chart()
+
+    def _month_range(self, start_date: str, end_date: str):
+        # return list of YYYY-MM strings from start to end inclusive
+        start = datetime.strptime(start_date, '%Y-%m-%d')
+        end = datetime.strptime(end_date, '%Y-%m-%d')
+        months = []
+        cur = start.replace(day=1)
+        while cur <= end:
+            months.append(cur.strftime('%Y-%m'))
+            if cur.month == 12:
+                cur = cur.replace(year=cur.year+1, month=1)
+            else:
+                cur = cur.replace(month=cur.month+1)
+        return months
+
+    def _aggregate_monthly(self, transactions, kind='all'):
+        # transactions: list of dicts with 'date' and 'amount'
+        data = {}
+        for t in transactions:
+            try:
+                key = t['date'][:7]
+                amt = float(t['amount'])
+            except Exception:
+                continue
+
+            if kind == 'income' and amt <= 0:
+                continue
+            if kind == 'expense' and amt >= 0:
+                continue
+
+            # expenses stored negative; for expense chart use abs
+            value = amt if kind != 'expense' else abs(amt)
+
+            data[key] = data.get(key, 0.0) + value
+
+        return data
+
+    def _get_transactions_in_range(self, start_date, end_date):
+        # Use db.get_transactions to retrieve transactions in range
+        if start_date and end_date:
+            return self.db.get_transactions(start_date, end_date)
+        else:
+            return self.db.get_transactions()
+
+    def _update_category_list(self):
+        cats = self.db.get_categories()
+        names = [c['name'] for c in cats]
+        self.category_combo['values'] = names
+        if names:
+            # keep current selection if valid, otherwise select first
+            cur = self.category_var.get()
+            if cur not in names:
+                self.category_var.set(names[0])
+
+    def refresh_category_drilldown_chart(self):
+        self.ax6.clear()
+        # ensure category list is up-to-date
+        try:
+            self._update_category_list()
+        except Exception:
+            pass
+
+        category = self.category_var.get()
+        if not category:
+            self.ax6.text(0.5, 0.5, 'No category selected', ha='center', va='center', transform=self.ax6.transAxes, fontsize=14, color='gray')
+            self.canvas6.draw()
+            return
+
+        start_date, end_date = self.get_date_range()
+        tx = self._get_transactions_in_range(start_date, end_date)
+
+        # filter by category (exact match)
+        filtered = [t for t in tx if (t.get('category') or '') == category]
+
+        monthly = self._aggregate_monthly(filtered, kind='all')
+
+        if not monthly:
+            self.ax6.text(0.5, 0.5, 'No data for selected category', ha='center', va='center', transform=self.ax6.transAxes, fontsize=14, color='gray')
+            self.canvas6.draw()
+            return
+
+        if start_date and end_date:
+            months = self._month_range(start_date, end_date)
+        else:
+            months = sorted(monthly.keys())
+
+        values = [abs(monthly.get(m, 0.0)) for m in months]
+
+        # Use a neutral color for category drilldown bars
+        bars = self.ax6.bar(range(len(months)), values, color='gray', alpha=0.7, edgecolor='black')
+        avg = sum(values) / len(values) if values else 0.0
+        self.ax6.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        # Add budget line if budget exists for this category
+        try:
+            budgets = self.db.get_budget_targets()
+            budget = next((b for b in budgets if b['category'] == category), None)
+            if budget:
+                # budget is monthly target; draw as horizontal line
+                monthly_budget = budget['monthly_target']
+                self.ax6.axhline(y=monthly_budget, color='green', linestyle='-', linewidth=2, label=f'Budget: ${monthly_budget:,.2f}')
+                self.ax6.legend()
+        except Exception:
+            pass
+
+        self.ax6.set_xlabel('Month')
+        self.ax6.set_ylabel('Amount ($)')
+        self.ax6.set_title(f'Category: {category} - Over Time')
+        labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
+        self.ax6.set_xticks(range(len(months)))
+        self.ax6.set_xticklabels(labels, rotation=45, ha='right')
+
+        for bar in bars:
+            hgt = bar.get_height()
+            self.ax6.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8)
+
+        self.figure6.tight_layout()
+        self.canvas6.draw()
+
+    def _fuzzy_match(self, keyword, text, threshold=0.9):
+        # Simple fuzzy matching: count matching chars / total unique chars
+        keyword_lower = keyword.lower()
+        text_lower = text.lower()
+        if keyword_lower in text_lower:
+            return True
+        # character-level matching
+        matches = sum(1 for c in keyword_lower if c in text_lower)
+        score = matches / len(keyword_lower) if keyword_lower else 0
+        return score >= threshold
+
+    def _exact_match(self, keyword, text):
+        # Case-insensitive substring match
+        return keyword.lower() in text.lower()
+
+    def refresh_keyword_drilldown_chart(self):
+        self.ax7.clear()
+        keyword = self.keyword_var.get().strip()
+        if not keyword:
+            self.ax7.text(0.5, 0.5, 'Enter a keyword to search', ha='center', va='center', transform=self.ax7.transAxes, fontsize=14, color='gray')
+            self.canvas7.draw()
+            return
+
+        start_date, end_date = self.get_date_range()
+        tx = self._get_transactions_in_range(start_date, end_date)
+
+        # filter by exact or fuzzy match on description based on checkbox
+        use_fuzzy = self.fuzzy_match_var.get()
+        if use_fuzzy:
+            thresh = float(self.fuzzy_threshold_var.get())
+            filtered = [t for t in tx if self._fuzzy_match(keyword, t.get('description', ''), threshold=thresh)]
+        else:
+            filtered = [t for t in tx if self._exact_match(keyword, t.get('description', ''))]
+
+        monthly = self._aggregate_monthly(filtered, kind='all')
+
+        if not monthly:
+            self.ax7.text(0.5, 0.5, 'No transactions match keyword', ha='center', va='center', transform=self.ax7.transAxes, fontsize=14, color='gray')
+            self.canvas7.draw()
+            return
+
+        if start_date and end_date:
+            months = self._month_range(start_date, end_date)
+        else:
+            months = sorted(monthly.keys())
+
+        values = [monthly.get(m, 0.0) for m in months]
+        colors = ['green' if v >= 0 else 'red' for v in values]
+
+        bars = self.ax7.bar(range(len(months)), values, color=colors, alpha=0.7, edgecolor='black')
+        avg = sum(values) / len(values) if values else 0.0
+        self.ax7.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        self.ax7.set_xlabel('Month')
+        self.ax7.set_ylabel('Amount ($)')
+        self.ax7.set_title(f'Keyword: "{keyword}" - Over Time')
+        labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
+        self.ax7.set_xticks(range(len(months)))
+        self.ax7.set_xticklabels(labels, rotation=45, ha='right')
+
+        for bar in bars:
+            hgt = bar.get_height()
+            self.ax7.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8)
+
+        self.figure7.tight_layout()
+        self.canvas7.draw()
+
+    def refresh_income_chart(self):
+        self.ax3.clear()
+        start_date, end_date = self.get_date_range()
+        tx = self._get_transactions_in_range(start_date, end_date)
+        monthly = self._aggregate_monthly(tx, kind='income')
+
+        if not monthly:
+            self.ax3.text(0.5, 0.5, 'No income data available', ha='center', va='center', transform=self.ax3.transAxes, fontsize=14, color='gray')
+            self.canvas3.draw()
+            return
+
+        if start_date and end_date:
+            months = self._month_range(start_date, end_date)
+        else:
+            months = sorted(monthly.keys())
+
+        values = [monthly.get(m, 0.0) for m in months]
+
+        bars = self.ax3.bar(range(len(months)), values, color='green', alpha=0.7, edgecolor='black')
+        avg = sum(values) / len(values) if values else 0.0
+        self.ax3.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        self.ax3.set_xlabel('Month')
+        self.ax3.set_ylabel('Income ($)')
+        self.ax3.set_title('Income Over Time')
+        labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
+        self.ax3.set_xticks(range(len(months)))
+        self.ax3.set_xticklabels(labels, rotation=45, ha='right')
+        self.figure3.tight_layout()
+        self.canvas3.draw()
+
+    def refresh_expenses_over_time_chart(self):
+        self.ax4.clear()
+        start_date, end_date = self.get_date_range()
+        tx = self._get_transactions_in_range(start_date, end_date)
+        monthly = self._aggregate_monthly(tx, kind='expense')
+
+        if not monthly:
+            self.ax4.text(0.5, 0.5, 'No expense data available', ha='center', va='center', transform=self.ax4.transAxes, fontsize=14, color='gray')
+            self.canvas4.draw()
+            return
+
+        if start_date and end_date:
+            months = self._month_range(start_date, end_date)
+        else:
+            months = sorted(monthly.keys())
+
+        values = [monthly.get(m, 0.0) for m in months]
+
+        bars = self.ax4.bar(range(len(months)), values, color='red', alpha=0.7, edgecolor='black')
+        avg = sum(values) / len(values) if values else 0.0
+        self.ax4.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        self.ax4.set_xlabel('Month')
+        self.ax4.set_ylabel('Expenses ($)')
+        self.ax4.set_title('Expenses Over Time')
+        labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
+        self.ax4.set_xticks(range(len(months)))
+        self.ax4.set_xticklabels(labels, rotation=45, ha='right')
+        self.figure4.tight_layout()
+        self.canvas4.draw()
+
+    def refresh_savings_chart(self):
+        self.ax5.clear()
+        start_date, end_date = self.get_date_range()
+        tx = self._get_transactions_in_range(start_date, end_date)
+
+        # aggregate incomes and expenses per month
+        income_monthly = self._aggregate_monthly(tx, kind='income')
+        expense_monthly = self._aggregate_monthly(tx, kind='expense')
+
+        if not income_monthly and not expense_monthly:
+            self.ax5.text(0.5, 0.5, 'No data available', ha='center', va='center', transform=self.ax5.transAxes, fontsize=14, color='gray')
+            self.canvas5.draw()
+            return
+
+        if start_date and end_date:
+            months = self._month_range(start_date, end_date)
+        else:
+            months = sorted(set(list(income_monthly.keys()) + list(expense_monthly.keys())))
+
+        values = [(income_monthly.get(m, 0.0) - expense_monthly.get(m, 0.0)) for m in months]
+        bars = self.ax5.bar(range(len(months)), values, color=['green' if v>=0 else 'red' for v in values], alpha=0.7, edgecolor='black')
+        avg = sum(values) / len(values) if values else 0.0
+        self.ax5.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        self.ax5.set_xlabel('Month')
+        self.ax5.set_ylabel('Savings ($)')
+        self.ax5.set_title('Savings Over Time')
+        labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
+        self.ax5.set_xticks(range(len(months)))
+        self.ax5.set_xticklabels(labels, rotation=45, ha='right')
+        self.figure5.tight_layout()
+        self.canvas5.draw()
 
     def refresh_net_worth_chart(self):
         self.ax1.clear()
@@ -92,37 +492,69 @@ class VisualizationsTab:
             return
 
         months = [h['month'] for h in history]
-        totals = [h['total'] for h in history]
 
+        # compute assets, liabilities, and net for each month
+        assets = []
+        liabilities = []
+        net = []
+        for h in history:
+            breakdown = h.get('breakdown', {}) or {}
+            # assets: sum of non-negative values; liabilities: sum of negative values (keep negative)
+            a = sum(float(v) for v in breakdown.values() if v and float(v) >= 0)
+            l = sum(float(v) for v in breakdown.values() if v and float(v) < 0)
+            assets.append(a)
+            liabilities.append(l)  # l will be negative or 0
+            # net: prefer provided total, otherwise sum of breakdown
+            net_val = h.get('total')
+            if net_val is None:
+                net_val = sum(float(v) for v in breakdown.values() if v)
+            net.append(net_val)
+
+        # labels
         month_labels = []
         for month in months:
             year, month_num = month.split('-')
             date_obj = datetime(int(year), int(month_num), 1)
             month_labels.append(date_obj.strftime('%b %Y'))
 
-        colors = ['green' if total >= 0 else 'red' for total in totals]
+        x = range(len(months))
+        width = 0.2
 
-        bars = self.ax1.bar(range(len(months)), totals, color=colors, alpha=0.7, edgecolor='black')
+        # Plot grouped bars: assets, liabilities, net
+        bars_a = self.ax1.bar([i - width for i in x], assets, width=width, color='tab:green', label='Assets', edgecolor='black', alpha=0.8)
+        bars_l = self.ax1.bar(x, liabilities, width=width, color='tab:red', label='Liabilities', edgecolor='black', alpha=0.8)
+        bars_n = self.ax1.bar([i + width for i in x], net, width=width, color='tab:blue', label='Net Worth', edgecolor='black', alpha=0.8)
+
+        # compute averages and draw dashed lines for each (liabilities average will be negative)
+        avg_a = sum(assets) / len(assets) if assets else 0.0
+        avg_l = sum(liabilities) / len(liabilities) if liabilities else 0.0
+        avg_n = sum(net) / len(net) if net else 0.0
+
+        self.ax1.axhline(y=avg_a, color='tab:green', linestyle='--', linewidth=1)
+        self.ax1.axhline(y=avg_l, color='tab:red', linestyle='--', linewidth=1)
+        self.ax1.axhline(y=avg_n, color='tab:blue', linestyle='--', linewidth=1)
 
         self.ax1.set_xlabel('Month', fontsize=12, fontweight='bold')
-        self.ax1.set_ylabel('Net Worth ($)', fontsize=12, fontweight='bold')
-        self.ax1.set_title('Net Worth Over Time', fontsize=14, fontweight='bold', pad=20)
+        self.ax1.set_ylabel('Amount ($)', fontsize=12, fontweight='bold')
+        self.ax1.set_title('Net Worth Breakdown Over Time', fontsize=14, fontweight='bold', pad=12)
 
         self.ax1.set_xticks(range(len(months)))
         self.ax1.set_xticklabels(month_labels, rotation=45, ha='right')
 
-        self.ax1.axhline(y=0, color='black', linestyle='-', linewidth=0.8)
-
+        # formatting
         self.ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-
         self.ax1.grid(True, axis='y', alpha=0.3, linestyle='--')
+        self.ax1.legend()
 
-        for i, (bar, total) in enumerate(zip(bars, totals)):
-            height = bar.get_height()
-            self.ax1.text(bar.get_x() + bar.get_width()/2., height,
-                        f'${total:,.0f}',
-                        ha='center', va='bottom' if height >= 0 else 'top',
-                        fontsize=9, fontweight='bold')
+        # annotate bar values for net and liabilities
+        for bar in bars_n:
+            hgt = bar.get_height()
+            self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8)
+
+        for bar in bars_l:
+            hgt = bar.get_height()
+            # liabilities are negative; place label below the bar
+            self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='top' if hgt < 0 else 'bottom', fontsize=8)
 
         self.figure1.tight_layout()
         self.canvas1.draw()

@@ -175,9 +175,10 @@ class CategoryManager:
         self.tree.heading('Name', text='Name')
         self.tree.heading('Type', text='Type')
         self.tree.heading('Keywords', text='Keywords')
-        self.tree.column('Name', width=75)
-        self.tree.column('Type', anchor='center', width=50)
-        self.tree.column('Keywords', width=375)
+        # Keep Name and Type fixed; let Keywords expand when window is resized
+        self.tree.column('Name', width=120, minwidth=75, stretch=False)
+        self.tree.column('Type', anchor='center', width=80, minwidth=50, stretch=False)
+        self.tree.column('Keywords', width=375, minwidth=100, stretch=True)
         self.tree.pack(fill='both', expand=True)
         
         button_frame = ttk.Frame(self.window)
