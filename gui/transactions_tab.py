@@ -4,7 +4,7 @@ from datetime import datetime
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
 from utils.csv_importer import CSVImporter, ImportDialog
-from utils.helpers import center_window
+from utils.helpers import center_window, fuzzy_match, exact_match
 
 class TransactionsTab:
     def __init__(self, parent, db: DatabaseManager):
@@ -27,32 +27,78 @@ class TransactionsTab:
         top_frame = ttk.Frame(self.frame)
         top_frame.pack(fill='x', padx=10, pady=10)
 
-        ttk.Label(top_frame, text="Filter by:").pack(side='left', padx=5)
+        ttk.Label(top_frame, text="Filters:").pack(side='left', padx=5)
 
+        # Filter by date range (toggles date pickers enabled/disabled)
         self.use_date_filter_var = tk.BooleanVar(value=False)
-        date_filter_check = ttk.Checkbutton(top_frame, text="Date Filter", style='Switch',
+        date_filter_check = ttk.Checkbutton(top_frame, text="By Date",
                                           variable=self.use_date_filter_var,
                                           command=self.toggle_date_filter)
         date_filter_check.pack(side='left', padx=5)
 
+        ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
+
         ttk.Label(top_frame, text="Start:").pack(side='left', padx=5)
-        self.start_date_picker = DateEntry(top_frame, width=12, background='darkblue',
+        self.start_date_picker = DateEntry(top_frame, width=10, background='darkblue',
                                           foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
                                           state='disabled')
         self.start_date_picker.pack(side='left', padx=5)
 
         ttk.Label(top_frame, text="End:").pack(side='left', padx=5)
-        self.end_date_picker = DateEntry(top_frame, width=12, background='darkblue',
+        self.end_date_picker = DateEntry(top_frame, width=10, background='darkblue',
                                         foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
                                         maxdate=datetime.now(), state='disabled')
         self.end_date_picker.pack(side='left', padx=5)
 
+        ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
+
+        # Filter by category
         ttk.Label(top_frame, text="Category:").pack(side='left', padx=5)
         self.category_var = tk.StringVar()
-        self.category_combo = ttk.Combobox(top_frame, textvariable=self.category_var, width=15)
+        self.category_combo = ttk.Combobox(top_frame, textvariable=self.category_var, width=12)
         self.category_combo.pack(side='left', padx=5)
         self.update_category_list()
 
+        ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
+
+        # Filter by keyword in description (exact or fuzzy match)
+        ttk.Label(top_frame, text='Keyword:').pack(side='left', padx=(4, 6))
+        self.keyword_var = tk.StringVar()
+        self.keyword_entry = ttk.Entry(top_frame, textvariable=self.keyword_var, width=10)
+        self.keyword_entry.pack(side='left')
+        self.keyword_entry.bind('<Return>', lambda e: self.refresh_transactions())
+
+        self.search_label_var = tk.StringVar(value='Exact')
+
+        # Exact match enabled by default; fuzzy match optional with configurable threshold
+        self.use_exact_keyword_filter_var = tk.BooleanVar(value=True)
+        exact_filter_check = ttk.Checkbutton(top_frame, style='Switch',
+                                          variable=self.use_exact_keyword_filter_var,
+                                          command=self.toggle_search_method)
+        exact_filter_check.pack(side='left', padx=(5,0))
+        exact_filter_label = ttk.Label(top_frame, textvariable=self.search_label_var, width=6)
+        exact_filter_label.pack(side='left')
+
+        # Fuzzy threshold control (disabled unless fuzzy match enabled)
+        self.fuzzy_threshold_var = tk.DoubleVar(value=0.9)
+        self.fuzzy_threshold_scale = ttk.Scale(top_frame, from_=0.1, to=1.0, orient='horizontal', variable=self.fuzzy_threshold_var)
+        self.fuzzy_threshold_scale.pack(side='left', padx=(3, 5))
+        self.fuzzy_threshold_scale.configure(length=40, state='disabled')
+        self.fuzzy_threshold_label = ttk.Label(top_frame, text=f'{self.fuzzy_threshold_var.get():.2f}')
+        self.fuzzy_threshold_label.pack(side='left', padx=(4, 0))
+
+        def _update_threshold_label(val):
+            try:
+                self.fuzzy_threshold_label.config(text=f'{float(val):.2f}')
+                self.refresh_transactions()
+            except Exception:
+                pass
+
+        self.fuzzy_threshold_scale.configure(command=_update_threshold_label)
+
+        ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=10, pady=2)
+
+        # Filter action buttons
         ttk.Button(top_frame, text="Filter", command=self.refresh_transactions).pack(side='left', padx=5)
         ttk.Button(top_frame, text="Clear", command=self.clear_filters).pack(side='left', padx=5)
         
@@ -75,7 +121,7 @@ class TransactionsTab:
         self.tree.heading('Notes', text='Notes')
 
         self.tree.column('Date', width=60, anchor='center')
-        self.tree.column('Description', width=100)
+        self.tree.column('Description', width=150)
         self.tree.column('Amount', width=60, anchor='center')
         self.tree.column('Category', width=60, anchor='center')
         self.tree.column('Account', width=60, anchor='center')
@@ -90,11 +136,17 @@ class TransactionsTab:
         top_button_frame.pack(pady=5)
 
         # Action buttons
-        ttk.Button(top_button_frame, text="Import CSV", style='Accent.TButton', command=self.import_csv).pack(side='left', padx=25)
+        ttk.Button(top_button_frame, text="Import CSV", style='Accent.TButton', command=self.import_csv).pack(side='left', padx=5)
+
+        ttk.Separator(top_button_frame, orient='vertical').pack(side='left', fill='y', padx=20, pady=2)
+
         ttk.Button(top_button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
         ttk.Button(top_button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
         ttk.Button(top_button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
-        ttk.Button(top_button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=25)
+
+        ttk.Separator(top_button_frame, orient='vertical').pack(side='left', fill='y', padx=20, pady=2)
+
+        ttk.Button(top_button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=5)
     
     def update_category_list(self):
         categories = self.db.get_categories()
@@ -114,7 +166,20 @@ class TransactionsTab:
         # Fetch transactions from DB and insert into the treeview
         transactions = self.db.get_transactions(start_date, end_date, category)
 
-        for trans in transactions:
+        keyword = self.keyword_var.get().strip()
+
+        if keyword != '':
+            # filter by exact or fuzzy match on description based on checkbox
+            search_exact = self.use_exact_keyword_filter_var.get()
+            if search_exact:
+                filtered = [t for t in transactions if exact_match(keyword, t.get('description', ''))]
+            else:
+                thresh = float(self.fuzzy_threshold_var.get())
+                filtered = [t for t in transactions if fuzzy_match(keyword, t.get('description', ''), threshold=thresh)]
+        else:
+            filtered = transactions
+
+        for trans in filtered:
             # Format amount for display, show negative amounts with a leading '-'
             amount_str = f"${trans['amount']:.2f}"
             if trans['amount'] < 0:
@@ -155,6 +220,12 @@ class TransactionsTab:
         self.end_date_picker.configure(state=state)
         self.refresh_transactions()
 
+    def toggle_search_method(self):
+        state = 'disabled' if self.use_exact_keyword_filter_var.get() else 'normal'
+        self.fuzzy_threshold_scale.configure(state=state)
+        self.search_label_var.set('Exact' if state == 'disabled' else 'Fuzzy')
+        self.refresh_transactions()
+
     def clear_filters(self):
         self.use_date_filter_var.set(False)
         self.start_date_picker.set_date(datetime.now())
@@ -162,6 +233,12 @@ class TransactionsTab:
         self.start_date_picker.configure(state='disabled')
         self.end_date_picker.configure(state='disabled')
         self.category_var.set('')
+        self.keyword_var.set('')
+        self.use_exact_keyword_filter_var.set(True)
+        self.fuzzy_threshold_scale.configure(state='disabled')
+        self.search_label_var.set('Exact')
+        self.fuzzy_threshold_var.set(0.9)
+        self.fuzzy_threshold_label.config(text=f'{float(self.fuzzy_threshold_var.get()):.2f}')
         self.refresh_transactions()
 
     def sort_by_column(self, column):

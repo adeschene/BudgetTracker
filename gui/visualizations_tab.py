@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from database.db_manager import DatabaseManager
+from utils.helpers import fuzzy_match, exact_match
 
 class VisualizationsTab:
     def __init__(self, parent, db: DatabaseManager):
@@ -323,22 +324,6 @@ class VisualizationsTab:
         self.figure6.tight_layout()
         self.canvas6.draw()
 
-    def _fuzzy_match(self, keyword, text, threshold=0.9):
-        # Simple fuzzy matching: treat as match if substring OR if
-        # a sufficient fraction of keyword characters appear in text.
-        keyword_lower = keyword.lower()
-        text_lower = text.lower()
-        if keyword_lower in text_lower:
-            return True
-        # character-level matching
-        matches = sum(1 for c in keyword_lower if c in text_lower)
-        score = matches / len(keyword_lower) if keyword_lower else 0
-        return score >= threshold
-
-    def _exact_match(self, keyword, text):
-        # Case-insensitive substring match
-        return keyword.lower() in text.lower()
-
     def refresh_keyword_drilldown_chart(self):
         # Draw monthly totals for transactions that match the provided keyword
         self.ax7.clear()
@@ -355,9 +340,9 @@ class VisualizationsTab:
         use_fuzzy = self.fuzzy_match_var.get()
         if use_fuzzy:
             thresh = float(self.fuzzy_threshold_var.get())
-            filtered = [t for t in tx if self._fuzzy_match(keyword, t.get('description', ''), threshold=thresh)]
+            filtered = [t for t in tx if fuzzy_match(keyword, t.get('description', ''), threshold=thresh)]
         else:
-            filtered = [t for t in tx if self._exact_match(keyword, t.get('description', ''))]
+            filtered = [t for t in tx if exact_match(keyword, t.get('description', ''))]
 
         monthly = self._aggregate_monthly(filtered, kind='all')
 

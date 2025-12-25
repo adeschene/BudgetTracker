@@ -15,7 +15,7 @@ class MainWindow:
         self.root = root
         self.root.title("Personal Budget Tracker")
         # Open window in the center of the screen
-        w, h = 1200, 800
+        w, h = 1280, 800
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2

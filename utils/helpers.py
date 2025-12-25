@@ -37,3 +37,19 @@ def center_window(window):
 
     # Apply the calculated geometry so the window appears centered
     window.geometry(f"{width}x{height}+{x}+{y}")
+
+def fuzzy_match(keyword, text, threshold=0.9):
+        # Simple fuzzy matching: treat as match if substring OR if
+        # a sufficient fraction of keyword characters appear in text.
+        keyword_lower = keyword.lower()
+        text_lower = text.lower()
+        if keyword_lower in text_lower:
+            return True
+        # character-level matching
+        matches = sum(1 for c in keyword_lower if c in text_lower)
+        score = matches / len(keyword_lower) if keyword_lower else 0
+        return score >= threshold
+
+def exact_match(keyword, text):
+    # Case-insensitive substring match
+    return keyword.lower() in text.lower()

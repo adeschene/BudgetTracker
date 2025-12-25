@@ -265,7 +265,7 @@ class ImportDialog:
         self.template_var = tk.StringVar()
         template_combo = ttk.Combobox(self.dialog, textvariable=self.template_var, state='readonly')
         templates = self.db.get_import_templates()
-        # Prepend auto-detect option; templates are optional now
+        # Prepend auto-detect option; templates are optional
         template_combo['values'] = ['(Auto-detect columns)'] + [t['template_name'] for t in templates]
         template_combo.set('(Auto-detect columns)')
         template_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
