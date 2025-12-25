@@ -116,11 +116,13 @@ class ImportDialog:
         self.dialog.geometry("400x200")
         self.dialog.transient(parent)
         
-        ttk.Label(self.dialog, text="Import Template:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Import Template (optional):").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.template_var = tk.StringVar()
         template_combo = ttk.Combobox(self.dialog, textvariable=self.template_var, state='readonly')
         templates = self.db.get_import_templates()
-        template_combo['values'] = [t['template_name'] for t in templates]
+        # Prepend auto-detect option; templates are optional now
+        template_combo['values'] = ['(Auto-detect columns)'] + [t['template_name'] for t in templates]
+        template_combo.set('(Auto-detect columns)')
         template_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
         self.has_header_var = tk.BooleanVar(value=True)
@@ -144,16 +146,30 @@ class ImportDialog:
 
     def do_import(self):
         template_name = self.template_var.get()
-        if not template_name:
-            messagebox.showerror("Error", "Please select an import template")
-            return
-
-        templates = self.db.get_import_templates()
-        template = next((t for t in templates if t['template_name'] == template_name), None)
-
-        if not template:
-            messagebox.showerror("Error", "Template not found")
-            return
+        
+        # If auto-detect is selected, use a default template that lets parse_csv auto-detect columns
+        if template_name == '(Auto-detect columns)' or not template_name:
+            template = {
+                'id': None,
+                'template_name': 'Auto-detect',
+                'account_name': 'Imported Transactions',
+                'date_column': None,  # Will be auto-detected by parse_csv
+                'description_column': None,  # Will be auto-detected by parse_csv
+                'amount_column': None,  # Will be auto-detected by parse_csv
+                'debit_column': None,
+                'credit_column': None,
+                'description2_column': None,
+                'description_delimiter': ' - ',
+                'skip_rows': 0,
+                'notes': 'Auto-generated template'
+            }
+        else:
+            templates = self.db.get_import_templates()
+            template = next((t for t in templates if t['template_name'] == template_name), None)
+            
+            if not template:
+                messagebox.showerror("Error", "Template not found")
+                return
 
         try:
             # Delegate parsing and insertion to CSVImporter

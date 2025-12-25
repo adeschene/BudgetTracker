@@ -151,7 +151,8 @@ class CSVImporter:
         account_name = template['account_name']
         skip_rows = template.get('skip_rows', 0)
 
-        rules = self.db.get_description_rules(template['id'])
+        # Only fetch rules if template has an ID (auto-detect templates have id=None)
+        rules = self.db.get_description_rules(template['id']) if template['id'] else []
 
         # Parse CSV into normalized transaction dicts using template mapping
         transactions = self.parse_csv(file_path, date_col, desc_col, amount_col, debit_col, credit_col, desc2_col, delimiter, has_header, skip_rows)
