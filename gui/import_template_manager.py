@@ -85,6 +85,7 @@ class ImportTemplateManager:
         
         ttk.Button(self.dialog, text="Close", command=self.dialog.destroy).pack(pady=10)
         
+        # Load existing templates and rules into the UI
         self.refresh_templates()
 
         self.dialog.update_idletasks()
@@ -92,12 +93,14 @@ class ImportTemplateManager:
         self.dialog.deiconify()
     
     def refresh_templates(self):
+        # Clear template list and repopulate from DB
         for item in self.template_tree.get_children():
             self.template_tree.delete(item)
         
         templates = self.db.get_import_templates()
         
         for template in templates:
+            # Display template name and linked account; keep id in tags
             self.template_tree.insert('', 'end', values=(
                 template['template_name'],
                 template['account_name']
@@ -107,6 +110,7 @@ class ImportTemplateManager:
         self.refresh_rules()
     
     def refresh_rules(self):
+        # Clear rules list and populate with rules for selected template
         for item in self.rules_tree.get_children():
             self.rules_tree.delete(item)
         
@@ -118,6 +122,7 @@ class ImportTemplateManager:
         rules = self.db.get_description_rules(template_id)
         
         for rule in rules:
+            # Show human-friendly 1-based order along with regex and replacement
             self.rules_tree.insert('', 'end', values=(
                 rule['rule_order'] + 1,
                 rule['pattern'],
@@ -207,6 +212,7 @@ class ImportTemplateManager:
         
         rule_ids[index], rule_ids[index-1] = rule_ids[index-1], rule_ids[index]
         
+        # Persist the new ordering and refresh the UI
         self.db.reorder_description_rules(template_id, rule_ids)
         self.refresh_rules()
         
@@ -232,6 +238,7 @@ class ImportTemplateManager:
         
         rule_ids[index], rule_ids[index+1] = rule_ids[index+1], rule_ids[index]
         
+        # Persist moved-down ordering and keep the moved item selected
         self.db.reorder_description_rules(template_id, rule_ids)
         self.refresh_rules()
         
@@ -245,6 +252,8 @@ class TemplateDialog:
         self.template = template
         self.callback = callback
 
+        # Dialog to create or edit an import template. Templates define
+        # how CSV columns map to transaction fields and related options.
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Edit Template" if template else "Add Template")
@@ -341,6 +350,7 @@ class TemplateDialog:
             self.credit_entry.config(state='normal')
 
     def save(self):
+        # Validate basic required fields
         if not self.name_var.get() or not self.account_var.get():
             messagebox.showerror("Error", "Template name and account are required")
             return
@@ -361,6 +371,7 @@ class TemplateDialog:
                 messagebox.showerror("Error", "Both debit and credit columns are required")
                 return
 
+        # Either update an existing template or create a new one
         if self.template:
             self.db.update_import_template(
                 template_id=self.template['id'],
@@ -404,6 +415,9 @@ class RuleDialog:
         self.rule = rule
         self.callback = callback
 
+        # Dialog to add or edit a description rule. Rules are evaluated
+        # in order for a template and can transform descriptions, assign
+        # categories, or mark transactions to be ignored.
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Edit Rule" if rule else "Add Rule")
@@ -454,6 +468,7 @@ class RuleDialog:
             self.category_combo.config(state='readonly')
 
     def save(self):
+        # Validate rule inputs: pattern is required; replacement required unless ignoring
         if not self.pattern_var.get():
             messagebox.showerror("Error", "Pattern is required")
             return
@@ -462,6 +477,7 @@ class RuleDialog:
             messagebox.showerror("Error", "Replacement is required when not ignoring")
             return
 
+        # Apply the change: update existing rule or append as a new ordered rule
         if self.rule:
             self.db.update_description_rule(
                 rule_id=self.rule['id'],

@@ -49,6 +49,7 @@ class TemplateManagerDialog:
         ttk.Button(button_frame, text="Delete Template", command=self.delete_template).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Close", command=self.dialog.destroy).pack(side='left', padx=5)
 
+        # Load templates into the list when dialog opens
         self.refresh_templates()
 
         self.dialog.update_idletasks()
@@ -56,6 +57,7 @@ class TemplateManagerDialog:
         self.dialog.deiconify()
 
     def refresh_templates(self):
+        # Refresh the displayed list of asset templates from the DB
         for item in self.tree.get_children():
             self.tree.delete(item)
 
@@ -102,6 +104,7 @@ class TemplateDialog:
         self.template = template
         self.callback = callback
 
+        # Dialog to add or edit an asset template (used when applying recurring assets)
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Add Template" if not template else "Edit Template")
@@ -135,6 +138,7 @@ class TemplateDialog:
         self.dialog.deiconify()
 
     def save(self):
+        # Persist template changes and refresh caller view
         if self.template:
             self.db.update_asset_template(
                 template_id=self.template['id'],
@@ -221,6 +225,7 @@ class NetWorthTab:
         self.tree.column('Value', width=120)
         self.tree.column('Notes', width=200)
 
+        # Double-click allows inline editing of entries (asset/type/value/notes)
         self.tree.bind('<Double-Button-1>', self.on_double_click)
 
         self.tree.pack(fill='both', expand=True)
@@ -276,6 +281,7 @@ class NetWorthTab:
         return start_date, end_date
     
     def refresh_data(self):
+        # Reload entries for the currently selected month and display summary
         for item in self.tree.get_children():
             self.tree.delete(item)
 
@@ -294,8 +300,10 @@ class NetWorthTab:
                 entry['notes'] or ''
             ]
 
+            # Store entry id in tags for edits/deletes
             self.tree.insert('', 'end', values=display_values, tags=(entry['id'],))
 
+        # Build a summary grouping by asset type for the small summary box
         summary = self.db.get_net_worth_summary(start_date, end_date)
         total = sum(summary.values())
 
@@ -359,6 +367,7 @@ class NetWorthTab:
         existing_assets = {row[0] for row in cursor.fetchall()}
         conn.close()
 
+        # Filter templates to only ones not already present for the month
         templates_to_add = [t for t in templates if t['asset_name'] not in existing_assets]
 
         if not templates_to_add:
@@ -366,6 +375,7 @@ class NetWorthTab:
                               f"All templates have already been added to {datetime(self.current_year, self.current_month, 1).strftime('%B %Y')}.")
             return
 
+        # Open a dialog to enter initial values and apply selected templates
         ApplyTemplateDialog(self.frame, self.db, templates_to_add, self.current_year, self.current_month, self.refresh_data)
 
     def manage_templates(self):
@@ -386,6 +396,7 @@ class NetWorthTab:
         column_names = ['Date', 'Asset', 'Type', 'Value', 'Notes']
         column_name = column_names[column_index]
 
+        # Allow editing of asset name, type, numeric value and notes
         if column_name not in ['Asset', 'Type', 'Value', 'Notes']:
             return
 
@@ -409,6 +420,7 @@ class NetWorthTab:
         edit_entry.focus_set()
         edit_entry.select_range(0, tk.END)
 
+        # Commit the inline edit to the DB via update_entry_field
         def save_edit(event=None):
             new_value = edit_var.get()
             edit_entry.destroy()
@@ -428,6 +440,7 @@ class NetWorthTab:
         edit_combo.place(x=x, y=y, width=width, height=height)
         edit_combo.focus_set()
 
+        # Commit combobox selection to update the entry
         def save_edit(event=None):
             if edit_combo.winfo_exists():
                 new_value = edit_var.get()
@@ -451,6 +464,7 @@ class NetWorthTab:
             return
 
         try:
+            # Update the in-memory entry and persist change
             if field_name == 'Asset':
                 entry['asset_name'] = new_value
             elif field_name == 'Type':
@@ -469,6 +483,7 @@ class NetWorthTab:
                 notes=entry['notes']
             )
 
+            # Refresh display after successful update
             self.refresh_data()
         except ValueError:
             messagebox.showerror("Error", "Invalid value entered")
@@ -479,6 +494,7 @@ class NetWorthDialog:
         self.entry = entry
         self.callback = callback
 
+        # Dialog for adding or editing a net worth entry (asset value)
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Add Net Worth Entry" if not entry else "Edit Net Worth Entry")
@@ -535,6 +551,7 @@ class NetWorthDialog:
         try:
             value = float(self.value_var.get())
 
+            # Persist the new or updated entry
             if self.entry:
                 self.db.update_net_worth_entry(
                     entry_id=self.entry['id'],

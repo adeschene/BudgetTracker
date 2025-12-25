@@ -139,7 +139,7 @@ class VisualizationsTab:
                     pass
 
         ttk.Checkbutton(kw_control, text='Exact Match', variable=self.exact_match_var, command=_on_exact_toggle).pack(side='left', padx=(10, 5))
-        ttk.Checkbutton(kw_control, text='Use Fuzzy Match', variable=self.fuzzy_match_var, command=_on_fuzzy_toggle).pack(side='left', padx=(6, 5))
+        ttk.Checkbutton(kw_control, text='Fuzzy Match', variable=self.fuzzy_match_var, command=_on_fuzzy_toggle).pack(side='left', padx=(6, 5))
 
         # Fuzzy threshold control (disabled unless fuzzy match enabled)
         self.fuzzy_threshold_var = tk.DoubleVar(value=0.9)
@@ -164,7 +164,7 @@ class VisualizationsTab:
         self.canvas7 = FigureCanvasTkAgg(self.figure7, kw_frame)
         self.canvas7.get_tk_widget().pack(fill='both', expand=True)
 
-        # Initial draw
+        # Initial draw of all charts using current default period
         self.refresh_charts()
 
     def get_date_range(self):
@@ -188,9 +188,12 @@ class VisualizationsTab:
         else:
             return None, None
 
+        # Return ISO date strings useful for DB queries
         return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
 
     def refresh_charts(self):
+        # Refresh each visualization panel. Each function queries the DB
+        # and redraws its respective matplotlib axes and canvas.
         self.refresh_net_worth_chart()
         self.refresh_expense_chart()
         self.refresh_income_chart()
@@ -214,7 +217,8 @@ class VisualizationsTab:
         return months
 
     def _aggregate_monthly(self, transactions, kind='all'):
-        # transactions: list of dicts with 'date' and 'amount'
+        # Aggregate transactions into monthly buckets (YYYY-MM) and sum amounts.
+        # `kind` can be 'income', 'expense' or 'all' to filter by sign.
         data = {}
         for t in transactions:
             try:
@@ -253,6 +257,7 @@ class VisualizationsTab:
                 self.category_var.set(names[0])
 
     def refresh_category_drilldown_chart(self):
+        # Draw a bar chart showing monthly totals for the selected category
         self.ax6.clear()
         # ensure category list is up-to-date
         try:
@@ -284,6 +289,7 @@ class VisualizationsTab:
         else:
             months = sorted(monthly.keys())
 
+        # Use absolute value for display (expenses may be negative in DB)
         values = [abs(monthly.get(m, 0.0)) for m in months]
 
         # Use a neutral color for category drilldown bars
@@ -318,7 +324,8 @@ class VisualizationsTab:
         self.canvas6.draw()
 
     def _fuzzy_match(self, keyword, text, threshold=0.9):
-        # Simple fuzzy matching: count matching chars / total unique chars
+        # Simple fuzzy matching: treat as match if substring OR if
+        # a sufficient fraction of keyword characters appear in text.
         keyword_lower = keyword.lower()
         text_lower = text.lower()
         if keyword_lower in text_lower:
@@ -333,6 +340,7 @@ class VisualizationsTab:
         return keyword.lower() in text.lower()
 
     def refresh_keyword_drilldown_chart(self):
+        # Draw monthly totals for transactions that match the provided keyword
         self.ax7.clear()
         keyword = self.keyword_var.get().strip()
         if not keyword:
@@ -364,6 +372,7 @@ class VisualizationsTab:
             months = sorted(monthly.keys())
 
         values = [monthly.get(m, 0.0) for m in months]
+        # Positive amounts shown green (income), negative red (expense)
         colors = ['green' if v >= 0 else 'red' for v in values]
 
         bars = self.ax7.bar(range(len(months)), values, color=colors, alpha=0.7, edgecolor='black')
@@ -385,6 +394,7 @@ class VisualizationsTab:
         self.canvas7.draw()
 
     def refresh_income_chart(self):
+        # Line/bar chart showing income totals per month
         self.ax3.clear()
         start_date, end_date = self.get_date_range()
         tx = self._get_transactions_in_range(start_date, end_date)
@@ -416,6 +426,7 @@ class VisualizationsTab:
         self.canvas3.draw()
 
     def refresh_expenses_over_time_chart(self):
+        # Bar chart showing expense totals per month
         self.ax4.clear()
         start_date, end_date = self.get_date_range()
         tx = self._get_transactions_in_range(start_date, end_date)
@@ -447,6 +458,7 @@ class VisualizationsTab:
         self.canvas4.draw()
 
     def refresh_savings_chart(self):
+        # Savings = income - expenses per month
         self.ax5.clear()
         start_date, end_date = self.get_date_range()
         tx = self._get_transactions_in_range(start_date, end_date)
@@ -480,6 +492,7 @@ class VisualizationsTab:
         self.canvas5.draw()
 
     def refresh_net_worth_chart(self):
+        # Grouped bar chart showing assets, liabilities and net worth over time
         self.ax1.clear()
 
         history = self.db.get_net_worth_history()
@@ -491,6 +504,7 @@ class VisualizationsTab:
             self.canvas1.draw()
             return
 
+        # `history` is expected to be list of dicts with 'month' and 'breakdown'
         months = [h['month'] for h in history]
 
         # compute assets, liabilities, and net for each month

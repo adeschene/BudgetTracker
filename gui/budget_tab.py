@@ -5,15 +5,18 @@ from gui.shared_functions import center_window
 
 class BudgetTab:
     def __init__(self, parent, db: DatabaseManager):
+        # Store the database manager and create a containing frame
         self.db = db
         self.frame = ttk.Frame(parent)
-        
+
+        # Build UI widgets for the Budget tab
         self.setup_ui()
     
     def setup_ui(self):
+        # Top info label explaining the purpose of this tab
         info_frame = ttk.Frame(self.frame)
         info_frame.pack(fill='x', padx=10, pady=10)
-        
+
         ttk.Label(info_frame, text="Set monthly budget targets for each expense category").pack()
         
         tree_frame = ttk.Frame(self.frame)
@@ -22,8 +25,9 @@ class BudgetTab:
         scrollbar = ttk.Scrollbar(tree_frame)
         scrollbar.pack(side='right', fill='y')
         
+        # Treeview displays budget rows: category, monthly target and notes
         self.tree = ttk.Treeview(tree_frame, columns=('Category', 'Monthly Target', 'Notes'),
-                                show='headings', yscrollcommand=scrollbar.set)
+                    show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
         
         self.tree.heading('Category', text='Category')
@@ -46,20 +50,24 @@ class BudgetTab:
         self.refresh_budgets()
     
     def refresh_budgets(self):
+        # Clear existing rows
         for item in self.tree.get_children():
             self.tree.delete(item)
-        
+
+        # Load budget targets from the database and populate the tree
         budgets = self.db.get_budget_targets()
-        
+
         for budget in budgets:
             display_values = [
                 budget['category'],
                 f"${budget['monthly_target']:.2f}",
                 budget['notes'] or ''
             ]
+            # Store budget id in the item's tags for later lookup
             self.tree.insert('', 'end', values=display_values, tags=(budget['id'],))
     
     def add_budget(self):
+        # Open dialog to create a new budget target; refresh after save
         BudgetDialog(self.frame, self.db, callback=self.refresh_budgets)
     
     def edit_budget(self):
@@ -73,6 +81,7 @@ class BudgetTab:
         budget = next((b for b in budgets if b['id'] == budget_id), None)
         
         if budget:
+            # Open dialog pre-filled with the selected budget for editing
             BudgetDialog(self.frame, self.db, budget=budget, callback=self.refresh_budgets)
     
     def delete_budget(self):
@@ -95,6 +104,7 @@ class BudgetDialog:
         
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
+        # Toplevel dialog used for adding or editing a budget target
         self.dialog.title("Edit Budget" if budget else "Add Budget")
         self.dialog.geometry("400x250")
         self.dialog.transient(parent)
@@ -109,6 +119,7 @@ class BudgetDialog:
             category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=categories)
             category_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
         
+        # Input for the numeric monthly target amount
         ttk.Label(self.dialog, text="Monthly Target:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.target_var = tk.StringVar(value=str(budget['monthly_target']) if budget else '0')
         ttk.Entry(self.dialog, textvariable=self.target_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
@@ -141,10 +152,12 @@ class BudgetDialog:
                     notes=self.notes_var.get()
                 )
             else:
+                # Creating a new budget requires selecting a category
                 if not self.category_var.get():
                     messagebox.showerror("Error", "Please select a category")
                     return
-                
+
+                # Insert new budget target into the database
                 self.db.add_budget_target(
                     category=self.category_var.get(),
                     monthly_target=target,
@@ -152,6 +165,7 @@ class BudgetDialog:
                 )
             
             if self.callback:
+                # Notify caller to refresh displayed data
                 self.callback()
             
             self.dialog.destroy()

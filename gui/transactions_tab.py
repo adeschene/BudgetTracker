@@ -7,12 +7,16 @@ from gui.shared_functions import center_window
 
 class TransactionsTab:
     def __init__(self, parent, db: DatabaseManager, main_window=None):
+        # Database manager and optional reference to MainWindow (for import)
         self.db = db
         self.main_window = main_window
+
+        # Container frame for this tab and sorting state
         self.frame = ttk.Frame(parent)
         self.sort_column = None
         self.sort_reverse = False
 
+        # Build UI and populate data
         self.setup_ui()
         self.refresh_transactions()
     
@@ -55,8 +59,9 @@ class TransactionsTab:
         scrollbar = ttk.Scrollbar(tree_frame)
         scrollbar.pack(side='right', fill='y')
         
+        # Main treeview showing transactions with clickable column headers
         self.tree = ttk.Treeview(tree_frame, columns=('Date', 'Description', 'Amount', 'Category', 'Account', 'Notes'),
-                                 show='headings', yscrollcommand=scrollbar.set)
+                     show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
 
         self.tree.heading('Date', text='Date', command=lambda: self.sort_by_column('Date'))
@@ -73,6 +78,7 @@ class TransactionsTab:
         self.tree.column('Account', width=60, anchor='center')
         self.tree.column('Notes', width=100)
 
+        # Double-click to edit a cell inline
         self.tree.bind('<Double-Button-1>', self.on_double_click)
 
         self.tree.pack(fill='both', expand=True)
@@ -80,6 +86,7 @@ class TransactionsTab:
         button_frame = ttk.Frame(self.frame)
         button_frame.pack(pady=10)
 
+        # Action buttons (import only when created via MainWindow)
         if self.main_window:
             ttk.Button(button_frame, text="Import CSV", style='Accent.TButton', command=self.main_window.import_csv).pack(side='left', padx=5)
             ttk.Button(button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
@@ -93,20 +100,25 @@ class TransactionsTab:
         self.category_combo['values'] = category_names
     
     def refresh_transactions(self):
+        # Clear existing rows
         for item in self.tree.get_children():
             self.tree.delete(item)
 
+        # Prepare filter arguments (date filter is optional)
         start_date = self.start_date_picker.get() if self.use_date_filter_var.get() else None
         end_date = self.end_date_picker.get() if self.use_date_filter_var.get() else None
         category = self.category_var.get() or None
 
+        # Fetch transactions from DB and insert into the treeview
         transactions = self.db.get_transactions(start_date, end_date, category)
 
         for trans in transactions:
+            # Format amount for display, show negative amounts with a leading '-'
             amount_str = f"${trans['amount']:.2f}"
             if trans['amount'] < 0:
                 amount_str = f"-${abs(trans['amount']):.2f}"
             
+            # Store transaction id in tags for later edits/deletes
             self.tree.insert('', 'end', values=(
                 trans['date'],
                 trans['description'],
@@ -138,19 +150,25 @@ class TransactionsTab:
             self.sort_column = column
             self.sort_reverse = False
 
+        # Build a list of (value, item_id) tuples for sorting
         items = [(self.tree.set(item, column), item) for item in self.tree.get_children('')]
 
+        # Choose sorting strategy depending on column type
         if column == 'Amount':
+            # Parse formatted currency strings back to floats for numeric sort
             items.sort(key=lambda x: float(x[0].replace('$', '').replace(',', '').replace('-', '-')), reverse=self.sort_reverse)
         elif column == 'Date':
             items.sort(key=lambda x: x[0], reverse=self.sort_reverse)
         else:
+            # Case-insensitive string sort for other columns
             items.sort(key=lambda x: x[0].lower(), reverse=self.sort_reverse)
 
+        # Reorder the tree items according to sorted order
         for index, (val, item) in enumerate(items):
             self.tree.move(item, '', index)
     
     def add_transaction(self):
+        # Open a dialog to add a new transaction; refresh on save
         TransactionDialog(self.frame, self.db, callback=self.refresh_transactions)
 
     def edit_transaction(self):
@@ -164,6 +182,7 @@ class TransactionsTab:
         transaction = next((t for t in transactions if t['id'] == transaction_id), None)
 
         if transaction:
+            # Edit the selected transaction using the dialog
             TransactionDialog(self.frame, self.db, transaction=transaction, callback=self.refresh_transactions)
 
     def delete_transaction(self):
@@ -176,6 +195,7 @@ class TransactionsTab:
         message = f"Are you sure you want to delete {count} transaction(s)?"
 
         if messagebox.askyesno("Confirm", message):
+            # Delete each selected transaction and refresh view
             for item in selection:
                 transaction_id = self.tree.item(item)['tags'][0]
                 self.db.delete_transaction(transaction_id)
@@ -196,6 +216,7 @@ class TransactionsTab:
         column_names = ['Date', 'Description', 'Amount', 'Category', 'Account', 'Notes']
         column_name = column_names[column_index]
 
+        # Only allow inline editing on editable columns
         if column_name not in ['Description', 'Amount', 'Category', 'Account', 'Notes']:
             return
 
@@ -203,7 +224,7 @@ class TransactionsTab:
         current_value = self.tree.item(row_id)['values'][column_index]
 
         x, y, width, height = self.tree.bbox(row_id, column)
-
+        # Create an inline editor at the cell's bounding box
         if column_name in ['Category', 'Account']:
             self.edit_cell_combobox(row_id, column_name, column_index, entry_id, current_value, x, y, width, height)
         else:
@@ -219,6 +240,7 @@ class TransactionsTab:
         edit_entry.focus_set()
         edit_entry.select_range(0, tk.END)
 
+        # Commit edit: pass new value back to update_transaction_field
         def save_edit(event=None):
             new_value = edit_var.get()
             edit_entry.destroy()
@@ -245,6 +267,7 @@ class TransactionsTab:
         edit_combo.place(x=x, y=y, width=width, height=height)
         edit_combo.focus_set()
 
+        # Commit combobox selection to the database
         def save_edit(event=None):
             if edit_combo.winfo_exists():
                 new_value = edit_var.get()
@@ -267,6 +290,7 @@ class TransactionsTab:
             return
 
         try:
+            # Update the in-memory transaction dict then persist
             if field_name == 'Description':
                 transaction['description'] = new_value
             elif field_name == 'Amount':
@@ -278,6 +302,7 @@ class TransactionsTab:
             elif field_name == 'Notes':
                 transaction['notes'] = new_value
 
+            # Determine transaction type from amount sign and persist changes
             transaction_type = 'income' if transaction['amount'] > 0 else 'expense'
 
             self.db.update_transaction(
@@ -291,6 +316,7 @@ class TransactionsTab:
                 notes=transaction.get('notes', '')
             )
 
+            # Refresh view to show updated values
             self.refresh_transactions()
         except ValueError:
             messagebox.showerror("Error", "Invalid value entered")
@@ -301,6 +327,7 @@ class TransactionDialog:
         self.transaction = transaction
         self.callback = callback
         
+        # Dialog used to add or edit a single transaction record
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Add Transaction" if not transaction else "Edit Transaction")

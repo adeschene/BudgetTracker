@@ -105,8 +105,10 @@ class DatabaseManager:
             )
         ''')
 
+        # Ensure default categories exist and run lightweight migrations
         self._insert_default_categories(cursor)
 
+        # Add any missing columns to import_templates/description_rules from older versions
         self._migrate_import_templates_table(cursor)
 
         conn.commit()
@@ -116,6 +118,7 @@ class DatabaseManager:
         cursor.execute("PRAGMA table_info(net_worth_entries)")
         columns = [column[1] for column in cursor.fetchall()]
 
+        # Add historical migration columns if they don't exist yet
         if 'is_recurring' not in columns:
             cursor.execute('ALTER TABLE net_worth_entries ADD COLUMN is_recurring INTEGER DEFAULT 0')
         if 'recurring_start_date' not in columns:
@@ -162,6 +165,7 @@ class DatabaseManager:
             ('Other Expense', 'expense', '')
         ]
         
+        # Insert sensible default categories (idempotent via INSERT OR IGNORE)
         for name, cat_type, keywords in default_categories:
             cursor.execute('''
                 INSERT OR IGNORE INTO categories (name, type, keywords)
@@ -179,6 +183,7 @@ class DatabaseManager:
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (date, description, amount, category, account, transaction_type, notes))
         
+        # Return the new transaction id for caller convenience
         conn.commit()
         transaction_id = cursor.lastrowid
         conn.close()
@@ -207,6 +212,7 @@ class DatabaseManager:
         
         query += ' ORDER BY date DESC'
         
+        # Execute parameterized query and return list of dicts (column name -> value)
         cursor.execute(query, params)
         columns = [description[0] for description in cursor.description]
         transactions = [dict(zip(columns, row)) for row in cursor.fetchall()]
@@ -218,11 +224,12 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
+        # Build dynamic SET clause using kwargs and execute parameterized update
         set_clause = ', '.join([f'{key} = ?' for key in kwargs.keys()])
         values = list(kwargs.values()) + [transaction_id]
-        
+
         cursor.execute(f'UPDATE transactions SET {set_clause} WHERE id = ?', values)
-        
+
         conn.commit()
         conn.close()
     

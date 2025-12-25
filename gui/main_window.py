@@ -23,13 +23,16 @@ class MainWindow:
         y = (sh - h) // 2
         self.root.geometry(f"{w}x{h}+{x}+{y}")
         
+        # Initialize database manager and CSV import helper
         self.db = DatabaseManager()
         self.csv_importer = CSVImporter(self.db)
-        
+
+        # Create application menu and main UI (tabs)
         self.setup_menu()
         self.setup_ui()
     
     def setup_menu(self):
+        # Build the top menubar with File, Data and Help menus
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
 
@@ -52,6 +55,7 @@ class MainWindow:
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill='both', expand=True, padx=5, pady=5)
 
+        # Create and attach each top-level tab, passing the shared DatabaseManager
         self.transactions_tab = TransactionsTab(self.notebook, self.db, self)
         self.net_worth_tab = NetWorthTab(self.notebook, self.db)
         self.budget_tab = BudgetTab(self.notebook, self.db)
@@ -70,13 +74,16 @@ class MainWindow:
             filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")]
         )
         
+        # If user selected a file, open the import dialog which handles mapping
         if not file_path:
             return
-        
+
         dialog = ImportDialog(self.root, self.db, self.csv_importer, file_path)
+        # Wait for the import dialog to close before continuing
         self.root.wait_window(dialog.dialog)
         
         if dialog.success:
+            # Refresh the transactions view and inform the user
             self.transactions_tab.refresh_transactions()
             messagebox.showinfo("Success", f"Imported {dialog.count} transactions")
     
@@ -87,6 +94,7 @@ class MainWindow:
         AccountManager(self.root, self.db)
 
     def manage_import_templates(self):
+        # Open the import template manager dialog
         from gui.import_template_manager import ImportTemplateManager
         ImportTemplateManager(self.root, self.db)
 
@@ -101,6 +109,7 @@ class ImportDialog:
         self.success = False
         self.count = 0
 
+        # Lightweight dialog to choose import template and options
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Import CSV")
@@ -147,6 +156,7 @@ class ImportDialog:
             return
 
         try:
+            # Delegate parsing and insertion to CSVImporter
             self.count = self.csv_importer.import_transactions(
                 self.file_path,
                 template=template,
@@ -196,6 +206,7 @@ class CategoryManager:
         self.window.deiconify()
     
     def refresh_categories(self):
+        # Reload categories from DB and repopulate the treeview
         for item in self.tree.get_children():
             self.tree.delete(item)
         
@@ -221,6 +232,7 @@ class CategoryManager:
         keywords_var = tk.StringVar()
         ttk.Entry(dialog, textvariable=keywords_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
         
+        # Save new category to the database and refresh the list
         def save():
             self.db.add_category(name_var.get(), type_var.get(), keywords_var.get())
             self.refresh_categories()
@@ -264,6 +276,7 @@ class CategoryManager:
         keywords_var = tk.StringVar(value=category.get('keywords', ''))
         ttk.Entry(dialog, textvariable=keywords_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
+        # Update selected category and handle unique-name constraint
         def save_edit():
             try:
                 self.db.update_category(category_id, name_var.get(), type_var.get(), keywords_var.get())
@@ -328,6 +341,7 @@ class AccountManager:
         self.window.deiconify()
 
     def refresh_accounts(self):
+        # Reload accounts from DB and populate the treeview
         for item in self.tree.get_children():
             self.tree.delete(item)
 
@@ -359,6 +373,7 @@ class AccountManager:
 
         if messagebox.askyesno("Confirm", "Are you sure you want to delete this account?"):
             account_id = int(self.tree.item(selection[0])['tags'][0])
+            # Direct SQL here to ensure immediate removal; then refresh list
             conn = self.db.get_connection()
             cursor = conn.cursor()
             cursor.execute('DELETE FROM accounts WHERE id = ?', (account_id,))
@@ -373,6 +388,7 @@ class AccountDialog:
         self.account = account
         self.callback = callback
 
+        # Dialog for creating or editing an account record
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Add Account" if not account else "Edit Account")
@@ -405,10 +421,11 @@ class AccountDialog:
         self.dialog.grab_set()
 
     def save(self):
+        # Persist the account (update existing or insert new)
         if self.account: # Editing existing account
             conn = self.db.get_connection()
             cursor = conn.cursor()
-            # Add account to DB
+            # Update record directly using SQL
             cursor.execute('''
                 UPDATE accounts SET name = ?, type = ?, last_updated = ?
                 WHERE id = ?

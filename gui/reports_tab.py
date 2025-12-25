@@ -57,6 +57,7 @@ class ReportsTab:
         scrollbar.config(command=self.report_text.yview)
         self.report_text.pack(fill='both', expand=True)
 
+        # Automatically generate an initial report on launch
         self.generate_report()
 
     # Enable date pickers when using custom timeframe
@@ -67,6 +68,7 @@ class ReportsTab:
         else:
             self.start_date_picker.config(state='disabled')
             self.end_date_picker.config(state='disabled')
+        # Regenerate report whenever the selected period changes
         self.generate_report()
 
     # Report timeframe picker logic
@@ -94,6 +96,7 @@ class ReportsTab:
         else:
             return None, None
 
+        # Return start and end dates as ISO strings for DB queries
         return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
     
     # Generates a simple text-based financial report for the user
@@ -104,6 +107,7 @@ class ReportsTab:
         start_date, end_date = self.get_date_range()
         
         self.report_text.insert('end', "=" * self.top_btm_separator_mult + "\n")
+        # Header
         self.report_text.insert('end', "FINANCIAL REPORT\n")
         self.report_text.insert('end', "=" * self.top_btm_separator_mult + "\n\n")
         
@@ -112,8 +116,10 @@ class ReportsTab:
         else:
             self.report_text.insert('end', "Period: All Time\n\n")
         
+        # Fetch transactions within the requested date range
         transactions = self.db.get_transactions(start_date, end_date)
         
+        # Aggregate simple totals for the report
         total_income = sum(t['amount'] for t in transactions if t['amount'] > 0)
         total_expenses = sum(abs(t['amount']) for t in transactions if t['amount'] < 0)
         net_income = total_income - total_expenses
@@ -125,6 +131,7 @@ class ReportsTab:
         self.report_text.insert('end', f"Total Expenses:      ${total_expenses:>15,.2f}\n")
         self.report_text.insert('end', f"Net Income:          ${net_income:>15,.2f}\n\n")
         
+        # Breakdown expenses by category for reporting and charts
         spending_by_category = self.db.get_spending_by_category(start_date, end_date)
 
         if spending_by_category:
@@ -140,6 +147,7 @@ class ReportsTab:
 
             self.report_text.insert('end', "\n")
 
+        # Compare configured budget targets against actual spending
         budget_targets = self.db.get_budget_targets()
         if budget_targets:
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
@@ -174,6 +182,7 @@ class ReportsTab:
             self.report_text.insert('end', f"{'TOTAL':<30} ${total_budget:>11,.2f}  ${total_actual:>11,.2f}  ${total_diff:>11,.2f}\n")
             self.report_text.insert('end', "\n")
 
+        # Prepare income section
         income_transactions = [t for t in transactions if t['amount'] > 0]
         if income_transactions:
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
@@ -193,6 +202,7 @@ class ReportsTab:
             
             self.report_text.insert('end', "\n")
         
+        # Include net worth (asset/liability) snapshot information
         net_worth_entries = self.db.get_net_worth_entries(start_date, end_date)
         allowed_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Credit Card']
 
@@ -246,6 +256,7 @@ class ReportsTab:
                     self.report_text.insert('end', f"{liability_type:<30} ${value:>15,.2f}\n")
                 self.report_text.insert('end', f"\n{'-> Total Liabilities:':<30} ${-total_liabilities:>15,.2f}\n\n")
 
+            # Final net worth calculation and display
             total_net_worth = total_assets - total_liabilities
             self.report_text.insert('end', f"{'TOTAL NET WORTH:':<30} ${total_net_worth:>15,.2f}\n\n")
         

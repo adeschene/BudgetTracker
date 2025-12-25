@@ -19,6 +19,8 @@ class CSVImporter:
                 next(file, None)
 
             if has_header:
+                # Use DictReader when file contains headers; try to auto-detect
+                # common column names when caller did not supply them.
                 reader = csv.DictReader(file)
                 headers = reader.fieldnames
 
@@ -35,6 +37,7 @@ class CSVImporter:
                         if transaction:
                             transactions.append(transaction)
                     except Exception as e:
+                        # Non-fatal: skip rows that fail to parse and continue
                         print(f"Error parsing row: {e}")
                         continue
             else:
@@ -96,6 +99,7 @@ class CSVImporter:
         else:
             return None
 
+        # Normalize and return a simplified transaction dict used by importer
         return {
             'date': self._parse_date(date_str),
             'description': description,
@@ -115,6 +119,7 @@ class CSVImporter:
             '%B %d, %Y'
         ]
 
+        # Attempt several common date formats, returning ISO date on success
         for fmt in date_formats:
             try:
                 date_obj = datetime.strptime(date_str.strip(), fmt)
@@ -122,6 +127,7 @@ class CSVImporter:
             except ValueError:
                 continue
 
+        # If parsing fails, return the original string (caller may handle it)
         return date_str
 
     def _parse_amount(self, amount_str: str) -> float:
@@ -147,20 +153,25 @@ class CSVImporter:
 
         rules = self.db.get_description_rules(template['id'])
 
+        # Parse CSV into normalized transaction dicts using template mapping
         transactions = self.parse_csv(file_path, date_col, desc_col, amount_col, debit_col, credit_col, desc2_col, delimiter, has_header, skip_rows)
 
         count = 0
+        # Apply description rules and categorization, then persist each transaction
         for trans in transactions:
             description = trans['description']
             category = None
 
+            # Rules can rewrite the description, assign a category, or indicate ignore
             description, rule_category = self._apply_description_rules(description, rules)
 
+            # If a rule marked the transaction to be ignored, skip it
             if description is None:
                 continue
 
             trans['description'] = description
 
+            # Rule category takes precedence; otherwise try automatic matching
             if rule_category:
                 category = rule_category
             elif auto_categorize:
