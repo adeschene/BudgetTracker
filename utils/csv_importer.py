@@ -1,8 +1,11 @@
 import csv
 import re
+import tkinter as tk
+from tkinter import ttk, messagebox
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional
 from database.db_manager import DatabaseManager
+from utils.shared_functions import center_window
 
 class CSVImporter:
     def __init__(self, db_manager: DatabaseManager):
@@ -242,3 +245,86 @@ class CSVImporter:
             return 'Other Income'
         else:
             return 'Other Expense'
+
+class ImportDialog:
+    def __init__(self, parent, db, csv_importer, file_path):
+        self.db = db
+        self.csv_importer = csv_importer
+        self.file_path = file_path
+        self.success = False
+        self.count = 0
+
+        # Lightweight dialog to choose import template and options
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
+        self.dialog.title("Import CSV")
+        self.dialog.geometry("400x200")
+        self.dialog.transient(parent)
+        
+        ttk.Label(self.dialog, text="Import Template (optional):").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        self.template_var = tk.StringVar()
+        template_combo = ttk.Combobox(self.dialog, textvariable=self.template_var, state='readonly')
+        templates = self.db.get_import_templates()
+        # Prepend auto-detect option; templates are optional now
+        template_combo['values'] = ['(Auto-detect columns)'] + [t['template_name'] for t in templates]
+        template_combo.set('(Auto-detect columns)')
+        template_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+
+        self.has_header_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self.dialog, text="File has header row", variable=self.has_header_var).grid(row=1, column=0, columnspan=2, pady=5)
+
+        self.auto_categorize_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self.dialog, text="Auto-categorize transactions", variable=self.auto_categorize_var).grid(row=2, column=0, columnspan=2, pady=5)
+
+        button_frame = ttk.Frame(self.dialog)
+        button_frame.grid(row=3, column=0, columnspan=2, pady=20)
+
+        ttk.Button(button_frame, text="Import", command=self.do_import, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+
+        self.dialog.columnconfigure(1, weight=1)
+        
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+        self.dialog.grab_set()
+
+    def do_import(self):
+        template_name = self.template_var.get()
+        
+        # If auto-detect is selected, use a default template that lets parse_csv auto-detect columns
+        if template_name == '(Auto-detect columns)' or not template_name:
+            template = {
+                'id': None,
+                'template_name': 'Auto-detect',
+                'account_name': 'Imported Transactions',
+                'date_column': None,  # Will be auto-detected by parse_csv
+                'description_column': None,  # Will be auto-detected by parse_csv
+                'amount_column': None,  # Will be auto-detected by parse_csv
+                'debit_column': None,
+                'credit_column': None,
+                'description2_column': None,
+                'description_delimiter': ' - ',
+                'skip_rows': 0,
+                'notes': 'Auto-generated template'
+            }
+        else:
+            templates = self.db.get_import_templates()
+            template = next((t for t in templates if t['template_name'] == template_name), None)
+            
+            if not template:
+                messagebox.showerror("Error", "Template not found")
+                return
+
+        try:
+            # Delegate parsing and insertion to CSVImporter
+            self.count = self.csv_importer.import_transactions(
+                self.file_path,
+                template=template,
+                has_header=self.has_header_var.get(),
+                auto_categorize=self.auto_categorize_var.get()
+            )
+            self.success = True
+            self.dialog.destroy()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to import CSV: {str(e)}")

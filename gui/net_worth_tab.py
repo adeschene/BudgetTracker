@@ -4,7 +4,7 @@ from datetime import datetime
 from calendar import monthrange
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
-from gui.shared_functions import center_window
+from utils.shared_functions import center_window
 
 class TemplateManagerDialog:
     def __init__(self, parent, db: DatabaseManager):
@@ -12,12 +12,12 @@ class TemplateManagerDialog:
 
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
-        self.dialog.title("Manage Asset Templates")
+        self.dialog.title("Manage Asset Template")
         self.dialog.geometry("700x500")
         self.dialog.transient(parent)
 
         info_label = tk.Label(self.dialog,
-                             text="Templates are used to quickly add recurring assets to each month.\nClick 'Apply Template' in the Net Worth tab to add these to the current month.",
+                             text="This template is used to quickly add recurring assets/liabilities to each month.\nClick 'Apply Template' in the Net Worth tab to add these to the current month.",
                              font=('Roboto', 9), fg='white', justify='left')
         info_label.pack(padx=10, pady=10, anchor='w')
 
@@ -31,7 +31,7 @@ class TemplateManagerDialog:
                                 show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
 
-        self.tree.heading('Asset', text='Asset Name')
+        self.tree.heading('Asset', text='Name')
         self.tree.heading('Type', text='Type')
         self.tree.heading('Notes', text='Notes')
 
@@ -44,9 +44,9 @@ class TemplateManagerDialog:
         button_frame = ttk.Frame(self.dialog)
         button_frame.pack(pady=10)
 
-        ttk.Button(button_frame, text="Add Template", style='Accent.TButton', command=self.add_template).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Edit Template", command=self.edit_template).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Delete Template", command=self.delete_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Add Entry", style='Accent.TButton', command=self.add_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Entry", command=self.edit_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Entry", command=self.delete_template).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Close", command=self.dialog.destroy).pack(side='left', padx=5)
 
         # Load templates into the list when dialog opens
@@ -77,7 +77,7 @@ class TemplateManagerDialog:
     def edit_template(self):
         selection = self.tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select a template to edit")
+            messagebox.showwarning("Warning", "Please select an entry to edit")
             return
 
         template_id = self.tree.item(selection[0])['tags'][0]
@@ -90,10 +90,10 @@ class TemplateManagerDialog:
     def delete_template(self):
         selection = self.tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select a template to delete")
+            messagebox.showwarning("Warning", "Please select an entry to delete")
             return
 
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this template?"):
+        if messagebox.askyesno("Confirm", "Are you sure you want to delete this entry?"):
             template_id = self.tree.item(selection[0])['tags'][0]
             self.db.delete_asset_template(template_id)
             self.refresh_templates()
@@ -107,15 +107,15 @@ class TemplateDialog:
         # Dialog to add or edit an asset template (used when applying recurring assets)
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
-        self.dialog.title("Add Template" if not template else "Edit Template")
+        self.dialog.title("Add Template Entry" if not template else "Edit Template Entry")
         self.dialog.geometry("400x220")
         self.dialog.transient(parent)
 
-        ttk.Label(self.dialog, text="Asset Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.asset_var = tk.StringVar(value=template['asset_name'] if template else '')
         ttk.Entry(self.dialog, textvariable=self.asset_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
-        ttk.Label(self.dialog, text="Asset Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.type_var = tk.StringVar(value=template['asset_type'] if template else 'Cash')
         type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var)
         type_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
@@ -214,7 +214,7 @@ class NetWorthTab:
         scrollbar.config(command=self.tree.yview)
 
         self.tree.heading('Date', text='Date')
-        self.tree.heading('Asset', text='Asset Name')
+        self.tree.heading('Asset', text='Asset/Liability Name')
         self.tree.heading('Type', text='Type')
         self.tree.heading('Value', text='Value')
         self.tree.heading('Notes', text='Notes')
@@ -233,8 +233,8 @@ class NetWorthTab:
         button_frame = ttk.Frame(entries_frame)
         button_frame.pack(pady=10)
         
-        ttk.Button(button_frame, text="Apply Templates", style='Accent.TButton', command=self.apply_template).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Manage Templates", command=self.manage_templates).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Apply Template", style='Accent.TButton', command=self.apply_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Manage Template", command=self.manage_templates).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Add Entry", command=self.add_entry).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Edit Entry", command=self.edit_entry).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Delete Entry", command=self.delete_entry).pack(side='left', padx=5)

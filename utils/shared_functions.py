@@ -1,5 +1,6 @@
 def center_window(window):
-    """Center a tkinter window on the screen.
+    '''
+    Center a tkinter window on the screen.
 
     This helper attempts to use the actual window size (after layout)
     and falls back to the window's requested size if the real size
@@ -8,7 +9,7 @@ def center_window(window):
 
     Args:
         window: a tkinter Toplevel or root window instance.
-    """
+    '''
     # Ensure geometry/layout calculations are up-to-date
     window.update_idletasks()
 

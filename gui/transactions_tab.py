@@ -1,18 +1,21 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, filedialog, messagebox
 from datetime import datetime
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
-from gui.shared_functions import center_window
+from utils.csv_importer import CSVImporter, ImportDialog
+from utils.shared_functions import center_window
 
 class TransactionsTab:
-    def __init__(self, parent, db: DatabaseManager, main_window=None):
-        # Database manager and optional reference to MainWindow (for import)
+    def __init__(self, parent, db: DatabaseManager):
+        # Database manager and reference to parent and top-level root
         self.db = db
-        self.main_window = main_window
+        self.parent = parent
+        self.root = parent.winfo_toplevel()
+        self.csv_importer = CSVImporter(self.db) # CSV import helper
 
         # Container frame for this tab and sorting state
-        self.frame = ttk.Frame(parent)
+        self.frame = ttk.Frame(self.parent)
         self.sort_column = None
         self.sort_reverse = False
 
@@ -83,16 +86,15 @@ class TransactionsTab:
 
         self.tree.pack(fill='both', expand=True)
         
-        button_frame = ttk.Frame(self.frame)
-        button_frame.pack(pady=10)
+        top_button_frame = ttk.Frame(self.frame)
+        top_button_frame.pack(pady=5)
 
-        # Action buttons (import only when created via MainWindow)
-        if self.main_window:
-            ttk.Button(button_frame, text="Import CSV", style='Accent.TButton', command=self.main_window.import_csv).pack(side='left', padx=5)
-            ttk.Button(button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
-            ttk.Button(button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
-            ttk.Button(button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
-            ttk.Button(button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=5)
+        # Action buttons
+        ttk.Button(top_button_frame, text="Import CSV", style='Accent.TButton', command=self.import_csv).pack(side='left', padx=25)
+        ttk.Button(top_button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
+        ttk.Button(top_button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
+        ttk.Button(top_button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
+        ttk.Button(top_button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=25)
     
     def update_category_list(self):
         categories = self.db.get_categories()
@@ -128,6 +130,25 @@ class TransactionsTab:
                 trans['notes'] or ''
             ), tags=(trans['id'],))
     
+    def import_csv(self):
+        file_path = filedialog.askopenfilename(
+            title="Select CSV File",
+            filetypes=[("CSV Files", "*.csv"), ("All Files", "*.*")]
+        )
+        
+        # If user selected a file, open the import dialog which handles mapping
+        if not file_path:
+            return
+
+        dialog = ImportDialog(self.root, self.db, self.csv_importer, file_path)
+        # Wait for the import dialog to close before continuing
+        self.root.wait_window(dialog.dialog)
+
+        if dialog.success:
+            # Refresh the transactions view and inform the user
+            self.refresh_transactions()
+            messagebox.showinfo("Success", f"Imported {dialog.count} transactions")
+
     def toggle_date_filter(self):
         state = 'normal' if self.use_date_filter_var.get() else 'disabled'
         self.start_date_picker.configure(state=state)

@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
-from gui.shared_functions import center_window
+from utils.shared_functions import center_window
 
 class ImportTemplateManager:
     def __init__(self, parent, db: DatabaseManager):
