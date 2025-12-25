@@ -4,7 +4,7 @@ from datetime import datetime
 from calendar import monthrange
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
-from utils.shared_functions import center_window
+from utils.helpers import center_window
 
 class TemplateManagerDialog:
     def __init__(self, parent, db: DatabaseManager):

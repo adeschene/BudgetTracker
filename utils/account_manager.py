@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from database.db_manager import DatabaseManager
-from utils.shared_functions import center_window
+from utils.helpers import center_window
 
 class AccountManager:
     def __init__(self, parent, db):

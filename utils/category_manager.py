@@ -1,7 +1,7 @@
 import tkinter as tk
 import sqlite3
 from tkinter import ttk, messagebox
-from utils.shared_functions import center_window
+from utils.helpers import center_window
 
 class CategoryManager:
     def __init__(self, parent, db):
