@@ -90,11 +90,15 @@ class TransactionsTab:
         def _update_threshold_label(val):
             try:
                 self.fuzzy_threshold_label.config(text=f'{float(val):.2f}')
-                self.refresh_transactions()
             except Exception:
                 pass
 
+        # For fuzzy search: refreshes transactions when the user releases the mouse after adjusting the scale
+        def _on_fuzzy_threshold_release(event):
+            self.refresh_transactions()
+
         self.fuzzy_threshold_scale.configure(command=_update_threshold_label)
+        self.fuzzy_threshold_scale.bind('<ButtonRelease-1>', _on_fuzzy_threshold_release)
 
         ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=10, pady=2)
 
