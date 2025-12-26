@@ -53,8 +53,8 @@ class VisualizationsTab:
         tabs.add(net_tab, text='Net Worth Over Time')
         net_worth_frame = ttk.Frame(net_tab)
         net_worth_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure1 = Figure(figsize=(10, 4), dpi=100, tight_layout=True)
-        self.ax1 = self.figure1.add_subplot(111)
+        self.figure1 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax1 = self.figure1.add_subplot(111, facecolor='#444445')
         self.canvas1 = FigureCanvasTkAgg(self.figure1, net_worth_frame)
         self.canvas1.get_tk_widget().pack(fill='both', expand=True)
 
@@ -63,8 +63,8 @@ class VisualizationsTab:
         tabs.add(income_tab, text='Income Over Time')
         income_frame = ttk.Frame(income_tab)
         income_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure3 = Figure(figsize=(10, 4), dpi=100, tight_layout=True)
-        self.ax3 = self.figure3.add_subplot(111)
+        self.figure3 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax3 = self.figure3.add_subplot(111, facecolor='#444445')
         self.canvas3 = FigureCanvasTkAgg(self.figure3, income_frame)
         self.canvas3.get_tk_widget().pack(fill='both', expand=True)
 
@@ -73,8 +73,8 @@ class VisualizationsTab:
         tabs.add(expenses_time_tab, text='Expenses Over Time')
         expenses_time_frame = ttk.Frame(expenses_time_tab)
         expenses_time_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure4 = Figure(figsize=(10, 4), dpi=100, tight_layout=True)
-        self.ax4 = self.figure4.add_subplot(111)
+        self.figure4 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax4 = self.figure4.add_subplot(111, facecolor='#444445')
         self.canvas4 = FigureCanvasTkAgg(self.figure4, expenses_time_frame)
         self.canvas4.get_tk_widget().pack(fill='both', expand=True)
 
@@ -83,8 +83,8 @@ class VisualizationsTab:
         tabs.add(savings_tab, text='Savings Over Time')
         savings_frame = ttk.Frame(savings_tab)
         savings_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure5 = Figure(figsize=(10, 4), dpi=100, tight_layout=True)
-        self.ax5 = self.figure5.add_subplot(111)
+        self.figure5 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax5 = self.figure5.add_subplot(111, facecolor='#444445')
         self.canvas5 = FigureCanvasTkAgg(self.figure5, savings_frame)
         self.canvas5.get_tk_widget().pack(fill='both', expand=True)
 
@@ -93,8 +93,8 @@ class VisualizationsTab:
         tabs.add(expense_tab, text='Expense Breakdown')
         expense_frame = ttk.Frame(expense_tab)
         expense_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure2 = Figure(figsize=(10, 4), dpi=100, tight_layout=True)
-        self.ax2 = self.figure2.add_subplot(111)
+        self.figure2 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax2 = self.figure2.add_subplot(111, facecolor='#444445')
         self.canvas2 = FigureCanvasTkAgg(self.figure2, expense_frame)
         self.canvas2.get_tk_widget().pack(fill='both', expand=True)
 
@@ -112,8 +112,8 @@ class VisualizationsTab:
 
         cat_frame = ttk.Frame(cat_tab)
         cat_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure6 = Figure(figsize=(10, 4), dpi=100, tight_layout=True)
-        self.ax6 = self.figure6.add_subplot(111)
+        self.figure6 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax6 = self.figure6.add_subplot(111, facecolor='#444445')
         self.canvas6 = FigureCanvasTkAgg(self.figure6, cat_frame)
         self.canvas6.get_tk_widget().pack(fill='both', expand=True)
 
@@ -186,8 +186,8 @@ class VisualizationsTab:
 
         kw_frame = ttk.Frame(kw_tab)
         kw_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure7 = Figure(figsize=(10, 4), dpi=100, tight_layout=True)
-        self.ax7 = self.figure7.add_subplot(111)
+        self.figure7 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax7 = self.figure7.add_subplot(111, facecolor='#444445')
         self.canvas7 = FigureCanvasTkAgg(self.figure7, kw_frame)
         self.canvas7.get_tk_widget().pack(fill='both', expand=True)
 
@@ -360,43 +360,59 @@ class VisualizationsTab:
                 month_labels.append(date_obj.strftime('%b %Y'))
 
             x = range(len(months))
-            width = 0.2
+            width =0.2
 
             # Plot grouped bars: assets, liabilities, net
-            bars_a = self.ax1.bar([i - width for i in x], assets, width=width, color='tab:green', label='Assets', edgecolor='black', alpha=0.8)
-            bars_l = self.ax1.bar(x, liabilities, width=width, color='tab:red', label='Liabilities', edgecolor='black', alpha=0.8)
-            bars_n = self.ax1.bar([i + width for i in x], net, width=width, color='tab:blue', label='Net Worth', edgecolor='black', alpha=0.8)
+            bars_a = self.ax1.bar([i - width for i in x], assets, width=width, color='tab:green', label='Assets', edgecolor='whitesmoke', alpha=0.8)
+            bars_l = self.ax1.bar(x, liabilities, width=width, color='tab:red', label='Liabilities', edgecolor='whitesmoke', alpha=0.8)
+            bars_n = self.ax1.bar([i + width for i in x], net, width=width, color='tab:blue', label='Net Worth', edgecolor='whitesmoke', alpha=0.8)
 
             # compute averages and draw dashed lines for each (liabilities average will be negative)
             avg_a = sum(assets) / len(assets) if assets else 0.0
             avg_l = sum(liabilities) / len(liabilities) if liabilities else 0.0
             avg_n = sum(net) / len(net) if net else 0.0
 
+            # Average lines
             self.ax1.axhline(y=avg_a, color='tab:green', linestyle='--', linewidth=1)
             self.ax1.axhline(y=avg_l, color='tab:red', linestyle='--', linewidth=1)
             self.ax1.axhline(y=avg_n, color='tab:blue', linestyle='--', linewidth=1)
 
+            # Origin line
+            self.ax1.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
+
             self.ax1.set_xlabel('Month', fontsize=12, fontweight='bold')
             self.ax1.set_ylabel('Amount ($)', fontsize=12, fontweight='bold')
-            self.ax1.set_title('Net Worth Breakdown Over Time', fontsize=14, fontweight='bold', pad=12)
+            self.ax1.set_title('Net Worth Breakdown Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
 
             self.ax1.set_xticks(range(len(months)))
             self.ax1.set_xticklabels(month_labels, rotation=45, ha='right')
 
             # formatting
             self.ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
-            self.ax1.grid(True, axis='y', alpha=0.3, linestyle='--')
-            self.ax1.legend()
+            self.ax1.grid(True, axis='y', alpha=0.3, linestyle=':')
+            self.ax1.legend(facecolor='#313131', edgecolor='whitesmoke', labelcolor='whitesmoke')
 
-            # annotate bar values for net and liabilities
+            # coloring
+            self.ax1.spines['top'].set_color('whitesmoke')
+            self.ax1.spines['left'].set_color('whitesmoke')
+            self.ax1.tick_params(axis='x', colors='whitesmoke')
+            self.ax1.tick_params(axis='y', colors='whitesmoke')
+            self.ax1.xaxis.label.set_color("whitesmoke")
+            self.ax1.yaxis.label.set_color("whitesmoke")
+
+            # Annotate bar values
             for bar in bars_n:
                 hgt = bar.get_height()
-                self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8)
+                self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
 
             for bar in bars_l:
                 hgt = bar.get_height()
-                # liabilities are negative; place label below the bar
-                self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='top' if hgt < 0 else 'bottom', fontsize=8)
+                # Liabilities should be negative; place label below the bar
+                self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='top' if hgt < 0 else 'bottom', fontsize=8, color='whitesmoke')
+
+            for bar in bars_a:
+                hgt = bar.get_height()
+                self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
 
             self.canvas1.draw()
 
@@ -408,7 +424,7 @@ class VisualizationsTab:
         monthly = self._aggregate_monthly(tx, kind='income')
 
         if not monthly:
-            self.ax3.text(0.5, 0.5, 'No income data available', ha='center', va='center', transform=self.ax3.transAxes, fontsize=14, color='gray')
+            self.ax3.text(0.5, 0.5, 'No income data available', ha='center', va='center', transform=self.ax3.transAxes, fontsize=14, color='whitesmoke')
             self.ax3.set_axis_off()
             self.canvas3.draw()
             return
@@ -420,16 +436,34 @@ class VisualizationsTab:
 
         values = [monthly.get(m, 0.0) for m in months]
 
-        bars = self.ax3.bar(range(len(months)), values, color='green', alpha=0.7, edgecolor='black')
+        # Formatting/Creating bars
+        bars = self.ax3.bar(range(len(months)), values, color='green', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
-        self.ax3.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        # Average line
+        self.ax3.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
         self.ax3.set_xlabel('Month')
         self.ax3.set_ylabel('Income ($)')
-        self.ax3.set_title('Income Over Time')
+        self.ax3.set_title('Income Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax3.set_xticks(range(len(months)))
         self.ax3.set_xticklabels(labels, rotation=45, ha='right')
+        self.ax3.grid(True, axis='y', alpha=0.3, linestyle=':')
+
+        # coloring
+        self.ax3.spines['top'].set_color('whitesmoke')
+        self.ax3.spines['left'].set_color('whitesmoke')
+        self.ax3.tick_params(axis='x', colors='whitesmoke')
+        self.ax3.tick_params(axis='y', colors='whitesmoke')
+        self.ax3.xaxis.label.set_color("whitesmoke")
+        self.ax3.yaxis.label.set_color("whitesmoke")
+
+        # Annotate bar values
+        for bar in bars:
+            hgt = bar.get_height()
+            self.ax3.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
+        
         self.canvas3.draw()
     
     def refresh_expenses_over_time_chart(self):
@@ -452,16 +486,31 @@ class VisualizationsTab:
 
         values = [monthly.get(m, 0.0) for m in months]
 
-        bars = self.ax4.bar(range(len(months)), values, color='red', alpha=0.7, edgecolor='black')
+        bars = self.ax4.bar(range(len(months)), values, color='red', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
-        self.ax4.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+        self.ax4.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
         self.ax4.set_xlabel('Month')
         self.ax4.set_ylabel('Expenses ($)')
-        self.ax4.set_title('Expenses Over Time')
+        self.ax4.set_title('Expenses Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax4.set_xticks(range(len(months)))
         self.ax4.set_xticklabels(labels, rotation=45, ha='right')
+        self.ax4.grid(True, axis='y', alpha=0.3, linestyle=':')
+
+        # coloring
+        self.ax4.spines['top'].set_color('whitesmoke')
+        self.ax4.spines['left'].set_color('whitesmoke')
+        self.ax4.tick_params(axis='x', colors='whitesmoke')
+        self.ax4.tick_params(axis='y', colors='whitesmoke')
+        self.ax4.xaxis.label.set_color("whitesmoke")
+        self.ax4.yaxis.label.set_color("whitesmoke")
+
+        # Annotate bar values
+        for bar in bars:
+            hgt = bar.get_height()
+            self.ax4.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
+
         self.canvas4.draw()
 
     def refresh_savings_chart(self):
@@ -475,7 +524,7 @@ class VisualizationsTab:
         expense_monthly = self._aggregate_monthly(tx, kind='expense')
 
         if not income_monthly and not expense_monthly:
-            self.ax5.text(0.5, 0.5, 'No data available', ha='center', va='center', transform=self.ax5.transAxes, fontsize=14, color='gray')
+            self.ax5.text(0.5, 0.5, 'No data available', ha='center', va='center', transform=self.ax5.transAxes, fontsize=14, color='whitesmoke')
             self.ax5.set_axis_off()
             self.canvas5.draw()
             return
@@ -486,16 +535,35 @@ class VisualizationsTab:
             months = sorted(set(list(income_monthly.keys()) + list(expense_monthly.keys())))
 
         values = [(income_monthly.get(m, 0.0) - expense_monthly.get(m, 0.0)) for m in months]
-        bars = self.ax5.bar(range(len(months)), values, color=['green' if v>=0 else 'red' for v in values], alpha=0.7, edgecolor='black')
+        bars = self.ax5.bar(range(len(months)), values, color=['green' if v>=0 else 'red' for v in values], alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
-        self.ax5.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        # Origin line
+        self.ax5.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
+        # Average line
+        self.ax5.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
         self.ax5.set_xlabel('Month')
         self.ax5.set_ylabel('Savings ($)')
-        self.ax5.set_title('Savings Over Time')
+        self.ax5.set_title('Savings Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax5.set_xticks(range(len(months)))
         self.ax5.set_xticklabels(labels, rotation=45, ha='right')
+        self.ax5.grid(True, axis='y', alpha=0.3, linestyle=':')
+
+        # coloring
+        self.ax5.spines['top'].set_color('whitesmoke')
+        self.ax5.spines['left'].set_color('whitesmoke')
+        self.ax5.tick_params(axis='x', colors='whitesmoke')
+        self.ax5.tick_params(axis='y', colors='whitesmoke')
+        self.ax5.xaxis.label.set_color("whitesmoke")
+        self.ax5.yaxis.label.set_color("whitesmoke")
+
+        # Annotate bar values
+        for bar in bars:
+            hgt = bar.get_height()
+            self.ax5.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
+
         self.canvas5.draw()
     
     def refresh_expense_chart(self):
@@ -507,7 +575,7 @@ class VisualizationsTab:
         if not spending:
             self.ax2.text(0.5, 0.5, 'No expense data available for this period',
                         ha='center', va='center', transform=self.ax2.transAxes,
-                        fontsize=14, color='gray')
+                        fontsize=14, color='whitesmoke')
             self.ax2.set_axis_off()
             self.canvas2.draw()
             return
@@ -521,14 +589,14 @@ class VisualizationsTab:
                                                 colors=colors, startangle=90)
 
         for autotext in autotexts:
-            autotext.set_color('black')
+            autotext.set_color('whitesmoke')
             autotext.set_fontweight('bold')
             autotext.set_fontsize(10)
 
         period_label = self.period_var.get()
-        self.ax2.set_title(f'Expenses by Category - {period_label}', fontsize=14, fontweight='bold', pad=20)
+        self.ax2.set_title(f'Expenses by Category - {period_label}', fontsize=14, fontweight='bold', color='whitesmoke', pad=20)
 
-        self.ax2.legend(categories, loc='center left', bbox_to_anchor=(1, 0.75), fontsize=12)
+        self.ax2.legend(categories, loc='center left', bbox_to_anchor=(1, 0.75), fontsize=12, facecolor='#444445', edgecolor='whitesmoke', labelcolor='whitesmoke')
 
         self.canvas2.draw()
 
@@ -543,7 +611,7 @@ class VisualizationsTab:
 
         category = self.category_var.get()
         if not category:
-            self.ax6.text(0.5, 0.5, 'No category selected', ha='center', va='center', transform=self.ax6.transAxes, fontsize=14, color='gray')
+            self.ax6.text(0.5, 0.5, 'No category selected', ha='center', va='center', transform=self.ax6.transAxes, fontsize=14, color='whitesmoke')
             self.ax6.set_axis_off()
             self.canvas6.draw()
             return
@@ -557,7 +625,7 @@ class VisualizationsTab:
         monthly = self._aggregate_monthly(filtered, kind='all')
 
         if not monthly:
-            self.ax6.text(0.5, 0.5, 'No data for selected category', ha='center', va='center', transform=self.ax6.transAxes, fontsize=14, color='gray')
+            self.ax6.text(0.5, 0.5, 'No data for selected category', ha='center', va='center', transform=self.ax6.transAxes, fontsize=14, color='whitesmoke')
             self.ax6.set_axis_off()
             self.canvas6.draw()
             return
@@ -571,9 +639,11 @@ class VisualizationsTab:
         values = [abs(monthly.get(m, 0.0)) for m in months]
 
         # Use a neutral color for category drilldown bars
-        bars = self.ax6.bar(range(len(months)), values, color='gray', alpha=0.7, edgecolor='black')
+        bars = self.ax6.bar(range(len(months)), values, color='gray', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
-        self.ax6.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        # Average line
+        self.ax6.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
         # Add budget line if budget exists for this category
         try:
@@ -583,20 +653,32 @@ class VisualizationsTab:
                 # budget is monthly target; draw as horizontal line
                 monthly_budget = budget['monthly_target']
                 self.ax6.axhline(y=monthly_budget, color='green', linestyle='-', linewidth=2, label=f'Budget: ${monthly_budget:,.2f}')
-                self.ax6.legend()
+                self.ax6.legend(facecolor='#313131', edgecolor='whitesmoke', labelcolor='whitesmoke')
         except Exception:
             pass
 
+        # Origin line
+        self.ax6.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
+
         self.ax6.set_xlabel('Month')
         self.ax6.set_ylabel('Amount ($)')
-        self.ax6.set_title(f'Category: {category} - Over Time')
+        self.ax6.set_title(f'Category: {category} - Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax6.set_xticks(range(len(months)))
         self.ax6.set_xticklabels(labels, rotation=45, ha='right')
+        self.ax6.grid(True, axis='y', alpha=0.3, linestyle=':')
+
+        # coloring
+        self.ax6.spines['top'].set_color('whitesmoke')
+        self.ax6.spines['left'].set_color('whitesmoke')
+        self.ax6.tick_params(axis='x', colors='whitesmoke')
+        self.ax6.tick_params(axis='y', colors='whitesmoke')
+        self.ax6.xaxis.label.set_color("whitesmoke")
+        self.ax6.yaxis.label.set_color("whitesmoke")
 
         for bar in bars:
             hgt = bar.get_height()
-            self.ax6.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8)
+            self.ax6.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
 
         self.canvas6.draw()
 
@@ -605,7 +687,7 @@ class VisualizationsTab:
         self.ax7.clear()
         keyword = self.keyword_var.get().strip()
         if not keyword:
-            self.ax7.text(0.5, 0.5, 'Enter a keyword to search', ha='center', va='center', transform=self.ax7.transAxes, fontsize=14, color='gray')
+            self.ax7.text(0.5, 0.5, 'Enter a keyword to search', ha='center', va='center', transform=self.ax7.transAxes, fontsize=14, color='whitesmoke')
             self.ax7.set_axis_off()
             self.canvas7.draw()
             return
@@ -624,7 +706,7 @@ class VisualizationsTab:
         monthly = self._aggregate_monthly(filtered, kind='all')
 
         if not monthly:
-            self.ax7.text(0.5, 0.5, 'No transactions match keyword', ha='center', va='center', transform=self.ax7.transAxes, fontsize=14, color='gray')
+            self.ax7.text(0.5, 0.5, 'No transactions match keyword', ha='center', va='center', transform=self.ax7.transAxes, fontsize=14, color='whitesmoke')
             self.ax7.set_axis_off()
             self.canvas7.draw()
             return
@@ -638,19 +720,33 @@ class VisualizationsTab:
         # Positive amounts shown green (income), negative red (expense)
         colors = ['green' if v >= 0 else 'red' for v in values]
 
-        bars = self.ax7.bar(range(len(months)), values, color=colors, alpha=0.7, edgecolor='black')
+        bars = self.ax7.bar(range(len(months)), values, color=colors, alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
-        self.ax7.axhline(y=avg, color='black', linestyle='--', linewidth=1)
+
+        # Average line
+        self.ax7.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
+
+        # Origin line
+        self.ax7.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
 
         self.ax7.set_xlabel('Month')
         self.ax7.set_ylabel('Amount ($)')
-        self.ax7.set_title(f'Keyword: "{keyword}" - Over Time')
+        self.ax7.set_title(f'Keyword: "{keyword}" - Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax7.set_xticks(range(len(months)))
         self.ax7.set_xticklabels(labels, rotation=45, ha='right')
+        self.ax7.grid(True, axis='y', alpha=0.3, linestyle=':')
+
+        # coloring
+        self.ax7.spines['top'].set_color('whitesmoke')
+        self.ax7.spines['left'].set_color('whitesmoke')
+        self.ax7.tick_params(axis='x', colors='whitesmoke')
+        self.ax7.tick_params(axis='y', colors='whitesmoke')
+        self.ax7.xaxis.label.set_color("whitesmoke")
+        self.ax7.yaxis.label.set_color("whitesmoke")
 
         for bar in bars:
             hgt = bar.get_height()
-            self.ax7.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8)
+            self.ax7.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
 
         self.canvas7.draw()
