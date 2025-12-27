@@ -25,7 +25,7 @@ class VisualizationsTab:
         period_combo = ttk.Combobox(control_frame, textvariable=self.period_var, width=18, state='readonly')
         period_combo['values'] = ['This Month', 'Last Month', 'This Year', 'Last Year', 'All Time', 'Custom']
         period_combo.pack(side='left')
-        period_combo.bind('<<ComboboxSelected>>', lambda e: self.on_period_change(e))
+        period_combo.bind('<<ComboboxSelected>>', lambda e: self.on_period_change())
 
         ttk.Separator(control_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
@@ -191,8 +191,8 @@ class VisualizationsTab:
         self.canvas7 = FigureCanvasTkAgg(self.figure7, kw_frame)
         self.canvas7.get_tk_widget().pack(fill='both', expand=True)
 
-        # Initial draw of all charts using current default period (run after layout settles)
-        self.frame.after_idle(self.refresh_charts)
+        # Initial draw of all charts using current default period
+        self.refresh_charts()
 
     # Enable date pickers when using custom timeframe
     def on_period_change(self, event=None):
@@ -403,15 +403,21 @@ class VisualizationsTab:
             # Annotate bar values
             for bar in bars_n:
                 hgt = bar.get_height()
+                if hgt == 0: # Don't label zero values
+                    continue
                 self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
 
             for bar in bars_l:
                 hgt = bar.get_height()
+                if hgt == 0: # Don't label zero values
+                    continue
                 # Liabilities should be negative; place label below the bar
                 self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='top' if hgt < 0 else 'bottom', fontsize=8, color='whitesmoke')
 
             for bar in bars_a:
                 hgt = bar.get_height()
+                if hgt == 0: # Don't label zero values
+                    continue
                 self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
 
             self.canvas1.draw()
@@ -462,6 +468,8 @@ class VisualizationsTab:
         # Annotate bar values
         for bar in bars:
             hgt = bar.get_height()
+            if hgt == 0: # Don't label zero values
+                continue
             self.ax3.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
         
         self.canvas3.draw()
@@ -509,6 +517,8 @@ class VisualizationsTab:
         # Annotate bar values
         for bar in bars:
             hgt = bar.get_height()
+            if hgt == 0: # Don't label zero values
+                continue
             self.ax4.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
 
         self.canvas4.draw()
@@ -562,6 +572,8 @@ class VisualizationsTab:
         # Annotate bar values
         for bar in bars:
             hgt = bar.get_height()
+            if hgt == 0: # Don't label zero values
+                continue
             self.ax5.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
 
         self.canvas5.draw()
@@ -678,6 +690,8 @@ class VisualizationsTab:
 
         for bar in bars:
             hgt = bar.get_height()
+            if hgt == 0: # Don't label zero values
+                continue
             self.ax6.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
 
         self.canvas6.draw()
@@ -747,6 +761,8 @@ class VisualizationsTab:
 
         for bar in bars:
             hgt = bar.get_height()
+            if hgt == 0: # Don't label zero values
+                continue
             self.ax7.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
 
         self.canvas7.draw()
