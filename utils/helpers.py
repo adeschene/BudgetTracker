@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 def center_window(window):
     '''
     Center a tkinter window on the screen.
@@ -53,3 +55,56 @@ def fuzzy_match(keyword, text, threshold=0.9):
 def exact_match(keyword, text):
     # Case-insensitive substring match
     return keyword.lower() in text.lower()
+
+
+
+# Ensure only valid numbers are entered in a given Entry textbox (allow minus sign at start)
+def validate_money_string(new_value: str, allow_negative: str, allow_decimal: str) -> bool:
+    # Allow empty for editing
+    if new_value == "":
+        return True
+    
+    # Don't allow negative sign if neg nums turned off in call
+    if allow_negative == 'False' and '-' in new_value:
+        return False
+    
+    # Reject decimals entirely if disabled
+    if allow_decimal == 'False' and '.' in new_value:
+        return False
+
+    # Structural checks: only one '.', only one '-' in front, no other chars
+    if new_value.count('.') > 1:
+        return False
+    if new_value.count('-') > 1:
+        return False
+    if '-' in new_value[1:]:
+        return False
+
+    # Must be digits / '.' / '-'
+    for ch in new_value:
+        if ch not in "0123456789.-":
+            return False
+
+    # Enforce at most 2 decimal places
+    if '.' in new_value:
+        frac = new_value.split('.', 1)[1]
+        if len(frac) > 2:
+            return False
+
+    # Reject leading zeros on integer part, allow 0.x / .x**
+    if '.' in new_value:
+        integer_part = new_value.split('.')[0].lstrip('-')
+    else:
+        integer_part = new_value.lstrip('-')
+    
+    # Reject if integer part starts with '0' and has more than one digit
+    if len(integer_part) > 1 and integer_part[0] == '0':
+        return False
+
+    # Finally, make sure it parses as a number
+    if new_value != '-' and new_value != '.' and new_value != '-.':
+        try:
+            Decimal(new_value)
+        except InvalidOperation:
+            return False
+    return True
