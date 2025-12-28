@@ -2,9 +2,10 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from datetime import datetime
 from tkcalendar import DateEntry
+from decimal import Decimal, InvalidOperation
 from database.db_manager import DatabaseManager
 from utils.csv_importer import CSVImporter, ImportDialog
-from utils.helpers import center_window, fuzzy_match, exact_match
+from utils.helpers import center_window, fuzzy_match, exact_match, validate_money_string
 
 class TransactionsTab:
     def __init__(self, parent, db: DatabaseManager):
@@ -207,13 +208,17 @@ class TransactionsTab:
 
         for trans in filtered:
             # Format amount for display, show negative amounts with a leading '-'
-            amount_str = f"${trans['amount']:.2f}"
             if trans['amount'] < 0:
                 amount_str = f"-${abs(trans['amount']):.2f}"
+            else:
+                amount_str = f"${trans['amount']:.2f}"
+
+            # Display dates in mm-dd-yyyy format
+            converted_date = datetime.strptime(trans['date'],"%Y-%m-%d").strftime("%m-%d-%Y")
             
             # Store transaction id in tags for later edits/deletes
             self.tree.insert('', 'end', values=(
-                trans['date'],
+                converted_date,
                 trans['description'],
                 amount_str,
                 trans['category'] or '',
@@ -356,10 +361,14 @@ class TransactionsTab:
 
     def edit_cell_entry(self, row_id, column_name, column_index, entry_id, current_value, x, y, width, height):
         if column_name == 'Amount':
+            vcmd_decimal_dollar = (self.tree.register(validate_money_string), "%P", True, True) # Digit validation registration
             current_value = str(current_value).replace('$', '').replace(',', '')
 
         edit_var = tk.StringVar(value=current_value)
-        edit_entry = ttk.Entry(self.tree, textvariable=edit_var)
+        if column_name == 'Amount':
+            edit_entry = ttk.Entry(self.tree, validate='key', validatecommand=vcmd_decimal_dollar, textvariable=edit_var)
+        else:
+            edit_entry = ttk.Entry(self.tree, textvariable=edit_var)
         edit_entry.place(x=x, y=y, width=width, height=height)
         edit_entry.focus_set()
         edit_entry.select_range(0, tk.END)
@@ -418,7 +427,7 @@ class TransactionsTab:
             if field_name == 'Description':
                 transaction['description'] = new_value
             elif field_name == 'Amount':
-                transaction['amount'] = float(new_value)
+                transaction['amount'] = Decimal(new_value)
             elif field_name == 'Category':
                 transaction['category'] = new_value
             elif field_name == 'Account':
@@ -433,7 +442,7 @@ class TransactionsTab:
                 transaction_id=transaction_id,
                 date=transaction['date'],
                 description=transaction['description'],
-                amount=transaction['amount'],
+                amount=float(transaction['amount']),  # Convert Decimal to float
                 category=transaction['category'],
                 account=transaction['account'],
                 transaction_type=transaction_type,
@@ -442,7 +451,7 @@ class TransactionsTab:
 
             # Refresh view to show updated values
             self.refresh_transactions()
-        except ValueError:
+        except (ValueError, InvalidOperation):
             messagebox.showerror("Error", "Invalid value entered")
 
 class TransactionDialog:
@@ -455,16 +464,25 @@ class TransactionDialog:
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Add Transaction" if not transaction else "Edit Transaction")
-        self.dialog.geometry("400x400")
+        self.dialog.geometry("400x420")
         self.dialog.transient(parent)
+        
+        vcmd_decimal_dollar = (self.dialog.register(validate_money_string), "%P", True, True) # Digit validation registration
         
         ttk.Label(self.dialog, text="Date:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         if transaction:
             date_obj = datetime.strptime(transaction['date'], '%Y-%m-%d')
         else:
             date_obj = datetime.now()
-        self.date_picker = DateEntry(self.dialog, width=18, background='darkblue',
-                                    foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
+        self.date_picker = DateEntry(self.dialog, width=18, firstweekday='sunday',
+                                    background='#232323', foreground='whitesmoke',
+                                    headersbackground='#454545', headersforeground='whitesmoke',
+                                    othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                    weekendbackground='#666666', weekendforeground='whitesmoke',
+                                    othermonthbackground='#777777', othermonthforeground='#232323',
+                                    normalbackground='#888888', normalforeground='black',
+                                    disableddaybackground='#454545', disableddayforeground='#888888',
+                                    bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                     maxdate=datetime.now(), year=date_obj.year,
                                     month=date_obj.month, day=date_obj.day)
         self.date_picker.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
@@ -475,30 +493,31 @@ class TransactionDialog:
         
         ttk.Label(self.dialog, text="Amount:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.amount_var = tk.StringVar(value=str(transaction['amount']) if transaction else '')
-        ttk.Entry(self.dialog, textvariable=self.amount_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, validate='all', validatecommand=vcmd_decimal_dollar, textvariable=self.amount_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+        tk.Label(self.dialog, text='Please enter negative values for expenses\n(purchases, withdrawals, etc.)', fg='gray').grid(row=3, column=1, padx=5, sticky='ew')
         
-        ttk.Label(self.dialog, text="Category:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Category:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
         self.category_var = tk.StringVar(value=transaction['category'] if transaction else '')
         category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var)
         categories = self.db.get_categories()
         category_combo['values'] = [cat['name'] for cat in categories]
-        category_combo.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+        category_combo.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
         
-        ttk.Label(self.dialog, text="Account:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Account:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
         self.account_var = tk.StringVar(value=transaction['account'] if transaction else '')
         account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var)
         accounts = self.db.get_accounts()
         account_combo['values'] = [acc['name'] for acc in accounts]
-        account_combo.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+        account_combo.grid(row=5, column=1, padx=10, pady=10, sticky='ew')
         
-        ttk.Label(self.dialog, text="Notes:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Notes:").grid(row=6, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=transaction['notes'] if transaction and transaction['notes'] else '')
-        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=5, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=6, column=1, padx=10, pady=10, sticky='ew')
         
         button_frame = ttk.Frame(self.dialog)
-        button_frame.grid(row=6, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=7, column=0, columnspan=2, pady=20)
         
-        ttk.Button(button_frame, text="Save", command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
         
         self.dialog.columnconfigure(1, weight=1)
@@ -515,7 +534,7 @@ class TransactionDialog:
             if self.transaction:
                 self.db.update_transaction(
                     self.transaction['id'],
-                    date=self.date_picker.get(),
+                    date=self.date_picker.get_date(),
                     description=self.desc_var.get(),
                     amount=amount,
                     category=self.category_var.get(),
@@ -525,7 +544,7 @@ class TransactionDialog:
                 )
             else:
                 self.db.add_transaction(
-                    date=self.date_picker.get(),
+                    date=self.date_picker.get_date(),
                     description=self.desc_var.get(),
                     amount=amount,
                     category=self.category_var.get(),
