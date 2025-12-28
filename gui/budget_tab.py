@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
-from utils.helpers import center_window
+from utils.helpers import center_window, validate_money_string
 
 class BudgetTab:
     def __init__(self, parent, db: DatabaseManager):
@@ -60,7 +60,7 @@ class BudgetTab:
         for budget in budgets:
             display_values = [
                 budget['category'],
-                f"${budget['monthly_target']:.2f}",
+                f"${budget['monthly_target']:,.0f}",
                 budget['notes'] or ''
             ]
             # Store budget id in the item's tags for later lookup
@@ -109,6 +109,8 @@ class BudgetDialog:
         self.dialog.geometry("400x250")
         self.dialog.transient(parent)
         
+        vcmd_positive_whole_dollars = (self.dialog.register(validate_money_string),"%P",False,False) # Digit validation registration
+        
         ttk.Label(self.dialog, text="Category:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.category_var = tk.StringVar(value=budget['category'] if budget else '')
         
@@ -120,9 +122,10 @@ class BudgetDialog:
             category_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
         
         # Input for the numeric monthly target amount
-        ttk.Label(self.dialog, text="Monthly Target:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        self.target_var = tk.StringVar(value=str(budget['monthly_target']) if budget else '0')
-        ttk.Entry(self.dialog, textvariable=self.target_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Label(self.dialog, text="Monthly Target ($):").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        self.target_var = tk.StringVar(value=str(int(budget['monthly_target'])) if budget else '')
+        ttk.Entry(self.dialog, validate='all', validatecommand=vcmd_positive_whole_dollars, 
+                textvariable=self.target_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
         
         ttk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=budget['notes'] if budget and budget['notes'] else '')
