@@ -4,7 +4,7 @@ from datetime import datetime
 from calendar import monthrange
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
-from utils.helpers import center_window
+from utils.helpers import center_window, validate_money_string
 
 class TemplateManagerDialog:
     def __init__(self, parent, db: DatabaseManager):
@@ -190,7 +190,7 @@ class NetWorthTab:
         summary_frame = ttk.Labelframe(self.frame, text="Net Worth Summary")
         summary_frame.pack(fill='x', padx=10, pady=10)
 
-        self.total_label = tk.Label(summary_frame, text="Total Net Worth: $0.00",
+        self.total_label = tk.Label(summary_frame, text="Total Net Worth: $0",
                                     font=('Roboto', 16, 'bold'), fg='#217346')
         self.total_label.pack(pady=10)
 
@@ -219,10 +219,10 @@ class NetWorthTab:
         self.tree.heading('Value', text='Value')
         self.tree.heading('Notes', text='Notes')
 
-        self.tree.column('Date', width=100)
-        self.tree.column('Asset', width=200)
-        self.tree.column('Type', width=150)
-        self.tree.column('Value', width=120)
+        self.tree.column('Date', width=100, anchor='center')
+        self.tree.column('Asset', width=200, anchor='center')
+        self.tree.column('Type', width=150, anchor='center')
+        self.tree.column('Value', width=120, anchor='center')
         self.tree.column('Notes', width=200)
 
         # Double-click allows inline editing of entries (asset/type/value/notes)
@@ -290,10 +290,17 @@ class NetWorthTab:
         entries = self.db.get_net_worth_entries(start_date, end_date)
 
         for entry in entries:
-            value_str = f"${entry['value']:.2f}"
+            # Display positive values as $value and negatives as -$value
+            if entry['value'] < 0:
+                value_str = f"-${abs(entry['value']):,.0f}"
+            else:
+                value_str = f"${entry['value']:,.0f}"
+
+            # Display dates in mm-dd-yyyy format
+            converted_date = datetime.strptime(entry['date'],"%Y-%m-%d").strftime("%m-%d-%Y")
 
             display_values = [
-                entry['date'],
+                converted_date,
                 entry['asset_name'],
                 entry['asset_type'] or '',
                 value_str,
@@ -307,14 +314,14 @@ class NetWorthTab:
         summary = self.db.get_net_worth_summary(start_date, end_date)
         total = sum(summary.values())
 
-        self.total_label.config(text=f"Total Net Worth: ${total:,.2f}")
+        self.total_label.config(text=f"Total Net Worth: ${total:,.0f}")
 
         self.breakdown_text.config(state='normal')
         self.breakdown_text.delete('1.0', 'end')
 
         if summary:
             for asset_type, value in summary.items():
-                self.breakdown_text.insert('end', f"{asset_type}: ${value:,.2f}\n")
+                self.breakdown_text.insert('end', f"{asset_type}: {'-' if value < 0 else ''}${abs(value):,.0f}\n")
         else:
             self.breakdown_text.insert('end', "No entries yet")
 
@@ -396,7 +403,7 @@ class NetWorthTab:
         column_names = ['Date', 'Asset', 'Type', 'Value', 'Notes']
         column_name = column_names[column_index]
 
-        # Allow editing of asset name, type, numeric value and notes
+        # Allow editing of asset name, type, value and notes
         if column_name not in ['Asset', 'Type', 'Value', 'Notes']:
             return
 
@@ -412,10 +419,14 @@ class NetWorthTab:
 
     def edit_cell_entry(self, row_id, column_name, column_index, entry_id, current_value, x, y, width, height):
         if column_name == 'Value':
+            vcmd_decimal_dollar = (self.tree.register(validate_money_string), "%P", True, False) # Digit validation registration
             current_value = str(current_value).replace('$', '').replace(',', '')
 
         edit_var = tk.StringVar(value=current_value)
-        edit_entry = ttk.Entry(self.tree, textvariable=edit_var)
+        if column_name == 'Value':
+            edit_entry = ttk.Entry(self.tree, validate='key', validatecommand=vcmd_decimal_dollar, textvariable=edit_var)
+        else:
+            edit_entry = ttk.Entry(self.tree, textvariable=edit_var)
         edit_entry.place(x=x, y=y, width=width, height=height)
         edit_entry.focus_set()
         edit_entry.select_range(0, tk.END)
@@ -498,8 +509,10 @@ class NetWorthDialog:
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Add Net Worth Entry" if not entry else "Edit Net Worth Entry")
-        self.dialog.geometry("400x350")
+        self.dialog.geometry("400x370")
         self.dialog.transient(parent)
+        
+        vcmd_whole_dollars = (self.dialog.register(validate_money_string), "%P", True, False) # Digit validation registration
 
         if entry:
             default_date = entry['date']
@@ -511,8 +524,15 @@ class NetWorthDialog:
         date_obj = datetime.strptime(default_date, '%Y-%m-%d')
 
         ttk.Label(self.dialog, text="Date:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
-        self.date_picker = DateEntry(self.dialog, width=18, background='darkblue',
-                                    foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
+        self.date_picker = DateEntry(self.dialog, width=18, firstweekday='sunday',
+                                    background='#232323', foreground='whitesmoke',
+                                    headersbackground='#454545', headersforeground='whitesmoke',
+                                    othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                    weekendbackground='#666666', weekendforeground='whitesmoke',
+                                    othermonthbackground='#777777', othermonthforeground='#232323',
+                                    normalbackground='#888888', normalforeground='black',
+                                    disableddaybackground='#454545', disableddayforeground='#888888',
+                                    bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                     maxdate=datetime.now(), year=date_obj.year,
                                     month=date_obj.month, day=date_obj.day)
         self.date_picker.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
@@ -528,15 +548,16 @@ class NetWorthDialog:
         type_combo.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Value:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
-        self.value_var = tk.StringVar(value=str(entry['value']) if entry else '')
-        ttk.Entry(self.dialog, textvariable=self.value_var).grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+        self.value_var = tk.StringVar(value=str(int(entry['value'])) if entry else '')
+        ttk.Entry(self.dialog, validate='all', validatecommand=vcmd_whole_dollars, textvariable=self.value_var).grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+        tk.Label(self.dialog, text='Please enter negative values for liabilities\n(loans, credit card balances, etc.)', fg='gray').grid(row=4, column=1, padx=5, sticky='ew')
 
-        ttk.Label(self.dialog, text="Notes:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
+        ttk.Label(self.dialog, text="Notes:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=entry['notes'] if entry and entry['notes'] else '')
-        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=5, column=1, padx=10, pady=10, sticky='ew')
 
         button_frame = ttk.Frame(self.dialog)
-        button_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=6, column=0, columnspan=2, pady=20)
 
         ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
@@ -555,7 +576,7 @@ class NetWorthDialog:
             if self.entry:
                 self.db.update_net_worth_entry(
                     entry_id=self.entry['id'],
-                    date=self.date_picker.get(),
+                    date=self.date_picker.get_date(),
                     asset_name=self.asset_var.get(),
                     asset_type=self.type_var.get(),
                     value=value,
@@ -563,7 +584,7 @@ class NetWorthDialog:
                 )
             else:
                 self.db.add_net_worth_entry(
-                    date=self.date_picker.get(),
+                    date=self.date_picker.get_date(),
                     asset_name=self.asset_var.get(),
                     asset_type=self.type_var.get(),
                     value=value,
