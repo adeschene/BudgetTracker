@@ -31,28 +31,28 @@ class ReportsTab:
         # Custom time-frame labels and date pickers (disabled unless using custom timeframe)
         ttk.Label(control_frame, text="Start:").pack(side='left', padx=5)
         self.start_date_picker = DateEntry(control_frame, width=12, firstweekday='sunday',
-                                           background='#232323', foreground='whitesmoke',
-                                           headersbackground='#454545', headersforeground='whitesmoke',
-                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
-                                           weekendbackground='#666666', weekendforeground='whitesmoke',
-                                           othermonthbackground='#777777', othermonthforeground='#232323',
-                                            normalbackground='#888888', normalforeground='black',
-                                            disableddaybackground='#454545', disableddayforeground='#888888',
-                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
-                                          maxdate=datetime.now(), day=1)
+                                        background='#232323', foreground='whitesmoke',
+                                        headersbackground='#454545', headersforeground='whitesmoke',
+                                        othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                        weekendbackground='#666666', weekendforeground='whitesmoke',
+                                        othermonthbackground='#777777', othermonthforeground='#232323',
+                                        normalbackground='#888888', normalforeground='black',
+                                        disableddaybackground='#454545', disableddayforeground='#888888',
+                                        bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                        maxdate=datetime.now(), day=1)
         self.start_date_picker.pack(side='left', padx=5)
         self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.generate_report())
 
         ttk.Label(control_frame, text="End:").pack(side='left', padx=5)
         self.end_date_picker = DateEntry(control_frame, width=12, firstweekday='sunday',
-                                           background='#232323', foreground='whitesmoke',
-                                           headersbackground='#454545', headersforeground='whitesmoke',
-                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
-                                           weekendbackground='#666666', weekendforeground='whitesmoke',
-                                           othermonthbackground='#777777', othermonthforeground='#232323',
-                                            normalbackground='#888888', normalforeground='black',
-                                            disableddaybackground='#454545', disableddayforeground='#888888',
-                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                        background='#232323', foreground='whitesmoke',
+                                        headersbackground='#454545', headersforeground='whitesmoke',
+                                        othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                        weekendbackground='#666666', weekendforeground='whitesmoke',
+                                        othermonthbackground='#777777', othermonthforeground='#232323',
+                                        normalbackground='#888888', normalforeground='black',
+                                        disableddaybackground='#454545', disableddayforeground='#888888',
+                                        bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                         maxdate=datetime.now())
         self.end_date_picker.pack(side='left', padx=5)
         self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.generate_report())
