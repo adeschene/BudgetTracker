@@ -220,16 +220,21 @@ class DatabaseManager:
         conn.close()
         return transactions
     
-    def update_transaction(self, transaction_id: int, **kwargs):
+    def update_transaction(self, transaction_id: int, date: str, description: str, 
+                      amount: float, category: str, account: str, transaction_type: str, notes: str):
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Build dynamic SET clause using kwargs and execute parameterized update
-        set_clause = ', '.join([f'{key} = ?' for key in kwargs.keys()])
-        values = list(kwargs.values()) + [transaction_id]
-
-        cursor.execute(f'UPDATE transactions SET {set_clause} WHERE id = ?', values)
-
+        # Convert Decimal if passed (safety net)
+        if hasattr(amount, 'decimal'):  # isinstance(amount, Decimal)
+            amount = float(amount)
+        
+        cursor.execute('''
+            UPDATE transactions 
+            SET date = ?, description = ?, amount = ?, category = ?, account = ?, transaction_type = ?, notes = ?
+            WHERE id = ?
+        ''', (date, description, amount, category, account, transaction_type, notes, transaction_id))
+    
         conn.commit()
         conn.close()
     
@@ -511,9 +516,14 @@ class DatabaseManager:
         ''')
 
         months = [row[0] for row in cursor.fetchall()]
+
+        if not months[0]:
+            return []
+        
         history = []
 
         for month in months:
+            print(months)
             year, month_num = month.split('-')
             start_date = f"{year}-{month_num}-01"
 
