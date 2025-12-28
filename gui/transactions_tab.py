@@ -39,16 +39,35 @@ class TransactionsTab:
         ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
         ttk.Label(top_frame, text="Start:").pack(side='left', padx=5)
-        self.start_date_picker = DateEntry(top_frame, width=10, background='darkblue',
-                                          foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
-                                          state='disabled')
+        self.start_date_picker = DateEntry(top_frame, width=10, firstweekday='sunday',
+                                           background='#232323', foreground='whitesmoke',
+                                           headersbackground='#454545', headersforeground='whitesmoke',
+                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                           weekendbackground='#666666', weekendforeground='whitesmoke',
+                                           othermonthbackground='#777777', othermonthforeground='#232323',
+                                            normalbackground='#888888', normalforeground='black',
+                                            disableddaybackground='#454545', disableddayforeground='#888888',
+                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                        maxdate=datetime.now(), day=1)
         self.start_date_picker.pack(side='left', padx=5)
+        self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_transactions())
 
         ttk.Label(top_frame, text="End:").pack(side='left', padx=5)
-        self.end_date_picker = DateEntry(top_frame, width=10, background='darkblue',
-                                        foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
-                                        maxdate=datetime.now(), state='disabled')
+        self.end_date_picker = DateEntry(top_frame, width=10, firstweekday='sunday',
+                                           background='#232323', foreground='whitesmoke',
+                                           headersbackground='#454545', headersforeground='whitesmoke',
+                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                           weekendbackground='#666666', weekendforeground='whitesmoke',
+                                           othermonthbackground='#777777', othermonthforeground='#232323',
+                                            normalbackground='#888888', normalforeground='black',
+                                            disableddaybackground='#454545', disableddayforeground='#888888',
+                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                        maxdate=datetime.now())
         self.end_date_picker.pack(side='left', padx=5)
+        self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_transactions())
+
+        self.start_date_picker.config(state='disabled')
+        self.end_date_picker.config(state='disabled')
 
         ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
@@ -58,6 +77,7 @@ class TransactionsTab:
         self.category_combo = ttk.Combobox(top_frame, textvariable=self.category_var, width=12)
         self.category_combo.pack(side='left', padx=5)
         self.update_category_list()
+        self.category_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_transactions())
 
         ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
@@ -66,7 +86,7 @@ class TransactionsTab:
         self.keyword_var = tk.StringVar()
         self.keyword_entry = ttk.Entry(top_frame, textvariable=self.keyword_var, width=10)
         self.keyword_entry.pack(side='left')
-        self.keyword_entry.bind('<Return>', lambda e: self.refresh_transactions())
+        self.keyword_entry.bind('<KeyRelease>', lambda e: self.refresh_transactions())
 
         self.search_label_var = tk.StringVar(value='Exact')
 
@@ -163,8 +183,10 @@ class TransactionsTab:
             self.tree.delete(item)
 
         # Prepare filter arguments (date filter is optional)
-        start_date = self.start_date_picker.get() if self.use_date_filter_var.get() else None
-        end_date = self.end_date_picker.get() if self.use_date_filter_var.get() else None
+        if self.use_date_filter_var.get():
+            start, end = self.start_date_picker.get_date(), self.end_date_picker.get_date()
+            start_date, end_date = start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
+        else: start_date, end_date = None, None
         category = self.category_var.get() or None
 
         # Fetch transactions from DB and insert into the treeview

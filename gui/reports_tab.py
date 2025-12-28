@@ -30,16 +30,32 @@ class ReportsTab:
 
         # Custom time-frame labels and date pickers (disabled unless using custom timeframe)
         ttk.Label(control_frame, text="Start:").pack(side='left', padx=5)
-        self.start_date_picker = DateEntry(control_frame, width=12, background='darkblue',
-                                          foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
-                                          maxdate=datetime.now())
+        self.start_date_picker = DateEntry(control_frame, width=12, firstweekday='sunday',
+                                           background='#232323', foreground='whitesmoke',
+                                           headersbackground='#454545', headersforeground='whitesmoke',
+                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                           weekendbackground='#666666', weekendforeground='whitesmoke',
+                                           othermonthbackground='#777777', othermonthforeground='#232323',
+                                            normalbackground='#888888', normalforeground='black',
+                                            disableddaybackground='#454545', disableddayforeground='#888888',
+                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                          maxdate=datetime.now(), day=1)
         self.start_date_picker.pack(side='left', padx=5)
+        self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.generate_report())
 
         ttk.Label(control_frame, text="End:").pack(side='left', padx=5)
-        self.end_date_picker = DateEntry(control_frame, width=12, background='darkblue',
-                                        foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
+        self.end_date_picker = DateEntry(control_frame, width=12, firstweekday='sunday',
+                                           background='#232323', foreground='whitesmoke',
+                                           headersbackground='#454545', headersforeground='whitesmoke',
+                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                           weekendbackground='#666666', weekendforeground='whitesmoke',
+                                           othermonthbackground='#777777', othermonthforeground='#232323',
+                                            normalbackground='#888888', normalforeground='black',
+                                            disableddaybackground='#454545', disableddayforeground='#888888',
+                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                         maxdate=datetime.now())
         self.end_date_picker.pack(side='left', padx=5)
+        self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.generate_report())
 
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
@@ -132,7 +148,7 @@ class ReportsTab:
         self.report_text.insert('end', f"Net Income:          ${net_income:>15,.2f}\n\n")
         
         # Breakdown expenses by category for reporting and charts
-        spending_by_category = self.db.get_spending_by_category(start_date, end_date)
+        spending_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='expense')
 
         if spending_by_category:
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
@@ -181,25 +197,21 @@ class ReportsTab:
             total_diff = total_budget - total_actual
             self.report_text.insert('end', f"{'TOTAL':<30} ${total_budget:>11,.2f}  ${total_actual:>11,.2f}  ${total_diff:>11,.2f}\n")
             self.report_text.insert('end', "\n")
+        
+        # Breakdown income by category for reporting and charts
+        income_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='income')
 
-        # Prepare income section
-        income_transactions = [t for t in transactions if t['amount'] > 0]
-        if income_transactions:
+        if income_by_category:
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             self.report_text.insert('end', "INCOME BY CATEGORY\n")
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            
-            income_by_category = {}
-            for trans in income_transactions:
-                category = trans['category'] or 'Uncategorized'
-                income_by_category[category] = income_by_category.get(category, 0) + trans['amount']
             
             sorted_income = sorted(income_by_category.items(), key=lambda x: x[1], reverse=True)
             
             for category, amount in sorted_income:
                 percentage = (amount / total_income * 100) if total_income > 0 else 0
                 self.report_text.insert('end', f"{category:<30} ${amount:>12,.2f}  ({percentage:>5.1f}%)\n")
-            
+
             self.report_text.insert('end', "\n")
         
         # Include net worth (asset/liability) snapshot information
