@@ -23,7 +23,7 @@ class VisualizationsTab:
         ttk.Label(control_frame, text='Period:').pack(side='left', padx=(4, 6))
         self.period_var = tk.StringVar(value='All Time')
         period_combo = ttk.Combobox(control_frame, textvariable=self.period_var, width=18, state='readonly')
-        period_combo['values'] = ['This Month', 'Last Month', 'This Year', 'Last Year', 'All Time', 'Custom']
+        period_combo['values'] = ['This Month', 'Last Month', 'Last Two Months', 'Last Three Months', 'This Year', 'Last Year', 'All Time', 'Custom']
         period_combo.pack(side='left')
         period_combo.bind('<<ComboboxSelected>>', lambda e: self.on_period_change())
 
@@ -31,16 +31,35 @@ class VisualizationsTab:
 
         # Custom date range pickers (toggled on/off based on period selection)
         ttk.Label(control_frame, text="Start:").pack(side='left', padx=5)
-        self.start_date_picker = DateEntry(control_frame, width=10, background='darkblue',
-                                          foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
-                                          state='disabled')
+        self.start_date_picker = DateEntry(control_frame, width=10, firstweekday='sunday',
+                                           background='#232323', foreground='whitesmoke',
+                                           headersbackground='#454545', headersforeground='whitesmoke',
+                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                           weekendbackground='#666666', weekendforeground='whitesmoke',
+                                           othermonthbackground='#777777', othermonthforeground='#232323',
+                                            normalbackground='#888888', normalforeground='black',
+                                            disableddaybackground='#454545', disableddayforeground='#888888',
+                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                        maxdate=datetime.now(), day=1)
         self.start_date_picker.pack(side='left', padx=5)
+        self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_charts())
 
         ttk.Label(control_frame, text="End:").pack(side='left', padx=5)
-        self.end_date_picker = DateEntry(control_frame, width=10, background='darkblue',
-                                        foreground='white', borderwidth=2, date_pattern='yyyy-mm-dd',
-                                        maxdate=datetime.now(), state='disabled')
+        self.end_date_picker = DateEntry(control_frame, width=10, firstweekday='sunday',
+                                           background='#232323', foreground='whitesmoke',
+                                           headersbackground='#454545', headersforeground='whitesmoke',
+                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                           weekendbackground='#666666', weekendforeground='whitesmoke',
+                                           othermonthbackground='#777777', othermonthforeground='#232323',
+                                            normalbackground='#888888', normalforeground='black',
+                                            disableddaybackground='#454545', disableddayforeground='#888888',
+                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                        maxdate=datetime.now())
         self.end_date_picker.pack(side='left', padx=5)
+        self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_charts())
+
+        self.start_date_picker.config(state='disabled')
+        self.end_date_picker.config(state='disabled')
 
         ttk.Button(control_frame, text='Refresh', style='Accent.TButton', command=self.refresh_charts).pack(side='right', padx=5)
 
@@ -58,9 +77,19 @@ class VisualizationsTab:
         self.canvas1 = FigureCanvasTkAgg(self.figure1, net_worth_frame)
         self.canvas1.get_tk_widget().pack(fill='both', expand=True)
 
+        # --- Income, Expenses, & Savings Tab ---
+        mixed_tab = ttk.Frame(tabs)
+        tabs.add(mixed_tab, text='Money In/Out')
+        mixed_frame = ttk.Frame(mixed_tab)
+        mixed_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        self.figure2 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax2 = self.figure2.add_subplot(111, facecolor='#444445')
+        self.canvas2 = FigureCanvasTkAgg(self.figure2, mixed_frame)
+        self.canvas2.get_tk_widget().pack(fill='both', expand=True)
+
         # --- Income Over Time Tab ---
         income_tab = ttk.Frame(tabs)
-        tabs.add(income_tab, text='Income Over Time')
+        tabs.add(income_tab, text='Income')
         income_frame = ttk.Frame(income_tab)
         income_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure3 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
@@ -70,7 +99,7 @@ class VisualizationsTab:
 
         # --- Expenses Over Time Tab ---
         expenses_time_tab = ttk.Frame(tabs)
-        tabs.add(expenses_time_tab, text='Expenses Over Time')
+        tabs.add(expenses_time_tab, text='Expenses')
         expenses_time_frame = ttk.Frame(expenses_time_tab)
         expenses_time_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure4 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
@@ -80,7 +109,7 @@ class VisualizationsTab:
 
         # --- Savings Over Time Tab ---
         savings_tab = ttk.Frame(tabs)
-        tabs.add(savings_tab, text='Savings Over Time')
+        tabs.add(savings_tab, text='Savings')
         savings_frame = ttk.Frame(savings_tab)
         savings_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure5 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
@@ -93,10 +122,20 @@ class VisualizationsTab:
         tabs.add(expense_tab, text='Expense Breakdown')
         expense_frame = ttk.Frame(expense_tab)
         expense_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure2 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
-        self.ax2 = self.figure2.add_subplot(111, facecolor='#444445')
-        self.canvas2 = FigureCanvasTkAgg(self.figure2, expense_frame)
-        self.canvas2.get_tk_widget().pack(fill='both', expand=True)
+        self.figure6 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax6 = self.figure6.add_subplot(111, facecolor='#444445')
+        self.canvas6 = FigureCanvasTkAgg(self.figure6, expense_frame)
+        self.canvas6.get_tk_widget().pack(fill='both', expand=True)
+
+        # --- Income Breakdown Tab (pie) ---
+        income_pie_tab = ttk.Frame(tabs)
+        tabs.add(income_pie_tab, text='Income Breakdown')
+        income_pie_frame = ttk.Frame(income_pie_tab)
+        income_pie_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        self.figure7 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax7 = self.figure7.add_subplot(111, facecolor='#444445')
+        self.canvas7 = FigureCanvasTkAgg(self.figure7, income_pie_frame)
+        self.canvas7.get_tk_widget().pack(fill='both', expand=True)
 
         # --- Category Drill Down Tab ---
         cat_tab = ttk.Frame(tabs)
@@ -112,10 +151,10 @@ class VisualizationsTab:
 
         cat_frame = ttk.Frame(cat_tab)
         cat_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure6 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
-        self.ax6 = self.figure6.add_subplot(111, facecolor='#444445')
-        self.canvas6 = FigureCanvasTkAgg(self.figure6, cat_frame)
-        self.canvas6.get_tk_widget().pack(fill='both', expand=True)
+        self.figure8 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax8 = self.figure8.add_subplot(111, facecolor='#444445')
+        self.canvas8 = FigureCanvasTkAgg(self.figure8, cat_frame)
+        self.canvas8.get_tk_widget().pack(fill='both', expand=True)
 
         # --- Keyword Drill Down Tab ---
         kw_tab = ttk.Frame(tabs)
@@ -186,10 +225,10 @@ class VisualizationsTab:
 
         kw_frame = ttk.Frame(kw_tab)
         kw_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure7 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
-        self.ax7 = self.figure7.add_subplot(111, facecolor='#444445')
-        self.canvas7 = FigureCanvasTkAgg(self.figure7, kw_frame)
-        self.canvas7.get_tk_widget().pack(fill='both', expand=True)
+        self.figure9 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
+        self.ax9 = self.figure9.add_subplot(111, facecolor='#444445')
+        self.canvas9 = FigureCanvasTkAgg(self.figure9, kw_frame)
+        self.canvas9.get_tk_widget().pack(fill='both', expand=True)
 
         # Initial draw of all charts using current default period
         self.refresh_charts()
@@ -210,26 +249,41 @@ class VisualizationsTab:
         today = datetime.now()
         period = self.period_var.get()
 
-        if period == 'This Month':
-            start = today.replace(day=1)
-            end = today
-        elif period == 'Last Month':
-            first_of_this_month = today.replace(day=1)
-            last_month_end = first_of_this_month - timedelta(days=1)
-            start = last_month_end.replace(day=1)
-            end = last_month_end
-        elif period == 'This Year':
-            start = today.replace(month=1, day=1)
-            end = today
-        elif period == 'Last Year':
-            start = today.replace(year=today.year-1, month=1, day=1)
-            end = today.replace(year=today.year-1, month=12, day=31)
-        elif period == 'Custom':
-            start_date = self.start_date_picker.get_date()
-            end_date = self.end_date_picker.get_date()
-            return start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
-        else:
-            return None, None
+        match period:
+            case 'This Month':
+                start = today.replace(day=1)
+                end = today
+            case 'Last Month':
+                first_of_this_month = today.replace(day=1)
+                last_month_end = first_of_this_month - timedelta(days=1)
+                start = last_month_end.replace(day=1)
+                end = last_month_end
+            case 'Last Two Months':
+                first_of_this_month = today.replace(day=1)
+                last_month_end = first_of_this_month - timedelta(days=1)
+                start = last_month_end.replace(day=1)
+                end = today
+            case 'Last Three Months':
+                this_month = today.month
+                this_year = today.year
+                match this_month:
+                    case 2: start_month = 12
+                    case 1: start_month = 11
+                    case _: start_month = this_month - 2
+                start_year = this_year - 1 if start_month == (12 or 11) else this_year
+                start = today.replace(year=start_year, month=start_month, day=1)
+                end = today
+            case 'This Year':
+                start = today.replace(month=1, day=1)
+                end = today
+            case 'Last Year':
+                start = today.replace(year=today.year-1, month=1, day=1)
+                end = today.replace(year=today.year-1, month=12, day=31)
+            case 'Custom':
+                start = self.start_date_picker.get_date()
+                end = self.end_date_picker.get_date()
+            case _: # All Time chosen, handled case-by-case in refresh methods
+                return None, None
 
         # Return ISO date strings useful for DB queries
         return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
@@ -238,10 +292,12 @@ class VisualizationsTab:
         # Refresh each visualization panel. Each function queries the DB
         # and redraws its respective matplotlib axes and canvas.
         self.refresh_net_worth_chart()
+        self.refresh_mixed_chart()
         self.refresh_income_chart()
         self.refresh_expenses_over_time_chart()
         self.refresh_savings_chart()
         self.refresh_expense_chart()
+        self.refresh_income_pie_chart()
         self.refresh_category_drilldown_chart()
         self.refresh_keyword_drilldown_chart()
 
@@ -315,44 +371,57 @@ class VisualizationsTab:
             # Respect selected period (start/end) if provided; otherwise use all history
             start_date, end_date = self.get_date_range()
 
-            history = self.db.get_net_worth_history()
+            history = self.db.get_net_worth_history() # Get all net worth entries in DB
+
+            if not start_date and not end_date and history: # All Time handling
+                first_entry_partial_date = history[0]['month']
+                start_date = f'{first_entry_partial_date[:4]}-{first_entry_partial_date[5:7]}-1'
+                end_date = datetime.now().strftime('%Y-%m-%d')
 
             # If a specific date range is selected, filter the month-level history
             if start_date and end_date and history:
                 start_month = start_date[:7]
                 end_month = end_date[:7]
                 filtered = [h for h in history if start_month <= h.get('month', '') <= end_month]
-                history = filtered
+                if filtered:
+                    # Add in months with no entries
+                    months_in_range = self._month_range(start_date, end_date)
+                    all_month_dicts = [{'month': m, 'total': 0.0, 'breakdown': {}} for m in months_in_range]
+                    lookup = {d['month']: d for d in filtered}
+                    missing_added = [lookup.get(d['month'], d) for d in all_month_dicts]
+                    history = missing_added
+                else: # Don't draw graph unless we have at least one entry to show
+                    history = filtered
 
             if not history:
-                self.ax1.text(0.5, 0.5, 'No net worth data available',
+                self.ax1.text(0.5, 0.5, 'No data available for selected period',
                             ha='center', va='center', transform=self.ax1.transAxes,
-                            fontsize=14, color='gray')
+                            fontsize=14, color='whitesmoke')
                 self.ax1.set_axis_off()
                 self.canvas1.draw()
                 return
 
-            # `history` is expected to be list of dicts with 'month' and 'breakdown'
+            # `History` is expected to be list of dicts with 'month' and 'breakdown'
             months = [h['month'] for h in history]
 
-            # compute assets, liabilities, and net for each month
+            # Compute assets, liabilities, and net for each month
             assets = []
             liabilities = []
             net = []
             for h in history:
                 breakdown = h.get('breakdown', {}) or {}
-                # assets: sum of non-negative values; liabilities: sum of negative values (keep negative)
+                # Assets: sum of non-negative values; liabilities: sum of negative values (keep negative)
                 a = sum(float(v) for v in breakdown.values() if v and float(v) >= 0)
                 l = sum(float(v) for v in breakdown.values() if v and float(v) < 0)
                 assets.append(a)
                 liabilities.append(l)  # l will be negative or 0
-                # net: prefer provided total, otherwise sum of breakdown
+                # Net: prefer provided total, otherwise sum of breakdown
                 net_val = h.get('total')
                 if net_val is None:
                     net_val = sum(float(v) for v in breakdown.values() if v)
                 net.append(net_val)
 
-            # labels
+            # Labels
             month_labels = []
             for month in months:
                 year, month_num = month.split('-')
@@ -366,8 +435,8 @@ class VisualizationsTab:
             bars_a = self.ax1.bar([i - width for i in x], assets, width=width, color='tab:green', label='Assets', edgecolor='whitesmoke', alpha=0.8)
             bars_l = self.ax1.bar(x, liabilities, width=width, color='tab:red', label='Liabilities', edgecolor='whitesmoke', alpha=0.8)
             bars_n = self.ax1.bar([i + width for i in x], net, width=width, color='tab:blue', label='Net Worth', edgecolor='whitesmoke', alpha=0.8)
-
-            # compute averages and draw dashed lines for each (liabilities average will be negative)
+            
+            # Compute averages and draw dashed lines for each (liabilities average will be negative)
             avg_a = sum(assets) / len(assets) if assets else 0.0
             avg_l = sum(liabilities) / len(liabilities) if liabilities else 0.0
             avg_n = sum(net) / len(net) if net else 0.0
@@ -380,19 +449,20 @@ class VisualizationsTab:
             # Origin line
             self.ax1.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
 
-            self.ax1.set_xlabel('Month', fontsize=12, fontweight='bold')
-            self.ax1.set_ylabel('Amount ($)', fontsize=12, fontweight='bold')
-            self.ax1.set_title('Net Worth Breakdown Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+            if start_date and end_date:
+                formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+                formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            self.ax1.set_title('Net Worth Breakdown\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
 
             self.ax1.set_xticks(range(len(months)))
-            self.ax1.set_xticklabels(month_labels, rotation=45, ha='right')
+            self.ax1.set_xticklabels(month_labels, rotation=90) # Use vertical month labels
 
-            # formatting
+            # Formatting
             self.ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
             self.ax1.grid(True, axis='y', alpha=0.3, linestyle=':')
             self.ax1.legend(facecolor='#313131', edgecolor='whitesmoke', labelcolor='whitesmoke')
 
-            # coloring
+            # Coloring
             self.ax1.spines['top'].set_color('whitesmoke')
             self.ax1.spines['left'].set_color('whitesmoke')
             self.ax1.tick_params(axis='x', colors='whitesmoke')
@@ -401,26 +471,96 @@ class VisualizationsTab:
             self.ax1.yaxis.label.set_color("whitesmoke")
 
             # Annotate bar values
-            for bar in bars_n:
-                hgt = bar.get_height()
-                if hgt == 0: # Don't label zero values
-                    continue
-                self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
-
-            for bar in bars_l:
-                hgt = bar.get_height()
-                if hgt == 0: # Don't label zero values
-                    continue
-                # Liabilities should be negative; place label below the bar
-                self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='top' if hgt < 0 else 'bottom', fontsize=8, color='whitesmoke')
+            padding = 6 # Additional space between bars and $ labels
 
             for bar in bars_a:
                 hgt = bar.get_height()
-                if hgt == 0: # Don't label zero values
-                    continue
-                self.ax1.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.0f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
+                if hgt > 0: # Don't label zero values, assets should always be positive, place label above bar
+                    self.ax1.text(bar.get_x() + bar.get_width()/2., hgt + padding, f'${hgt:,.0f}', ha='center', va='bottom', fontsize=8, color='whitesmoke')
+
+            for bar in bars_l:
+                hgt = bar.get_height()
+                if hgt < 0: # Liabilities should be negative; place label below the bar
+                    self.ax1.text(bar.get_x() + bar.get_width()/2., hgt - padding, f'${hgt:,.0f}', ha='center', va='top', fontsize=8, color='whitesmoke')
+
+            for bar in bars_n:
+                hgt = bar.get_height()
+                y_pos = hgt + padding if hgt > 0 else hgt - padding
+                if hgt != 0: # Net value varies, place label according to value, but don't label zeroes regardless
+                    self.ax1.text(bar.get_x() + bar.get_width()/2., y_pos, f'${hgt:,.0f}', ha='center', va='bottom' if hgt > 0 else 'top', fontsize=8, color='whitesmoke')
 
             self.canvas1.draw()
+
+    # Shows income, expenses, and savings in a bar chart, adjusted for the chosen period
+    def refresh_mixed_chart(self):
+        # Grouped bar chart showing assets, liabilities and net worth over time
+        self.ax2.clear()
+
+        # Respect selected period (start/end) if provided; otherwise use all history
+        start_date, end_date = self.get_date_range()
+        tx = self._get_transactions_in_range(start_date, end_date)
+
+        if not tx:
+            self.ax2.text(0.5, 0.5, 'No data available for selected period', ha='center', va='center', transform=self.ax2.transAxes, fontsize=14, color='whitesmoke')
+            self.ax2.set_axis_off()
+            self.canvas2.draw()
+            return
+
+        # Get dollar value lists for income, expenses, and both mixed together
+        income = [c['amount'] for c in tx if c['transaction_type'] == 'income']
+        expenses = [c['amount'] for c in tx if c['transaction_type'] == 'expense']
+        all_vals = income + expenses
+
+        # Get total values for bars
+        total_income = sum(income)
+        total_expenses = sum(expenses)
+        total_savings = sum(all_vals)
+
+        # Bar variables
+        values = [total_income,total_expenses,total_savings]
+        width = 1.0
+        colors = ['tab:green','tab:red','tab:blue']
+
+        # Plot bars for income, expenses, and savings
+        bars = self.ax2.bar(range(len(values)), values, width=width, color=colors, edgecolor='whitesmoke', alpha=0.8)
+
+        # Origin line
+        self.ax2.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
+
+        if start_date and end_date:
+            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        self.ax2.set_title('Total Income, Expenses & Savings\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        
+        # Label setup
+        labels = ['Income','Expenses','Savings']
+        self.ax2.set_xticks(range(len(labels)))
+        self.ax2.set_xticklabels(labels)
+
+        # Formatting
+        self.ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+        self.ax2.grid(True, axis='y', alpha=0.3, linestyle=':')
+        #self.ax2.legend(facecolor='#313131', edgecolor='whitesmoke', labelcolor='whitesmoke')
+
+        # Coloring
+        self.ax2.spines['top'].set_color('whitesmoke')
+        self.ax2.spines['left'].set_color('whitesmoke')
+        self.ax2.tick_params(axis='x', colors='whitesmoke')
+        self.ax2.tick_params(axis='y', colors='whitesmoke')
+        self.ax2.xaxis.label.set_color("whitesmoke")
+        self.ax2.yaxis.label.set_color("whitesmoke")
+
+        # Annotate bar values
+        padding = 80 # Additional space between bars and $ labels
+
+        for bar in bars:
+            hgt = bar.get_height()
+            y_pos = hgt + padding if hgt > 0 else hgt - padding
+            if hgt != 0: # Value sign varies, place label according to value, but don't label zeroes regardless
+                self.ax2.text(bar.get_x() + bar.get_width()/2., y_pos, f'${hgt:,.0f}', ha='center', va='bottom' if hgt > 0 else 'top', fontsize=8, color='whitesmoke')
+
+        self.canvas2.draw()
+
 
     def refresh_income_chart(self):
         # Line/bar chart showing income totals per month
@@ -430,7 +570,7 @@ class VisualizationsTab:
         monthly = self._aggregate_monthly(tx, kind='income')
 
         if not monthly:
-            self.ax3.text(0.5, 0.5, 'No income data available', ha='center', va='center', transform=self.ax3.transAxes, fontsize=14, color='whitesmoke')
+            self.ax3.text(0.5, 0.5, 'No data available for selected period', ha='center', va='center', transform=self.ax3.transAxes, fontsize=14, color='whitesmoke')
             self.ax3.set_axis_off()
             self.canvas3.draw()
             return
@@ -441,7 +581,7 @@ class VisualizationsTab:
             months = sorted(monthly.keys())
 
         values = [monthly.get(m, 0.0) for m in months]
-
+        
         # Formatting/Creating bars
         bars = self.ax3.bar(range(len(months)), values, color='green', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
@@ -449,15 +589,20 @@ class VisualizationsTab:
         # Average line
         self.ax3.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
-        self.ax3.set_xlabel('Month')
-        self.ax3.set_ylabel('Income ($)')
-        self.ax3.set_title('Income Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        if start_date and end_date:
+            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        self.ax3.set_title('Income Over Time\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax3.set_xticks(range(len(months)))
-        self.ax3.set_xticklabels(labels, rotation=45, ha='right')
+        self.ax3.set_xticklabels(labels, rotation=90) # Use vertical month labels
+
+        # Formatting
+        self.ax3.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
         self.ax3.grid(True, axis='y', alpha=0.3, linestyle=':')
 
-        # coloring
+        # Coloring
         self.ax3.spines['top'].set_color('whitesmoke')
         self.ax3.spines['left'].set_color('whitesmoke')
         self.ax3.tick_params(axis='x', colors='whitesmoke')
@@ -466,13 +611,10 @@ class VisualizationsTab:
         self.ax3.yaxis.label.set_color("whitesmoke")
 
         # Annotate bar values
-        for bar in bars:
-            hgt = bar.get_height()
-            if hgt == 0: # Don't label zero values
-                continue
-            self.ax3.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
-        
-        self.canvas3.draw()
+        ignore_zeroes = [f'${v:,.2f}' if v > 0 else '' for v in values]
+        self.ax3.bar_label(bars, labels=ignore_zeroes, padding=3, color='whitesmoke', fontsize=8)
+
+        self.canvas3.draw() # Redraw canvas with updated chart
     
     def refresh_expenses_over_time_chart(self):
         # Bar chart showing expense totals per month
@@ -482,7 +624,7 @@ class VisualizationsTab:
         monthly = self._aggregate_monthly(tx, kind='expense')
 
         if not monthly:
-            self.ax4.text(0.5, 0.5, 'No expense data available', ha='center', va='center', transform=self.ax4.transAxes, fontsize=14, color='gray')
+            self.ax4.text(0.5, 0.5, 'No data available for selected period', ha='center', va='center', transform=self.ax4.transAxes, fontsize=14, color='whitesmoke')
             self.ax4.set_axis_off()
             self.canvas4.draw()
             return
@@ -497,13 +639,18 @@ class VisualizationsTab:
         bars = self.ax4.bar(range(len(months)), values, color='red', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
         self.ax4.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
-
-        self.ax4.set_xlabel('Month')
-        self.ax4.set_ylabel('Expenses ($)')
-        self.ax4.set_title('Expenses Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        
+        if start_date and end_date:
+            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        self.ax4.set_title('Expenses Over Time\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax4.set_xticks(range(len(months)))
-        self.ax4.set_xticklabels(labels, rotation=45, ha='right')
+        self.ax4.set_xticklabels(labels, rotation=90) # Use vertical month labels
+
+        # Formatting
+        self.ax4.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
         self.ax4.grid(True, axis='y', alpha=0.3, linestyle=':')
 
         # coloring
@@ -515,11 +662,8 @@ class VisualizationsTab:
         self.ax4.yaxis.label.set_color("whitesmoke")
 
         # Annotate bar values
-        for bar in bars:
-            hgt = bar.get_height()
-            if hgt == 0: # Don't label zero values
-                continue
-            self.ax4.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
+        ignore_zeroes = [f'${v:,.2f}' if v > 0 else '' for v in values]
+        self.ax4.bar_label(bars, labels=ignore_zeroes, padding=3, color='whitesmoke', fontsize=8)
 
         self.canvas4.draw()
 
@@ -534,7 +678,9 @@ class VisualizationsTab:
         expense_monthly = self._aggregate_monthly(tx, kind='expense')
 
         if not income_monthly and not expense_monthly:
-            self.ax5.text(0.5, 0.5, 'No data available', ha='center', va='center', transform=self.ax5.transAxes, fontsize=14, color='whitesmoke')
+            self.ax5.text(0.5, 0.5, 'No data available for selected period', 
+                          ha='center', va='center', transform=self.ax5.transAxes, 
+                          fontsize=14, color='whitesmoke')
             self.ax5.set_axis_off()
             self.canvas5.draw()
             return
@@ -553,12 +699,17 @@ class VisualizationsTab:
         # Average line
         self.ax5.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
-        self.ax5.set_xlabel('Month')
-        self.ax5.set_ylabel('Savings ($)')
-        self.ax5.set_title('Savings Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        if start_date and end_date:
+            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        self.ax5.set_title('Savings Over Time\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax5.set_xticks(range(len(months)))
-        self.ax5.set_xticklabels(labels, rotation=45, ha='right')
+        self.ax5.set_xticklabels(labels, rotation=90) # Use vertical month labels
+
+        # Formatting
+        self.ax5.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
         self.ax5.grid(True, axis='y', alpha=0.3, linestyle=':')
 
         # coloring
@@ -570,51 +721,119 @@ class VisualizationsTab:
         self.ax5.yaxis.label.set_color("whitesmoke")
 
         # Annotate bar values
+        padding = 10 # Additional space between bars and $ labels
         for bar in bars:
             hgt = bar.get_height()
-            if hgt == 0: # Don't label zero values
-                continue
-            self.ax5.text(bar.get_x() + bar.get_width()/2., hgt/2, f'${hgt:,.0f}', ha='center', va='center', fontsize=8, color='whitesmoke')
+            y_pos = hgt + padding if hgt > 0 else hgt - padding
+            if hgt != 0: # Place label according to value, don't label zeroes
+                self.ax5.text(bar.get_x() + bar.get_width()/2., y_pos, f'${hgt:,.0f}', ha='center', va='bottom' if hgt > 0 else 'top', fontsize=8, color='whitesmoke')
 
         self.canvas5.draw()
     
     def refresh_expense_chart(self):
-        self.ax2.clear()
-
+        self.ax6.clear()
         start_date, end_date = self.get_date_range()
-        spending = self.db.get_spending_by_category(start_date, end_date)
+        expenses = self.db.get_category_totals_by_type(start_date, end_date, type='expense')
+        cat_dict = self.db.get_categories(cat_type='expense') 
 
-        if not spending:
-            self.ax2.text(0.5, 0.5, 'No expense data available for this period',
-                        ha='center', va='center', transform=self.ax2.transAxes,
+        if not expenses or not cat_dict:
+            self.ax6.text(0.5, 0.5, 'No data available for selected period',
+                        ha='center', va='center', transform=self.ax6.transAxes,
                         fontsize=14, color='whitesmoke')
-            self.ax2.set_axis_off()
-            self.canvas2.draw()
+            self.ax6.set_axis_off()
+            self.canvas6.draw()
             return
 
-        categories = list(spending.keys())
-        amounts = list(spending.values())
+        categories = [c['name'] for c in cat_dict]
+        sorted_cats = sorted(categories, key=lambda c: expenses.get(c, 0.0), reverse=True)
 
-        colors = plt.cm.Set3(range(len(categories)))
+        values = [expenses.get(c, 0.0) for c in sorted_cats]
+        bars = self.ax6.bar(sorted_cats, values, color='red', alpha=0.7, edgecolor='whitesmoke')
+        avg = sum(list(filter(None, values))) / len(list(filter(None, values))) if values else 0.0
 
-        wedges, texts, autotexts = self.ax2.pie(amounts, autopct='%1.1f%%', pctdistance=1.1,
-                                                colors=colors, startangle=90)
+        # Average line
+        self.ax6.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
-        for autotext in autotexts:
-            autotext.set_color('whitesmoke')
-            autotext.set_fontweight('bold')
-            autotext.set_fontsize(10)
+        if start_date and end_date:
+            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        self.ax6.set_title('Expenses Breakdown\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        
+        self.ax6.set_xticks(range(len(sorted_cats)))
+        self.ax6.set_xticklabels(sorted_cats, rotation=45, ha='right') # Use tilted category labels
 
-        period_label = self.period_var.get()
-        self.ax2.set_title(f'Expenses by Category - {period_label}', fontsize=14, fontweight='bold', color='whitesmoke', pad=20)
+        # Formatting
+        self.ax6.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+        self.ax6.grid(True, axis='y', alpha=0.3, linestyle=':')
 
-        self.ax2.legend(categories, loc='center left', bbox_to_anchor=(1, 0.75), fontsize=12, facecolor='#444445', edgecolor='whitesmoke', labelcolor='whitesmoke')
+        # coloring
+        self.ax6.spines['top'].set_color('whitesmoke')
+        self.ax6.spines['left'].set_color('whitesmoke')
+        self.ax6.tick_params(axis='x', colors='whitesmoke')
+        self.ax6.tick_params(axis='y', colors='whitesmoke')
+        self.ax6.xaxis.label.set_color("whitesmoke")
+        self.ax6.yaxis.label.set_color("whitesmoke")
 
-        self.canvas2.draw()
+        # Annotate bar values
+        ignore_zeroes = [f'${v:,.2f}' if v > 0 else '' for v in values]
+        self.ax6.bar_label(bars, labels=ignore_zeroes, padding=3, color='whitesmoke', fontsize=8)
+
+        self.canvas6.draw()
+    
+    def refresh_income_pie_chart(self):
+        self.ax7.clear()
+
+        start_date, end_date = self.get_date_range()
+        income = self.db.get_category_totals_by_type(start_date, end_date, type='income')
+        cat_dict = self.db.get_categories(cat_type='income') 
+
+        if not income or not cat_dict:
+            self.ax7.text(0.5, 0.5, 'No data available for selected period',
+                        ha='center', va='center', transform=self.ax7.transAxes,
+                        fontsize=14, color='whitesmoke')
+            self.ax7.set_axis_off()
+            self.canvas7.draw()
+            return
+
+        categories = [c['name'] for c in cat_dict]
+        sorted_cats = sorted(categories, key=lambda c: income.get(c, 0.0), reverse=True)
+
+        values = [income.get(c, 0.0) for c in sorted_cats]
+        bars = self.ax7.bar(sorted_cats, values, color='green', alpha=0.7, edgecolor='whitesmoke')
+        avg = sum(list(filter(None, values))) / len(list(filter(None, values))) if values else 0.0
+
+        # Average line
+        self.ax7.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
+
+        if start_date and end_date:
+            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        self.ax7.set_title('Income Breakdown\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        
+        self.ax7.set_xticks(range(len(sorted_cats)))
+        self.ax7.set_xticklabels(sorted_cats, rotation=45, ha='right') # Use tilted category labels
+
+        # Formatting
+        self.ax7.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+        self.ax7.grid(True, axis='y', alpha=0.3, linestyle=':')
+
+        # coloring
+        self.ax7.spines['top'].set_color('whitesmoke')
+        self.ax7.spines['left'].set_color('whitesmoke')
+        self.ax7.tick_params(axis='x', colors='whitesmoke')
+        self.ax7.tick_params(axis='y', colors='whitesmoke')
+        self.ax7.xaxis.label.set_color("whitesmoke")
+        self.ax7.yaxis.label.set_color("whitesmoke")
+
+        # Annotate bar values
+        ignore_zeroes = [f'${v:,.2f}' if v > 0 else '' for v in values]
+        self.ax7.bar_label(bars, labels=ignore_zeroes, padding=3, color='whitesmoke', fontsize=8)
+
+        self.canvas7.draw()
 
     def refresh_category_drilldown_chart(self):
         # Draw a bar chart showing monthly totals for the selected category
-        self.ax6.clear()
+        self.ax8.clear()
         # ensure category list is up-to-date
         try:
             self._update_category_list()
@@ -623,9 +842,9 @@ class VisualizationsTab:
 
         category = self.category_var.get()
         if not category:
-            self.ax6.text(0.5, 0.5, 'No category selected', ha='center', va='center', transform=self.ax6.transAxes, fontsize=14, color='whitesmoke')
-            self.ax6.set_axis_off()
-            self.canvas6.draw()
+            self.ax8.text(0.5, 0.5, 'Select a category to view spending data', ha='center', va='center', transform=self.ax8.transAxes, fontsize=14, color='whitesmoke')
+            self.ax8.set_axis_off()
+            self.canvas8.draw()
             return
 
         start_date, end_date = self.get_date_range()
@@ -637,9 +856,9 @@ class VisualizationsTab:
         monthly = self._aggregate_monthly(filtered, kind='all')
 
         if not monthly:
-            self.ax6.text(0.5, 0.5, 'No data for selected category', ha='center', va='center', transform=self.ax6.transAxes, fontsize=14, color='whitesmoke')
-            self.ax6.set_axis_off()
-            self.canvas6.draw()
+            self.ax8.text(0.5, 0.5, 'No data available for selected category', ha='center', va='center', transform=self.ax8.transAxes, fontsize=14, color='whitesmoke')
+            self.ax8.set_axis_off()
+            self.canvas8.draw()
             return
 
         if start_date and end_date:
@@ -651,11 +870,11 @@ class VisualizationsTab:
         values = [abs(monthly.get(m, 0.0)) for m in months]
 
         # Use a neutral color for category drilldown bars
-        bars = self.ax6.bar(range(len(months)), values, color='gray', alpha=0.7, edgecolor='whitesmoke')
+        bars = self.ax8.bar(range(len(months)), values, color='gray', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
 
         # Average line
-        self.ax6.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
+        self.ax8.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
         # Add budget line if budget exists for this category
         try:
@@ -664,46 +883,49 @@ class VisualizationsTab:
             if budget:
                 # budget is monthly target; draw as horizontal line
                 monthly_budget = budget['monthly_target']
-                self.ax6.axhline(y=monthly_budget, color='green', linestyle='-', linewidth=2, label=f'Budget: ${monthly_budget:,.2f}')
-                self.ax6.legend(facecolor='#313131', edgecolor='whitesmoke', labelcolor='whitesmoke')
+                self.ax8.axhline(y=monthly_budget, color='green', linestyle='-', linewidth=2, label=f'Budget: ${monthly_budget:,.2f}')
+                self.ax8.legend(facecolor='#313131', edgecolor='whitesmoke', labelcolor='whitesmoke')
         except Exception:
             pass
 
         # Origin line
-        self.ax6.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
+        self.ax8.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
 
-        self.ax6.set_xlabel('Month')
-        self.ax6.set_ylabel('Amount ($)')
-        self.ax6.set_title(f'Category: {category} - Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        if start_date and end_date:
+            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        self.ax8.set_title(f'Category: {category}\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
-        self.ax6.set_xticks(range(len(months)))
-        self.ax6.set_xticklabels(labels, rotation=45, ha='right')
-        self.ax6.grid(True, axis='y', alpha=0.3, linestyle=':')
+        self.ax8.set_xticks(range(len(months)))
+        self.ax8.set_xticklabels(labels, rotation=90) # Use vertical month labels
+
+        # Formatting
+        self.ax8.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+        self.ax8.grid(True, axis='y', alpha=0.3, linestyle=':')
 
         # coloring
-        self.ax6.spines['top'].set_color('whitesmoke')
-        self.ax6.spines['left'].set_color('whitesmoke')
-        self.ax6.tick_params(axis='x', colors='whitesmoke')
-        self.ax6.tick_params(axis='y', colors='whitesmoke')
-        self.ax6.xaxis.label.set_color("whitesmoke")
-        self.ax6.yaxis.label.set_color("whitesmoke")
+        self.ax8.spines['top'].set_color('whitesmoke')
+        self.ax8.spines['left'].set_color('whitesmoke')
+        self.ax8.tick_params(axis='x', colors='whitesmoke')
+        self.ax8.tick_params(axis='y', colors='whitesmoke')
+        self.ax8.xaxis.label.set_color("whitesmoke")
+        self.ax8.yaxis.label.set_color("whitesmoke")
 
-        for bar in bars:
-            hgt = bar.get_height()
-            if hgt == 0: # Don't label zero values
-                continue
-            self.ax6.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
+        # Annotate bar values
+        ignore_zeroes = [f'${v:,.2f}' if v > 0 else '' for v in values]
+        self.ax8.bar_label(bars, labels=ignore_zeroes, padding=3, color='whitesmoke', fontsize=8)
 
-        self.canvas6.draw()
+        self.canvas8.draw()
 
     def refresh_keyword_drilldown_chart(self):
         # Draw monthly totals for transactions that match the provided keyword
-        self.ax7.clear()
+        self.ax9.clear()
         keyword = self.keyword_var.get().strip()
         if not keyword:
-            self.ax7.text(0.5, 0.5, 'Enter a keyword to search', ha='center', va='center', transform=self.ax7.transAxes, fontsize=14, color='whitesmoke')
-            self.ax7.set_axis_off()
-            self.canvas7.draw()
+            self.ax9.text(0.5, 0.5, 'Enter a keyword to search transactions', ha='center', va='center', transform=self.ax9.transAxes, fontsize=14, color='whitesmoke')
+            self.ax9.set_axis_off()
+            self.canvas9.draw()
             return
 
         start_date, end_date = self.get_date_range()
@@ -720,9 +942,9 @@ class VisualizationsTab:
         monthly = self._aggregate_monthly(filtered, kind='all')
 
         if not monthly:
-            self.ax7.text(0.5, 0.5, 'No transactions match keyword', ha='center', va='center', transform=self.ax7.transAxes, fontsize=14, color='whitesmoke')
-            self.ax7.set_axis_off()
-            self.canvas7.draw()
+            self.ax9.text(0.5, 0.5, 'No transactions match keyword', ha='center', va='center', transform=self.ax9.transAxes, fontsize=14, color='whitesmoke')
+            self.ax9.set_axis_off()
+            self.canvas9.draw()
             return
 
         if start_date and end_date:
@@ -734,35 +956,42 @@ class VisualizationsTab:
         # Positive amounts shown green (income), negative red (expense)
         colors = ['green' if v >= 0 else 'red' for v in values]
 
-        bars = self.ax7.bar(range(len(months)), values, color=colors, alpha=0.7, edgecolor='whitesmoke')
+        bars = self.ax9.bar(range(len(months)), values, color=colors, alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
 
         # Average line
-        self.ax7.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
+        self.ax9.axhline(y=avg, color='whitesmoke', linestyle='--', linewidth=1)
 
         # Origin line
-        self.ax7.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
+        self.ax9.axhline(y=0, color='whitesmoke', linestyle='-', linewidth=1)
 
-        self.ax7.set_xlabel('Month')
-        self.ax7.set_ylabel('Amount ($)')
-        self.ax7.set_title(f'Keyword: "{keyword}" - Over Time', fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        if start_date and end_date:
+            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        self.ax9.set_title(f'Keyword: {keyword}\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color='whitesmoke')
+        
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
-        self.ax7.set_xticks(range(len(months)))
-        self.ax7.set_xticklabels(labels, rotation=45, ha='right')
-        self.ax7.grid(True, axis='y', alpha=0.3, linestyle=':')
+        self.ax9.set_xticks(range(len(months)))
+        self.ax9.set_xticklabels(labels, rotation=90) # Use vertical month labels
 
-        # coloring
-        self.ax7.spines['top'].set_color('whitesmoke')
-        self.ax7.spines['left'].set_color('whitesmoke')
-        self.ax7.tick_params(axis='x', colors='whitesmoke')
-        self.ax7.tick_params(axis='y', colors='whitesmoke')
-        self.ax7.xaxis.label.set_color("whitesmoke")
-        self.ax7.yaxis.label.set_color("whitesmoke")
+        # Formatting
+        self.ax9.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
+        self.ax9.grid(True, axis='y', alpha=0.3, linestyle=':')
 
+        # Coloring
+        self.ax9.spines['top'].set_color('whitesmoke')
+        self.ax9.spines['left'].set_color('whitesmoke')
+        self.ax9.tick_params(axis='x', colors='whitesmoke')
+        self.ax9.tick_params(axis='y', colors='whitesmoke')
+        self.ax9.xaxis.label.set_color("whitesmoke")
+        self.ax9.yaxis.label.set_color("whitesmoke")
+
+        # Annotate bar values
+        padding = 5 # Additional space between bars and $ labels
         for bar in bars:
             hgt = bar.get_height()
-            if hgt == 0: # Don't label zero values
-                continue
-            self.ax7.text(bar.get_x() + bar.get_width()/2., hgt, f'${hgt:,.2f}', ha='center', va='bottom' if hgt >= 0 else 'top', fontsize=8, color='whitesmoke')
+            y_pos = hgt + padding if hgt > 0 else hgt - padding
+            if hgt != 0: # Place label according to value, don't label zeroes
+                self.ax9.text(bar.get_x() + bar.get_width()/2., y_pos, f'${hgt:,.0f}', ha='center', va='bottom' if hgt > 0 else 'top', fontsize=8, color='whitesmoke')
 
-        self.canvas7.draw()
+        self.canvas9.draw()
