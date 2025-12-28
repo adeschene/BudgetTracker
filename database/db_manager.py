@@ -283,6 +283,33 @@ class DatabaseManager:
         conn.close()
         return categories
     
+    def get_category_totals_by_type(self, start_date: str = None, end_date: str = None, type: str = 'expense') -> Dict[str, float]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        query = '''
+            SELECT category, SUM(amount) as total
+            FROM transactions
+            INNER JOIN categories ON transactions.category = categories.name
+            WHERE (categories.type = ?)
+        '''
+        params = [type]
+
+        if start_date:
+            query += ' AND date >= ?'
+            params.append(start_date)
+        if end_date:
+            query += ' AND date <= ?'
+            params.append(end_date)
+
+        query += ' GROUP BY category'
+
+        cursor.execute(query, params)
+        totals = {row[0] or 'Uncategorized': abs(row[1]) for row in cursor.fetchall()}
+
+        conn.close()
+        return totals
+    
     def add_account(self, name: str, account_type: str, create_template: bool = True):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -319,55 +346,6 @@ class DatabaseManager:
         accounts = [dict(zip(columns, row)) for row in cursor.fetchall()]
         conn.close()
         return accounts
-    
-    def add_net_worth_entry(self, date: str, asset_name: str, value: float,
-                           asset_type: str = None, notes: str = None):
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            INSERT INTO net_worth_entries (date, asset_name, asset_type, value, notes)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (date, asset_name, asset_type, value, notes))
-
-        conn.commit()
-        conn.close()
-
-    def update_net_worth_entry(self, entry_id: int, date: str, asset_name: str, value: float,
-                              asset_type: str = None, notes: str = None):
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            UPDATE net_worth_entries
-            SET date = ?, asset_name = ?, asset_type = ?, value = ?, notes = ?
-            WHERE id = ?
-        ''', (date, asset_name, asset_type, value, notes, entry_id))
-        conn.commit()
-        conn.close()
-
-    def get_net_worth_entries(self, start_date: str = None, end_date: str = None) -> List[Dict]:
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        query = 'SELECT * FROM net_worth_entries WHERE 1=1'
-        params = []
-
-        if start_date:
-            query += ' AND date >= ?'
-            params.append(start_date)
-        if end_date:
-            query += ' AND date <= ?'
-            params.append(end_date)
-
-        query += ' ORDER BY date DESC'
-
-        cursor.execute(query, params)
-        columns = [description[0] for description in cursor.description]
-        entries = [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-        conn.close()
-        return entries
 
     def add_asset_template(self, asset_name: str, asset_type: str = None, notes: str = None):
         conn = self.get_connection()
@@ -433,6 +411,55 @@ class DatabaseManager:
 
         conn.commit()
         conn.close()
+    
+    def add_net_worth_entry(self, date: str, asset_name: str, value: float,
+                           asset_type: str = None, notes: str = None):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            INSERT INTO net_worth_entries (date, asset_name, asset_type, value, notes)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (date, asset_name, asset_type, value, notes))
+
+        conn.commit()
+        conn.close()
+
+    def update_net_worth_entry(self, entry_id: int, date: str, asset_name: str, value: float,
+                              asset_type: str = None, notes: str = None):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            UPDATE net_worth_entries
+            SET date = ?, asset_name = ?, asset_type = ?, value = ?, notes = ?
+            WHERE id = ?
+        ''', (date, asset_name, asset_type, value, notes, entry_id))
+        conn.commit()
+        conn.close()
+
+    def get_net_worth_entries(self, start_date: str = None, end_date: str = None) -> List[Dict]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        query = 'SELECT * FROM net_worth_entries WHERE 1=1'
+        params = []
+
+        if start_date:
+            query += ' AND date >= ?'
+            params.append(start_date)
+        if end_date:
+            query += ' AND date <= ?'
+            params.append(end_date)
+
+        query += ' ORDER BY date DESC'
+
+        cursor.execute(query, params)
+        columns = [description[0] for description in cursor.description]
+        entries = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        conn.close()
+        return entries
 
     def delete_net_worth_entry(self, entry_id: int):
         conn = self.get_connection()
@@ -472,32 +499,45 @@ class DatabaseManager:
         summary = {row[0] or 'Other': row[1] for row in cursor.fetchall()}
         conn.close()
         return summary
-    
-    def get_spending_by_category(self, start_date: str = None, end_date: str = None) -> Dict[str, float]:
+
+    def get_net_worth_history(self) -> List[Dict]:
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        query = '''
-            SELECT category, SUM(amount) as total
-            FROM transactions
-            WHERE amount < 0
-        '''
-        params = []
+        cursor.execute('''
+            SELECT DISTINCT strftime('%Y-%m', date) as month
+            FROM net_worth_entries
+            ORDER BY month
+        ''')
 
-        if start_date:
-            query += ' AND date >= ?'
-            params.append(start_date)
-        if end_date:
-            query += ' AND date <= ?'
-            params.append(end_date)
+        months = [row[0] for row in cursor.fetchall()]
+        history = []
 
-        query += ' GROUP BY category'
+        for month in months:
+            year, month_num = month.split('-')
+            start_date = f"{year}-{month_num}-01"
 
-        cursor.execute(query, params)
-        spending = {row[0] or 'Uncategorized': abs(row[1]) for row in cursor.fetchall()}
+            if month_num == '12':
+                end_date = f"{year}-12-31"
+            else:
+                last_day = 31
+                if month_num in ['04', '06', '09', '11']:
+                    last_day = 30
+                elif month_num == '02':
+                    last_day = 29 if int(year) % 4 == 0 and (int(year) % 100 != 0 or int(year) % 400 == 0) else 28
+                end_date = f"{year}-{month_num}-{last_day}"
+
+            summary = self.get_net_worth_summary(start_date, end_date)
+            total = sum(summary.values())
+
+            history.append({
+                'month': month,
+                'total': total,
+                'breakdown': summary
+            })
 
         conn.close()
-        return spending
+        return history
 
     def add_budget_target(self, category: str, monthly_target: float, notes: str = None):
         conn = self.get_connection()
@@ -543,45 +583,6 @@ class DatabaseManager:
         cursor.execute('DELETE FROM budget_targets WHERE id = ?', (budget_id,))
         conn.commit()
         conn.close()
-
-    def get_net_worth_history(self) -> List[Dict]:
-        conn = self.get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            SELECT DISTINCT strftime('%Y-%m', date) as month
-            FROM net_worth_entries
-            ORDER BY month
-        ''')
-
-        months = [row[0] for row in cursor.fetchall()]
-        history = []
-
-        for month in months:
-            year, month_num = month.split('-')
-            start_date = f"{year}-{month_num}-01"
-
-            if month_num == '12':
-                end_date = f"{year}-12-31"
-            else:
-                last_day = 31
-                if month_num in ['04', '06', '09', '11']:
-                    last_day = 30
-                elif month_num == '02':
-                    last_day = 29 if int(year) % 4 == 0 and (int(year) % 100 != 0 or int(year) % 400 == 0) else 28
-                end_date = f"{year}-{month_num}-{last_day}"
-
-            summary = self.get_net_worth_summary(start_date, end_date)
-            total = sum(summary.values())
-
-            history.append({
-                'month': month,
-                'total': total,
-                'breakdown': summary
-            })
-
-        conn.close()
-        return history
 
     def add_import_template(self, template_name: str, account_name: str, date_column: str,
                            description_column: str, amount_column: str = None, skip_rows: int = 0, notes: str = None,
