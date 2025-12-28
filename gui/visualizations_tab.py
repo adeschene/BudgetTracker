@@ -32,28 +32,28 @@ class VisualizationsTab:
         # Custom date range pickers (toggled on/off based on period selection)
         ttk.Label(control_frame, text="Start:").pack(side='left', padx=5)
         self.start_date_picker = DateEntry(control_frame, width=10, firstweekday='sunday',
-                                           background='#232323', foreground='whitesmoke',
-                                           headersbackground='#454545', headersforeground='whitesmoke',
-                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
-                                           weekendbackground='#666666', weekendforeground='whitesmoke',
-                                           othermonthbackground='#777777', othermonthforeground='#232323',
-                                            normalbackground='#888888', normalforeground='black',
-                                            disableddaybackground='#454545', disableddayforeground='#888888',
-                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                        background='#232323', foreground='whitesmoke',
+                                        headersbackground='#454545', headersforeground='whitesmoke',
+                                        othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                        weekendbackground='#666666', weekendforeground='whitesmoke',
+                                        othermonthbackground='#777777', othermonthforeground='#232323',
+                                        normalbackground='#888888', normalforeground='black',
+                                        disableddaybackground='#454545', disableddayforeground='#888888',
+                                        bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                         maxdate=datetime.now(), day=1)
         self.start_date_picker.pack(side='left', padx=5)
         self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_charts())
 
         ttk.Label(control_frame, text="End:").pack(side='left', padx=5)
         self.end_date_picker = DateEntry(control_frame, width=10, firstweekday='sunday',
-                                           background='#232323', foreground='whitesmoke',
-                                           headersbackground='#454545', headersforeground='whitesmoke',
-                                           othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
-                                           weekendbackground='#666666', weekendforeground='whitesmoke',
-                                           othermonthbackground='#777777', othermonthforeground='#232323',
-                                            normalbackground='#888888', normalforeground='black',
-                                            disableddaybackground='#454545', disableddayforeground='#888888',
-                                           bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                        background='#232323', foreground='whitesmoke',
+                                        headersbackground='#454545', headersforeground='whitesmoke',
+                                        othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
+                                        weekendbackground='#666666', weekendforeground='whitesmoke',
+                                        othermonthbackground='#777777', othermonthforeground='#232323',
+                                        normalbackground='#888888', normalforeground='black',
+                                        disableddaybackground='#454545', disableddayforeground='#888888',
+                                        bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                         maxdate=datetime.now())
         self.end_date_picker.pack(side='left', padx=5)
         self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_charts())
@@ -321,7 +321,16 @@ class VisualizationsTab:
         data = {}
         for t in transactions:
             try:
-                key = t['date'][:7]
+                raw_date = t['date']
+
+                # Normalize date data regardless of format
+                try:
+                    dt = datetime.strptime(raw_date, '%Y-%m-%d')
+                except ValueError:
+                    dt = datetime.strptime(raw_date, '%m-%d-%Y')
+
+                key = dt.strftime('%Y-%m')
+
                 amt = float(t['amount'])
             except Exception:
                 continue
