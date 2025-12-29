@@ -489,10 +489,12 @@ class ApplyTemplateDialog:
             ttk.Label(frame, text=template['asset_name']).grid(row=0, column=0, padx=10, pady=5, sticky='w')
             ttk.Label(frame, text=f"({template['asset_type'] or 'No Type'})").grid(row=0, column=1, padx=5, pady=5, sticky='w')
 
+            vcmd_decimal_dollar = (frame.register(validate_money_string), "%P", True, False) # Digit validation registration
+
             ttk.Label(frame, text="Current Value:").grid(row=1, column=0, padx=10, pady=5, sticky='w')
             value_var = tk.StringVar(value='')
             self.value_vars[template['id']] = value_var
-            entry = ttk.Entry(frame, textvariable=value_var, width=20)
+            entry = ttk.Entry(frame, validate='key', validatecommand=vcmd_decimal_dollar, textvariable=value_var, width=20)
             entry.grid(row=1, column=1, padx=5, pady=5, sticky='w')
 
             if template['notes']:
