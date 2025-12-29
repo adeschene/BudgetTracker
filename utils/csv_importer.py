@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional
+from decimal import Decimal
 from database.db_manager import DatabaseManager
 from utils.helpers import center_window
 
@@ -87,8 +88,8 @@ class CSVImporter:
             debit_str = row.get(debit_col, '')
             credit_str = row.get(credit_col, '')
 
-            debit_amount = self._parse_amount(debit_str) if debit_str else 0.0
-            credit_amount = self._parse_amount(credit_str) if credit_str else 0.0
+            debit_amount = self._parse_amount(debit_str) if debit_str else Decimal(0.0)
+            credit_amount = self._parse_amount(credit_str) if credit_str else Decimal(0.0)
 
             debit_amount = abs(debit_amount)
             credit_amount = abs(credit_amount)
@@ -130,15 +131,15 @@ class CSVImporter:
             except ValueError:
                 continue
 
-        # If parsing fails, return the original string (caller may handle it)
+        # If parsing fails, return the original string (TODO caller should handle error)
         return date_str
 
-    def _parse_amount(self, amount_str: str) -> float:
+    def _parse_amount(self, amount_str: str) -> Decimal:
         amount_str = amount_str.strip()
         amount_str = re.sub(r'[^\d\.\-\+]', '', amount_str)
 
         try:
-            return float(amount_str)
+            return Decimal(amount_str)
         except ValueError:
             return 0.0
 
@@ -186,7 +187,7 @@ class CSVImporter:
             self.db.add_transaction(
                 date=trans['date'],
                 description=description,
-                amount=trans['amount'],
+                amount=int(Decimal(trans['amount'])*100),
                 category=category,
                 account=account_name,
                 transaction_type=transaction_type

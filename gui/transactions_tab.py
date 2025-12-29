@@ -209,9 +209,9 @@ class TransactionsTab:
         for trans in filtered:
             # Format amount for display, show negative amounts with a leading '-'
             if trans['amount'] < 0:
-                amount_str = f"-${abs(trans['amount']):.2f}"
+                amount_str = f"-${abs(trans['amount']/100):.2f}"
             else:
-                amount_str = f"${trans['amount']:.2f}"
+                amount_str = f"${trans['amount']/100:.2f}"
 
             # Display dates in mm-dd-yyyy format
             converted_date = datetime.strptime(trans['date'],"%Y-%m-%d").strftime("%m-%d-%Y")
@@ -285,7 +285,7 @@ class TransactionsTab:
         # Choose sorting strategy depending on column type
         if column == 'Amount':
             # Parse formatted currency strings back to floats for numeric sort
-            items.sort(key=lambda x: float(x[0].replace('$', '').replace(',', '').replace('-', '-')), reverse=self.sort_reverse)
+            items.sort(key=lambda x: Decimal(x[0].replace('$', '').replace(',', '').replace('-', '-')), reverse=self.sort_reverse)
         elif column == 'Date':
             items.sort(key=lambda x: x[0], reverse=self.sort_reverse)
         else:
@@ -427,7 +427,7 @@ class TransactionsTab:
             if field_name == 'Description':
                 transaction['description'] = new_value
             elif field_name == 'Amount':
-                transaction['amount'] = Decimal(new_value)
+                transaction['amount'] = new_value
             elif field_name == 'Category':
                 transaction['category'] = new_value
             elif field_name == 'Account':
@@ -436,13 +436,13 @@ class TransactionsTab:
                 transaction['notes'] = new_value
 
             # Determine transaction type from amount sign and persist changes
-            transaction_type = 'income' if transaction['amount'] > 0 else 'expense'
+            transaction_type = 'income' if Decimal(transaction['amount']) > 0 else 'expense'
 
             self.db.update_transaction(
                 transaction_id=transaction_id,
                 date=transaction['date'],
                 description=transaction['description'],
-                amount=float(transaction['amount']),  # Convert Decimal to float
+                amount=int(Decimal(transaction['amount'])*100),  # Convert Decimal to int
                 category=transaction['category'],
                 account=transaction['account'],
                 transaction_type=transaction_type,
@@ -492,7 +492,7 @@ class TransactionDialog:
         ttk.Entry(self.dialog, textvariable=self.desc_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
         
         ttk.Label(self.dialog, text="Amount:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
-        self.amount_var = tk.StringVar(value=str(transaction['amount']) if transaction else '')
+        self.amount_var = tk.StringVar(value=str(transaction['amount']/100) if transaction else '') # Convert to decimal
         ttk.Entry(self.dialog, validate='all', validatecommand=vcmd_decimal_dollar, textvariable=self.amount_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
         tk.Label(self.dialog, text='Please enter negative values for expenses\n(purchases, withdrawals, etc.)', fg='gray').grid(row=3, column=1, padx=5, sticky='ew')
         
@@ -528,7 +528,7 @@ class TransactionDialog:
     
     def save(self):
         try:
-            amount = float(self.amount_var.get())
+            amount = int(float(self.amount_var.get()) * 100) # Convert from decimal
             transaction_type = 'income' if amount > 0 else 'expense'
             
             if self.transaction:

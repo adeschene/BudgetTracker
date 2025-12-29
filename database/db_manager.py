@@ -19,7 +19,7 @@ class DatabaseManager:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT NOT NULL,
                 description TEXT,
-                amount REAL NOT NULL,
+                amount INTEGER NOT NULL,
                 category TEXT,
                 account TEXT,
                 transaction_type TEXT,
@@ -134,7 +134,7 @@ class DatabaseManager:
                 VALUES (?, ?, ?)
             ''', (name, cat_type, keywords))
     
-    def add_transaction(self, date: str, description: str, amount: float, 
+    def add_transaction(self, date: str, description: str, amount: int, 
                        category: str = None, account: str = None, 
                        transaction_type: str = None, notes: str = None):
         conn = self.get_connection()
@@ -183,13 +183,9 @@ class DatabaseManager:
         return transactions
     
     def update_transaction(self, transaction_id: int, date: str, description: str, 
-                      amount: float, category: str, account: str, transaction_type: str, notes: str):
+                      amount: int, category: str, account: str, transaction_type: str, notes: str):
         conn = self.get_connection()
         cursor = conn.cursor()
-        
-        # Convert Decimal if passed (safety net)
-        if hasattr(amount, 'decimal'):  # isinstance(amount, Decimal)
-            amount = float(amount)
         
         cursor.execute('''
             UPDATE transactions 
@@ -485,7 +481,6 @@ class DatabaseManager:
         history = []
 
         for month in months:
-            print(months)
             year, month_num = month.split('-')
             start_date = f"{year}-{month_num}-01"
 
