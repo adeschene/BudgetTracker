@@ -6,158 +6,6 @@ from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
 from utils.helpers import center_window, validate_money_string
 
-class TemplateManagerDialog:
-    def __init__(self, parent, db: DatabaseManager):
-        self.db = db
-
-        self.dialog = tk.Toplevel(parent)
-        self.dialog.withdraw()
-        self.dialog.title("Manage Asset Template")
-        self.dialog.geometry("700x500")
-        self.dialog.transient(parent)
-
-        info_label = tk.Label(self.dialog,
-                             text="This template is used to quickly add recurring assets/liabilities to each month.\nClick 'Apply Template' in the Net Worth tab to add these to the current month.",
-                             font=('Roboto', 9), fg='white', justify='left')
-        info_label.pack(padx=10, pady=10, anchor='w')
-
-        tree_frame = ttk.Frame(self.dialog)
-        tree_frame.pack(fill='both', expand=True, padx=10, pady=10)
-
-        scrollbar = ttk.Scrollbar(tree_frame)
-        scrollbar.pack(side='right', fill='y')
-
-        self.tree = ttk.Treeview(tree_frame, columns=('Asset', 'Type', 'Notes'),
-                                show='headings', yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.tree.yview)
-
-        self.tree.heading('Asset', text='Name')
-        self.tree.heading('Type', text='Type')
-        self.tree.heading('Notes', text='Notes')
-
-        self.tree.column('Asset', width=250)
-        self.tree.column('Type', width=200)
-        self.tree.column('Notes', width=220)
-
-        self.tree.pack(fill='both', expand=True)
-
-        button_frame = ttk.Frame(self.dialog)
-        button_frame.pack(pady=10)
-
-        ttk.Button(button_frame, text="Add Entry", style='Accent.TButton', command=self.add_template).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Edit Entry", command=self.edit_template).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Delete Entry", command=self.delete_template).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Close", command=self.dialog.destroy).pack(side='left', padx=5)
-
-        # Load templates into the list when dialog opens
-        self.refresh_templates()
-
-        self.dialog.update_idletasks()
-        center_window(self.dialog)
-        self.dialog.deiconify()
-
-    def refresh_templates(self):
-        # Refresh the displayed list of asset templates from the DB
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-
-        templates = self.db.get_asset_templates()
-
-        for template in templates:
-            display_values = [
-                template['asset_name'],
-                template['asset_type'] or '',
-                template['notes'] or ''
-            ]
-            self.tree.insert('', 'end', values=display_values, tags=(template['id'],))
-
-    def add_template(self):
-        TemplateDialog(self.dialog, self.db, callback=self.refresh_templates)
-
-    def edit_template(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Warning", "Please select an entry to edit")
-            return
-
-        template_id = self.tree.item(selection[0])['tags'][0]
-        templates = self.db.get_asset_templates()
-        template = next((t for t in templates if t['id'] == template_id), None)
-
-        if template:
-            TemplateDialog(self.dialog, self.db, template=template, callback=self.refresh_templates)
-
-    def delete_template(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Warning", "Please select an entry to delete")
-            return
-
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this entry?"):
-            template_id = self.tree.item(selection[0])['tags'][0]
-            self.db.delete_asset_template(template_id)
-            self.refresh_templates()
-
-class TemplateDialog:
-    def __init__(self, parent, db: DatabaseManager, template=None, callback=None):
-        self.db = db
-        self.template = template
-        self.callback = callback
-
-        # Dialog to add or edit an asset template (used when applying recurring assets)
-        self.dialog = tk.Toplevel(parent)
-        self.dialog.withdraw()
-        self.dialog.title("Add Template Entry" if not template else "Edit Template Entry")
-        self.dialog.geometry("400x220")
-        self.dialog.transient(parent)
-
-        ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
-        self.asset_var = tk.StringVar(value=template['asset_name'] if template else '')
-        ttk.Entry(self.dialog, textvariable=self.asset_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
-
-        ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        self.type_var = tk.StringVar(value=template['asset_type'] if template else 'Cash')
-        type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var)
-        type_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
-        type_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
-
-        ttk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
-        self.notes_var = tk.StringVar(value=template['notes'] if template and template['notes'] else '')
-        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
-
-        button_frame = ttk.Frame(self.dialog)
-        button_frame.grid(row=3, column=0, columnspan=2, pady=20)
-
-        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
-
-        self.dialog.columnconfigure(1, weight=1)
-
-        self.dialog.update_idletasks()
-        center_window(self.dialog)
-        self.dialog.deiconify()
-
-    def save(self):
-        # Persist template changes and refresh caller view
-        if self.template:
-            self.db.update_asset_template(
-                template_id=self.template['id'],
-                asset_name=self.asset_var.get(),
-                asset_type=self.type_var.get(),
-                notes=self.notes_var.get()
-            )
-        else:
-            self.db.add_asset_template(
-                asset_name=self.asset_var.get(),
-                asset_type=self.type_var.get(),
-                notes=self.notes_var.get()
-            )
-
-        if self.callback:
-            self.callback()
-
-        self.dialog.destroy()
-
 class NetWorthTab:
     def __init__(self, parent, db: DatabaseManager):
         self.db = db
@@ -292,9 +140,9 @@ class NetWorthTab:
         for entry in entries:
             # Display positive values as $value and negatives as -$value
             if entry['value'] < 0:
-                value_str = f"-${abs(entry['value']):,.0f}"
+                value_str = f"-${abs(entry['value']):,}"
             else:
-                value_str = f"${entry['value']:,.0f}"
+                value_str = f"${entry['value']:,}"
 
             # Display dates in mm-dd-yyyy format
             converted_date = datetime.strptime(entry['date'],"%Y-%m-%d").strftime("%m-%d-%Y")
@@ -314,14 +162,14 @@ class NetWorthTab:
         summary = self.db.get_net_worth_summary(start_date, end_date)
         total = sum(summary.values())
 
-        self.total_label.config(text=f"Total Net Worth: ${total:,.0f}")
+        self.total_label.config(text=f"Total Net Worth: ${total:,}")
 
         self.breakdown_text.config(state='normal')
         self.breakdown_text.delete('1.0', 'end')
 
         if summary:
             for asset_type, value in summary.items():
-                self.breakdown_text.insert('end', f"{asset_type}: {'-' if value < 0 else ''}${abs(value):,.0f}\n")
+                self.breakdown_text.insert('end', f"{asset_type}: {'-' if value < 0 else ''}${abs(value):,}\n")
         else:
             self.breakdown_text.insert('end', "No entries yet")
 
@@ -481,7 +329,7 @@ class NetWorthTab:
             elif field_name == 'Type':
                 entry['asset_type'] = new_value
             elif field_name == 'Value':
-                entry['value'] = float(new_value)
+                entry['value'] = int(new_value)
             elif field_name == 'Notes':
                 entry['notes'] = new_value
 
@@ -548,7 +396,7 @@ class NetWorthDialog:
         type_combo.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Value:").grid(row=3, column=0, padx=10, pady=10, sticky='w')
-        self.value_var = tk.StringVar(value=str(int(entry['value'])) if entry else '')
+        self.value_var = tk.StringVar(value=str(entry['value']) if entry else '')
         ttk.Entry(self.dialog, validate='all', validatecommand=vcmd_whole_dollars, textvariable=self.value_var).grid(row=3, column=1, padx=10, pady=10, sticky='ew')
         tk.Label(self.dialog, text='Please enter negative values for liabilities\n(loans, credit card balances, etc.)', fg='gray').grid(row=4, column=1, padx=5, sticky='ew')
 
@@ -570,8 +418,6 @@ class NetWorthDialog:
 
     def save(self):
         try:
-            value = float(self.value_var.get())
-
             # Persist the new or updated entry
             if self.entry:
                 self.db.update_net_worth_entry(
@@ -579,7 +425,7 @@ class NetWorthDialog:
                     date=self.date_picker.get_date(),
                     asset_name=self.asset_var.get(),
                     asset_type=self.type_var.get(),
-                    value=value,
+                    value=int(self.value_var.get()),
                     notes=self.notes_var.get()
                 )
             else:
@@ -587,7 +433,7 @@ class NetWorthDialog:
                     date=self.date_picker.get_date(),
                     asset_name=self.asset_var.get(),
                     asset_type=self.type_var.get(),
-                    value=value,
+                    value=int(self.value_var.get()),
                     notes=self.notes_var.get()
                 )
 
@@ -644,7 +490,7 @@ class ApplyTemplateDialog:
             ttk.Label(frame, text=f"({template['asset_type'] or 'No Type'})").grid(row=0, column=1, padx=5, pady=5, sticky='w')
 
             ttk.Label(frame, text="Current Value:").grid(row=1, column=0, padx=10, pady=5, sticky='w')
-            value_var = tk.StringVar(value='0')
+            value_var = tk.StringVar(value='')
             self.value_vars[template['id']] = value_var
             entry = ttk.Entry(frame, textvariable=value_var, width=20)
             entry.grid(row=1, column=1, padx=5, pady=5, sticky='w')
@@ -666,7 +512,7 @@ class ApplyTemplateDialog:
         try:
             template_values = {}
             for template_id, value_var in self.value_vars.items():
-                value = float(value_var.get())
+                value = int(value_var.get())
                 template_values[template_id] = value
 
             self.db.apply_templates_to_month(self.year, self.month, template_values)
@@ -678,3 +524,155 @@ class ApplyTemplateDialog:
             self.dialog.destroy()
         except ValueError:
             messagebox.showerror("Error", "Please enter valid numeric values for all assets")
+
+class TemplateManagerDialog:
+    def __init__(self, parent, db: DatabaseManager):
+        self.db = db
+
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
+        self.dialog.title("Manage Asset Template")
+        self.dialog.geometry("700x500")
+        self.dialog.transient(parent)
+
+        info_label = tk.Label(self.dialog,
+                             text="This template is used to quickly add recurring assets/liabilities to each month.\nClick 'Apply Template' in the Net Worth tab to add these to the current month.",
+                             font=('Roboto', 9), fg='white', justify='left')
+        info_label.pack(padx=10, pady=10, anchor='w')
+
+        tree_frame = ttk.Frame(self.dialog)
+        tree_frame.pack(fill='both', expand=True, padx=10, pady=10)
+
+        scrollbar = ttk.Scrollbar(tree_frame)
+        scrollbar.pack(side='right', fill='y')
+
+        self.tree = ttk.Treeview(tree_frame, columns=('Asset', 'Type', 'Notes'),
+                                show='headings', yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.tree.yview)
+
+        self.tree.heading('Asset', text='Name')
+        self.tree.heading('Type', text='Type')
+        self.tree.heading('Notes', text='Notes')
+
+        self.tree.column('Asset', width=250)
+        self.tree.column('Type', width=200)
+        self.tree.column('Notes', width=220)
+
+        self.tree.pack(fill='both', expand=True)
+
+        button_frame = ttk.Frame(self.dialog)
+        button_frame.pack(pady=10)
+
+        ttk.Button(button_frame, text="Add Entry", style='Accent.TButton', command=self.add_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Edit Entry", command=self.edit_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Delete Entry", command=self.delete_template).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Close", command=self.dialog.destroy).pack(side='left', padx=5)
+
+        # Load templates into the list when dialog opens
+        self.refresh_templates()
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+
+    def refresh_templates(self):
+        # Refresh the displayed list of asset templates from the DB
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        templates = self.db.get_asset_templates()
+
+        for template in templates:
+            display_values = [
+                template['asset_name'],
+                template['asset_type'] or '',
+                template['notes'] or ''
+            ]
+            self.tree.insert('', 'end', values=display_values, tags=(template['id'],))
+
+    def add_template(self):
+        TemplateDialog(self.dialog, self.db, callback=self.refresh_templates)
+
+    def edit_template(self):
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select an entry to edit")
+            return
+
+        template_id = self.tree.item(selection[0])['tags'][0]
+        templates = self.db.get_asset_templates()
+        template = next((t for t in templates if t['id'] == template_id), None)
+
+        if template:
+            TemplateDialog(self.dialog, self.db, template=template, callback=self.refresh_templates)
+
+    def delete_template(self):
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select an entry to delete")
+            return
+
+        if messagebox.askyesno("Confirm", "Are you sure you want to delete this entry?"):
+            template_id = self.tree.item(selection[0])['tags'][0]
+            self.db.delete_asset_template(template_id)
+            self.refresh_templates()
+
+class TemplateDialog:
+    def __init__(self, parent, db: DatabaseManager, template=None, callback=None):
+        self.db = db
+        self.template = template
+        self.callback = callback
+
+        # Dialog to add or edit an asset template (used when applying recurring assets)
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
+        self.dialog.title("Add Template Entry" if not template else "Edit Template Entry")
+        self.dialog.geometry("400x220")
+        self.dialog.transient(parent)
+
+        ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        self.asset_var = tk.StringVar(value=template['asset_name'] if template else '')
+        ttk.Entry(self.dialog, textvariable=self.asset_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+
+        ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        self.type_var = tk.StringVar(value=template['asset_type'] if template else 'Cash')
+        type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var)
+        type_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
+        type_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+
+        ttk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        self.notes_var = tk.StringVar(value=template['notes'] if template and template['notes'] else '')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+
+        button_frame = ttk.Frame(self.dialog)
+        button_frame.grid(row=3, column=0, columnspan=2, pady=20)
+
+        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+
+        self.dialog.columnconfigure(1, weight=1)
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+
+    def save(self):
+        # Persist template changes and refresh caller view
+        if self.template:
+            self.db.update_asset_template(
+                template_id=self.template['id'],
+                asset_name=self.asset_var.get(),
+                asset_type=self.type_var.get(),
+                notes=self.notes_var.get()
+            )
+        else:
+            self.db.add_asset_template(
+                asset_name=self.asset_var.get(),
+                asset_type=self.type_var.get(),
+                notes=self.notes_var.get()
+            )
+
+        if self.callback:
+            self.callback()
+
+        self.dialog.destroy()

@@ -52,7 +52,7 @@ class DatabaseManager:
                 date TEXT NOT NULL,
                 asset_name TEXT NOT NULL,
                 asset_type TEXT,
-                value REAL NOT NULL,
+                value INTEGER NOT NULL,
                 notes TEXT
             )
         ''')
@@ -70,7 +70,7 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS budget_targets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 category TEXT UNIQUE NOT NULL,
-                monthly_target REAL NOT NULL,
+                monthly_target INTEGER NOT NULL,
                 notes TEXT
             )
         ''')
@@ -108,46 +108,8 @@ class DatabaseManager:
         # Ensure default categories exist and run lightweight migrations
         self._insert_default_categories(cursor)
 
-        # Add any missing columns to import_templates/description_rules from older versions
-        self._migrate_import_templates_table(cursor)
-
         conn.commit()
         conn.close()
-
-    def _migrate_net_worth_table(self, cursor):
-        cursor.execute("PRAGMA table_info(net_worth_entries)")
-        columns = [column[1] for column in cursor.fetchall()]
-
-        # Add historical migration columns if they don't exist yet
-        if 'is_recurring' not in columns:
-            cursor.execute('ALTER TABLE net_worth_entries ADD COLUMN is_recurring INTEGER DEFAULT 0')
-        if 'recurring_start_date' not in columns:
-            cursor.execute('ALTER TABLE net_worth_entries ADD COLUMN recurring_start_date TEXT')
-        if 'recurring_end_date' not in columns:
-            cursor.execute('ALTER TABLE net_worth_entries ADD COLUMN recurring_end_date TEXT')
-        if 'is_auto_generated' not in columns:
-            cursor.execute('ALTER TABLE net_worth_entries ADD COLUMN is_auto_generated INTEGER DEFAULT 0')
-
-    def _migrate_import_templates_table(self, cursor):
-        cursor.execute("PRAGMA table_info(import_templates)")
-        columns = [column[1] for column in cursor.fetchall()]
-
-        if 'skip_rows' not in columns:
-            cursor.execute('ALTER TABLE import_templates ADD COLUMN skip_rows INTEGER DEFAULT 0')
-        if 'debit_column' not in columns:
-            cursor.execute('ALTER TABLE import_templates ADD COLUMN debit_column TEXT')
-        if 'credit_column' not in columns:
-            cursor.execute('ALTER TABLE import_templates ADD COLUMN credit_column TEXT')
-        if 'description2_column' not in columns:
-            cursor.execute('ALTER TABLE import_templates ADD COLUMN description2_column TEXT')
-        if 'description_delimiter' not in columns:
-            cursor.execute('ALTER TABLE import_templates ADD COLUMN description_delimiter TEXT DEFAULT \' - \'')
-
-        cursor.execute("PRAGMA table_info(description_rules)")
-        rule_columns = [column[1] for column in cursor.fetchall()]
-
-        if 'ignore' not in rule_columns:
-            cursor.execute('ALTER TABLE description_rules ADD COLUMN ignore INTEGER DEFAULT 0')
     
     def _insert_default_categories(self, cursor):
         default_categories = [
@@ -417,7 +379,7 @@ class DatabaseManager:
         conn.commit()
         conn.close()
     
-    def add_net_worth_entry(self, date: str, asset_name: str, value: float,
+    def add_net_worth_entry(self, date: str, asset_name: str, value: int,
                            asset_type: str = None, notes: str = None):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -430,7 +392,7 @@ class DatabaseManager:
         conn.commit()
         conn.close()
 
-    def update_net_worth_entry(self, entry_id: int, date: str, asset_name: str, value: float,
+    def update_net_worth_entry(self, entry_id: int, date: str, asset_name: str, value: int,
                               asset_type: str = None, notes: str = None):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -517,7 +479,7 @@ class DatabaseManager:
 
         months = [row[0] for row in cursor.fetchall()]
 
-        if not months[0]:
+        if not months or not months[0]:
             return []
         
         history = []
@@ -549,7 +511,7 @@ class DatabaseManager:
         conn.close()
         return history
 
-    def add_budget_target(self, category: str, monthly_target: float, notes: str = None):
+    def add_budget_target(self, category: str, monthly_target: int, notes: str = None):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
@@ -576,7 +538,7 @@ class DatabaseManager:
         conn.close()
         return budgets
 
-    def update_budget_target(self, budget_id: int, category: str, monthly_target: float, notes: str = None):
+    def update_budget_target(self, budget_id: int, category: str, monthly_target: int, notes: str = None):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''

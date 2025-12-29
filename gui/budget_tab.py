@@ -60,7 +60,7 @@ class BudgetTab:
         for budget in budgets:
             display_values = [
                 budget['category'],
-                f"${budget['monthly_target']:,.0f}",
+                f"${budget['monthly_target']:,}",
                 budget['notes'] or ''
             ]
             # Store budget id in the item's tags for later lookup
@@ -123,7 +123,7 @@ class BudgetDialog:
         
         # Input for the numeric monthly target amount
         ttk.Label(self.dialog, text="Monthly Target ($):").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        self.target_var = tk.StringVar(value=str(int(budget['monthly_target'])) if budget else '')
+        self.target_var = tk.StringVar(value=str(budget['monthly_target']) if budget else '')
         ttk.Entry(self.dialog, validate='all', validatecommand=vcmd_positive_whole_dollars, 
                 textvariable=self.target_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
         
@@ -145,7 +145,7 @@ class BudgetDialog:
 
     def save(self):
         try:
-            target = float(self.target_var.get())
+            target = int(self.target_var.get())
             
             if self.budget:
                 self.db.update_budget_target(
