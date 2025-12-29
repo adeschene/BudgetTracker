@@ -118,8 +118,15 @@ class BudgetDialog:
             ttk.Label(self.dialog, text=budget['category']).grid(row=0, column=1, padx=10, pady=10, sticky='w')
         else:
             categories = [cat['name'] for cat in self.db.get_categories() if cat['type'] == 'expense']
-            category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=categories)
+            # Remove category from dropdown if it already has an associated budget
+            budgetted = [b['category'] for b in self.db.get_budget_targets()]
+            filtered = [b for b in categories if b not in budgetted]
+            category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=filtered, state="readonly")
             category_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+            if filtered: # Always default to first option in list
+                category_combo.current(0)
+            else: # If out of options, disable the combobox
+                category_combo.config(state='disabled')
         
         # Input for the numeric monthly target amount
         ttk.Label(self.dialog, text="Monthly Target ($):").grid(row=1, column=0, padx=10, pady=10, sticky='w')

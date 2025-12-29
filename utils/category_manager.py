@@ -47,7 +47,7 @@ class CategoryManager:
         
         categories = self.db.get_categories()
         for cat in categories:
-            self.tree.insert('', 'end', values=(cat['name'], cat['type'], cat['keywords']), tags=(cat['id'],))
+            self.tree.insert('', 'end', values=(cat['name'], cat['type'].title(), cat['keywords']), tags=(cat['id'],))
     
     def add_category(self):
         dialog = tk.Toplevel(self.window)
@@ -60,8 +60,8 @@ class CategoryManager:
         ttk.Entry(dialog, textvariable=name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
         
         ttk.Label(dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        type_var = tk.StringVar(value='expense')
-        ttk.Combobox(dialog, textvariable=type_var, values=['income', 'expense']).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        type_var = tk.StringVar(value='Expense')
+        ttk.Combobox(dialog, textvariable=type_var, values=['Income', 'Expense'], state='readonly').grid(row=1, column=1, padx=10, pady=10, sticky='ew')
         
         ttk.Label(dialog, text="Keywords:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         keywords_var = tk.StringVar()
@@ -69,7 +69,12 @@ class CategoryManager:
         
         # Save new category to the database and refresh the list
         def save():
-            self.db.add_category(name_var.get(), type_var.get(), keywords_var.get())
+            cats = self.db.get_categories()
+            current_cat_names = [c['name'] for c in cats]
+            if name_var.get() in current_cat_names:
+                messagebox.showerror("Error", "Category already exists")
+                return
+            self.db.add_category(name_var.get(), type_var.get().lower(), keywords_var.get())
             self.refresh_categories()
             dialog.destroy()
         
@@ -104,8 +109,8 @@ class CategoryManager:
         ttk.Entry(dialog, textvariable=name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        type_var = tk.StringVar(value=category['type'])
-        ttk.Combobox(dialog, textvariable=type_var, values=['income', 'expense']).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        type_var = tk.StringVar(value=category['type'].title())
+        ttk.Combobox(dialog, textvariable=type_var, values=['Income', 'Expense'], state='readonly').grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(dialog, text="Keywords:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         keywords_var = tk.StringVar(value=category.get('keywords', ''))
@@ -113,12 +118,18 @@ class CategoryManager:
 
         # Update selected category and handle unique-name constraint
         def save_edit():
+            # Check for duplicate category names
+            current_cat_names = [c['name'] for c in categories]
+            new_name = name_var.get()
+            if new_name != category['name'] and new_name in current_cat_names:
+                messagebox.showerror("Error", "Category already exists")
+                return
             try:
-                self.db.update_category(category_id, name_var.get(), type_var.get(), keywords_var.get())
+                self.db.update_category(category_id, name_var.get(), type_var.get().lower(), keywords_var.get())
                 self.refresh_categories()
                 dialog.destroy()
             except sqlite3.IntegrityError:
-                messagebox.showerror("Error", "Category name must be unique")
+                messagebox.showerror("Error", "Category name must be unique") # Should be removed TODO
 
         tk.Label(dialog, text="Enter keywords separated by commas.", fg='gray').grid(row=3, column=0, columnspan=2, pady=10)
         ttk.Button(dialog, text="Save", style='Accent.TButton', command=save_edit).grid(row=4, column=0, columnspan=2, pady=10)

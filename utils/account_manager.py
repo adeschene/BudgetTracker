@@ -45,7 +45,7 @@ class AccountManager:
 
         accounts = self.db.get_accounts()
         for acc in accounts:
-            self.tree.insert('', 'end', values=(acc['name'], acc['type']), tags=(acc['id'],))
+            self.tree.insert('', 'end', values=(acc['name'], acc['type'].title()), tags=(acc['id'],))
 
     def add_account(self):
         AccountDialog(self.window, self.db, callback=self.refresh_accounts)
@@ -98,8 +98,8 @@ class AccountDialog:
         ttk.Entry(self.dialog, textvariable=self.name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        self.type_var = tk.StringVar(value=account['type'] if account else 'checking')
-        ttk.Combobox(self.dialog, textvariable=self.type_var, values=['checking', 'savings', 'credit', 'investment']).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        self.type_var = tk.StringVar(value=account['type'] if account else 'Checking')
+        ttk.Combobox(self.dialog, textvariable=self.type_var, values=['Checking', 'Savings', 'Credit', 'Investment'], state='readonly').grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
         self.auto_template_var = tk.BooleanVar(value=True)
         self.auto_template_check = ttk.Checkbutton(self.dialog, text="Automatically add a Net Worth\ntemplate entry for this account", variable=self.auto_template_var)
@@ -120,18 +120,28 @@ class AccountDialog:
 
     def save(self):
         # Persist the account (update existing or insert new)
+        accounts = [a['name'] for a in self.db.get_accounts()]
+        new_acc_name = self.name_var.get()
         if self.account: # Editing existing account
+            # Check for duplicate account names but allow renaming to same name
+            if self.account['name'] != new_acc_name and new_acc_name in accounts:
+                messagebox.showerror("Error", "Account name already in use")
+                return
             conn = self.db.get_connection()
             cursor = conn.cursor()
             # Update record directly using SQL
             cursor.execute('''
                 UPDATE accounts SET name = ?, type = ?, last_updated = ?
                 WHERE id = ?
-            ''', (self.name_var.get(), self.type_var.get(), datetime.now().isoformat(), self.account['id']))
+            ''', (self.name_var.get(), self.type_var.get().lower(), datetime.now().isoformat(), self.account['id']))
             conn.commit()
             conn.close()
         else: # New account
-            self.db.add_account(self.name_var.get(), self.type_var.get(), self.auto_template_var.get())
+            # Check for duplicate account names
+            if new_acc_name in accounts:
+                messagebox.showerror("Error", "Account already exists")
+                return
+            self.db.add_account(new_acc_name, self.type_var.get(), self.auto_template_var.get())
 
         if self.callback:
             self.callback()

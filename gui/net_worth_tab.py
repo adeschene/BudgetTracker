@@ -176,7 +176,8 @@ class NetWorthTab:
         self.breakdown_text.config(state='disabled')
 
     def add_entry(self):
-        NetWorthDialog(self.frame, self.db, callback=self.refresh_data,
+        start_date, end_date = self.get_month_date_range()
+        NetWorthDialog(self.frame, self.db, callback=self.refresh_data, start_date=start_date, end_date=end_date,
                       default_month=self.current_month, default_year=self.current_year)
 
     def edit_entry(self):
@@ -191,7 +192,7 @@ class NetWorthTab:
         entry = next((e for e in entries if e['id'] == entry_id), None)
 
         if entry:
-            NetWorthDialog(self.frame, self.db, entry=entry, callback=self.refresh_data,
+            NetWorthDialog(self.frame, self.db, entry=entry, callback=self.refresh_data, start_date=start_date, end_date=end_date,
                           default_month=self.current_month, default_year=self.current_year)
 
     def delete_entry(self):
@@ -227,7 +228,7 @@ class NetWorthTab:
 
         if not templates_to_add:
             messagebox.showinfo("Already Applied",
-                              f"All templates have already been added to {datetime(self.current_year, self.current_month, 1).strftime('%B %Y')}.")
+                              f"All templates have already been added to {datetime(self.current_year, self.current_month, 1).strftime('%B %Y')}")
             return
 
         # Open a dialog to enter initial values and apply selected templates
@@ -294,7 +295,7 @@ class NetWorthTab:
 
     def edit_cell_combobox(self, row_id, column_name, column_index, entry_id, current_value, x, y, width, height):
         edit_var = tk.StringVar(value=current_value)
-        edit_combo = ttk.Combobox(self.tree, textvariable=edit_var)
+        edit_combo = ttk.Combobox(self.tree, textvariable=edit_var, state='readonly')
         edit_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
         edit_combo.place(x=x, y=y, width=width, height=height)
         edit_combo.focus_set()
@@ -325,6 +326,11 @@ class NetWorthTab:
         try:
             # Update the in-memory entry and persist change
             if field_name == 'Asset':
+                # Check for duplicate names before saving
+                entry_names = [e['asset_name'] for e in entries]
+                if new_value != entry['asset_name'] and new_value in entry_names:
+                    messagebox.showerror("Error", "An entry already exists by that name")
+                    return
                 entry['asset_name'] = new_value
             elif field_name == 'Type':
                 entry['asset_type'] = new_value
@@ -348,10 +354,12 @@ class NetWorthTab:
             messagebox.showerror("Error", "Invalid value entered")
 
 class NetWorthDialog:
-    def __init__(self, parent, db: DatabaseManager, entry=None, callback=None, default_month=None, default_year=None):
+    def __init__(self, parent, db: DatabaseManager, entry=None, callback=None, start_date=None, end_date=None, default_month=None, default_year=None):
         self.db = db
         self.entry = entry
         self.callback = callback
+        self.start_date = start_date
+        self.end_date = end_date
 
         # Dialog for adding or editing a net worth entry (asset value)
         self.dialog = tk.Toplevel(parent)
@@ -391,7 +399,7 @@ class NetWorthDialog:
 
         ttk.Label(self.dialog, text="Asset Type:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.type_var = tk.StringVar(value=entry['asset_type'] if entry else 'Cash')
-        type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var)
+        type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var, state='readonly')
         type_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
         type_combo.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
@@ -417,18 +425,29 @@ class NetWorthDialog:
         self.dialog.deiconify()
 
     def save(self):
+        entries = self.db.get_net_worth_entries(self.start_date, self.end_date)
+        entry_names = [n['asset_name'] for n in entries]
+        new_name = self.asset_var.get()
         try:
             # Persist the new or updated entry
             if self.entry:
+                # Check for duplicate name before saving
+                if self.entry['asset_name'] != new_name and new_name in entry_names:
+                    messagebox.showerror("Error", "An entry with that name already exists for this month")
+                    return
                 self.db.update_net_worth_entry(
                     entry_id=self.entry['id'],
                     date=self.date_picker.get_date(),
-                    asset_name=self.asset_var.get(),
+                    asset_name=new_name,
                     asset_type=self.type_var.get(),
                     value=int(self.value_var.get()),
                     notes=self.notes_var.get()
                 )
             else:
+                # Check for duplicate name before saving
+                if new_name in entry_names:
+                    messagebox.showerror("Error", "An entry with that name already exists for this month")
+                    return
                 self.db.add_net_worth_entry(
                     date=self.date_picker.get_date(),
                     asset_name=self.asset_var.get(),

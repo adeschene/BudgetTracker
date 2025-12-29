@@ -267,8 +267,9 @@ class TemplateDialog:
         ttk.Label(self.dialog, text="Account:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.account_var = tk.StringVar(value=template['account_name'] if template else '')
         accounts = [acc['name'] for acc in self.db.get_accounts()]
-        account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var, values=accounts)
+        account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var, values=accounts, state='readonly')
         account_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        account_combo.current(0)
 
         ttk.Label(self.dialog, text="Date Column:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.date_col_var = tk.StringVar(value=template['date_column'] if template else 'Date')
@@ -320,7 +321,7 @@ class TemplateDialog:
         skip_frame = ttk.Frame(self.dialog)
         skip_frame.grid(row=10, column=1, padx=10, pady=10, sticky='ew')
         ttk.Spinbox(skip_frame, from_=0, to=100, textvariable=self.skip_rows_var, width=4).pack(side='left')
-        tk.Label(skip_frame, text="(rows to skip before header)", fg='gray').pack(side='left', padx=5)
+        tk.Label(skip_frame, text="(rows to skip before header row)", fg='gray').pack(side='left', padx=5)
 
         ttk.Label(self.dialog, text="Notes:").grid(row=11, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=template['notes'] if template and template['notes'] else '')
@@ -436,7 +437,7 @@ class RuleDialog:
         ttk.Label(self.dialog, text="Category (optional):").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.category_var = tk.StringVar(value=rule['category'] if rule and rule['category'] else '')
         categories = [cat['name'] for cat in self.db.get_categories()]
-        category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=[''] + categories)
+        category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=[''] + categories, state='readonly')
         category_combo.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
         self.ignore_var = tk.IntVar(value=rule['ignore'] if rule and 'ignore' in rule else 0)
