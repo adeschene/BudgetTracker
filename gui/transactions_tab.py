@@ -26,9 +26,11 @@ class TransactionsTab:
     
     def setup_ui(self):
         top_frame = ttk.Frame(self.frame)
-        top_frame.pack(fill='x', padx=10, pady=10)
+        top_frame.pack(padx=10, pady=10)
 
         ttk.Label(top_frame, text="Filters:").pack(side='left', padx=5)
+
+        ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
         # Filter by date range (toggles date pickers enabled/disabled)
         self.use_date_filter_var = tk.BooleanVar(value=False)
@@ -39,7 +41,7 @@ class TransactionsTab:
 
         ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
-        ttk.Label(top_frame, text="Start:").pack(side='left', padx=5)
+        ttk.Label(top_frame, text="Start:").pack(side='left', padx=(5,0))
         self.start_date_picker = DateEntry(top_frame, width=10, firstweekday='sunday',
                                            background='#232323', foreground='whitesmoke',
                                            headersbackground='#454545', headersforeground='whitesmoke',
@@ -53,7 +55,7 @@ class TransactionsTab:
         self.start_date_picker.pack(side='left', padx=5)
         self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_transactions())
 
-        ttk.Label(top_frame, text="End:").pack(side='left', padx=5)
+        ttk.Label(top_frame, text="End:").pack(side='left', padx=(5,0))
         self.end_date_picker = DateEntry(top_frame, width=10, firstweekday='sunday',
                                            background='#232323', foreground='whitesmoke',
                                            headersbackground='#454545', headersforeground='whitesmoke',
@@ -86,7 +88,7 @@ class TransactionsTab:
         ttk.Label(top_frame, text='Keyword:').pack(side='left', padx=(4, 6))
         self.keyword_var = tk.StringVar()
         self.keyword_entry = ttk.Entry(top_frame, textvariable=self.keyword_var, width=10)
-        self.keyword_entry.pack(side='left')
+        self.keyword_entry.pack(side='left', padx=5)
         self.keyword_entry.bind('<KeyRelease>', lambda e: self.refresh_transactions())
 
         self.search_label_var = tk.StringVar(value='Exact')
@@ -104,27 +106,22 @@ class TransactionsTab:
         self.fuzzy_threshold_var = tk.DoubleVar(value=0.9)
         self.fuzzy_threshold_scale = ttk.Scale(top_frame, from_=0.1, to=1.0, orient='horizontal', variable=self.fuzzy_threshold_var)
         self.fuzzy_threshold_scale.pack(side='left', padx=(3, 5))
-        self.fuzzy_threshold_scale.configure(length=40, state='disabled')
-        self.fuzzy_threshold_label = ttk.Label(top_frame, text=f'{self.fuzzy_threshold_var.get():.2f}')
+        self.fuzzy_threshold_scale.configure(length=65, state='disabled')
+        self.fuzzy_threshold_label = ttk.Label(top_frame, text=f'Threshold: {self.fuzzy_threshold_var.get():.2f}')
         self.fuzzy_threshold_label.pack(side='left', padx=(4, 0))
 
         def _update_threshold_label(val):
             try:
-                self.fuzzy_threshold_label.config(text=f'{float(val):.2f}')
+                self.fuzzy_threshold_label.config(text=f'Threshold: {float(val):.2f}')
             except Exception:
                 pass
 
-        # For fuzzy search: refreshes transactions when the user releases the mouse after adjusting the scale
-        def _on_fuzzy_threshold_release(event):
-            self.refresh_transactions()
-
         self.fuzzy_threshold_scale.configure(command=_update_threshold_label)
-        self.fuzzy_threshold_scale.bind('<ButtonRelease-1>', _on_fuzzy_threshold_release)
+        self.fuzzy_threshold_scale.bind('<ButtonRelease-1>', lambda e: self.refresh_transactions())
 
         ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=10, pady=2)
 
-        # Filter action buttons
-        ttk.Button(top_frame, text="Filter", command=self.refresh_transactions).pack(side='left', padx=5)
+        # Filter clear button
         ttk.Button(top_frame, text="Clear", command=self.clear_filters).pack(side='left', padx=5)
         
         tree_frame = ttk.Frame(self.frame)
@@ -269,7 +266,7 @@ class TransactionsTab:
         self.fuzzy_threshold_scale.configure(state='disabled')
         self.search_label_var.set('Exact')
         self.fuzzy_threshold_var.set(0.9)
-        self.fuzzy_threshold_label.config(text=f'{float(self.fuzzy_threshold_var.get()):.2f}')
+        self.fuzzy_threshold_label.config(text=f'Threshold: {float(self.fuzzy_threshold_var.get()):.2f}')
         self.refresh_transactions()
 
     def sort_by_column(self, column):
