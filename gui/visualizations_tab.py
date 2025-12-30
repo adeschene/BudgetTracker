@@ -3,6 +3,7 @@ from tkinter import ttk
 from datetime import datetime, timedelta
 from tkcalendar import DateEntry
 import matplotlib.pyplot as plt
+from decimal import Decimal
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from database.db_manager import DatabaseManager
@@ -294,10 +295,10 @@ class VisualizationsTab:
         self.refresh_net_worth_chart()
         self.refresh_mixed_chart()
         self.refresh_income_chart()
-        self.refresh_expenses_over_time_chart()
+        self.refresh_expenses_chart()
         self.refresh_savings_chart()
-        self.refresh_expense_chart()
-        self.refresh_income_pie_chart()
+        self.refresh_expense_breakdown_chart()
+        self.refresh_income_breakdown_chart()
         self.refresh_category_drilldown_chart()
         self.refresh_keyword_drilldown_chart()
 
@@ -331,19 +332,20 @@ class VisualizationsTab:
 
                 key = dt.strftime('%Y-%m')
 
-                amt = float(t['amount'])
+                amt = Decimal(t['amount'])/100
             except Exception:
                 continue
 
+            # Kind filtering, also skipping $0 transactions
             if kind == 'income' and amt <= 0:
                 continue
             if kind == 'expense' and amt >= 0:
                 continue
 
-            # expenses stored negative; for expense chart use abs
+            # Expenses stored negative; for expense chart use abs
             value = amt if kind != 'expense' else abs(amt)
 
-            data[key] = data.get(key, 0.0) + value
+            data[key] = Decimal(data.get(key, 0.0)) + value
 
         return data
 
@@ -359,7 +361,7 @@ class VisualizationsTab:
         names = [c['name'] for c in cats]
         self.category_combo['values'] = names
         if names:
-            # keep current selection if valid, otherwise select first
+            # Keep current selection if valid, otherwise select first
             cur = self.category_var.get()
             if cur not in names:
                 self.category_var.set(names[0])
@@ -420,14 +422,14 @@ class VisualizationsTab:
             for h in history:
                 breakdown = h.get('breakdown', {}) or {}
                 # Assets: sum of non-negative values; liabilities: sum of negative values (keep negative)
-                a = sum(float(v) for v in breakdown.values() if v and float(v) >= 0)
-                l = sum(float(v) for v in breakdown.values() if v and float(v) < 0)
+                a = sum(v for v in breakdown.values() if v and v >= 0)
+                l = sum(v for v in breakdown.values() if v and v < 0)
                 assets.append(a)
                 liabilities.append(l)  # l will be negative or 0
                 # Net: prefer provided total, otherwise sum of breakdown
                 net_val = h.get('total')
                 if net_val is None:
-                    net_val = sum(float(v) for v in breakdown.values() if v)
+                    net_val = sum(v for v in breakdown.values() if v)
                 net.append(net_val)
 
             # Labels
@@ -516,8 +518,8 @@ class VisualizationsTab:
             return
 
         # Get dollar value lists for income, expenses, and both mixed together
-        income = [c['amount'] for c in tx if c['transaction_type'] == 'income']
-        expenses = [c['amount'] for c in tx if c['transaction_type'] == 'expense']
+        income = [Decimal(t['amount'])/100 for t in tx if t['transaction_type'] == 'income']
+        expenses = [Decimal(t['amount'])/100 for t in tx if t['transaction_type'] == 'expense']
         all_vals = income + expenses
 
         # Get total values for bars
@@ -625,7 +627,7 @@ class VisualizationsTab:
 
         self.canvas3.draw() # Redraw canvas with updated chart
     
-    def refresh_expenses_over_time_chart(self):
+    def refresh_expenses_chart(self):
         # Bar chart showing expense totals per month
         self.ax4.clear()
         start_date, end_date = self.get_date_range()
@@ -739,7 +741,7 @@ class VisualizationsTab:
 
         self.canvas5.draw()
     
-    def refresh_expense_chart(self):
+    def refresh_expense_breakdown_chart(self):
         self.ax6.clear()
         start_date, end_date = self.get_date_range()
         expenses = self.db.get_category_totals_by_type(start_date, end_date, type='expense')
@@ -756,7 +758,7 @@ class VisualizationsTab:
         categories = [c['name'] for c in cat_dict]
         sorted_cats = sorted(categories, key=lambda c: expenses.get(c, 0.0), reverse=True)
 
-        values = [expenses.get(c, 0.0) for c in sorted_cats]
+        values = [Decimal(expenses.get(c, 0.0))/100 for c in sorted_cats]
         bars = self.ax6.bar(sorted_cats, values, color='red', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(list(filter(None, values))) / len(list(filter(None, values))) if values else 0.0
 
@@ -789,7 +791,7 @@ class VisualizationsTab:
 
         self.canvas6.draw()
     
-    def refresh_income_pie_chart(self):
+    def refresh_income_breakdown_chart(self):
         self.ax7.clear()
 
         start_date, end_date = self.get_date_range()
@@ -807,7 +809,7 @@ class VisualizationsTab:
         categories = [c['name'] for c in cat_dict]
         sorted_cats = sorted(categories, key=lambda c: income.get(c, 0.0), reverse=True)
 
-        values = [income.get(c, 0.0) for c in sorted_cats]
+        values = [Decimal(income.get(c, 0.0))/100 for c in sorted_cats]
         bars = self.ax7.bar(sorted_cats, values, color='green', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(list(filter(None, values))) / len(list(filter(None, values))) if values else 0.0
 
