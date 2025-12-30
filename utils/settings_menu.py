@@ -12,16 +12,15 @@ class SettingsWindow:
         self.window = tk.Toplevel(parent)
         self.window.withdraw()
         self.window.title("Settings")
-        self.window.geometry("300x225")
+        self.window.geometry("300x175")
         self.window.transient(parent)
 
         frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
         
-        ttk.Button(frame, text="Manage Categories", command=self.manage_categories).pack(pady=10)
         ttk.Button(frame, text="Manage Accounts", command=self.manage_accounts).pack(pady=10)
+        ttk.Button(frame, text="Manage Categories", command=self.manage_categories).pack(pady=10)
         ttk.Button(frame, text="Manage Import Templates", command=self.manage_import_templates).pack(pady=10)
-        ttk.Button(frame, text="Close", command=self.window.destroy).pack(pady=10)
 
         self.window.update_idletasks()
         center_window(self.window)

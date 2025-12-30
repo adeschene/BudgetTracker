@@ -7,7 +7,7 @@ class HelpWindow:
         self.window = tk.Toplevel(parent)
         self.window.withdraw()
         self.window.title("Help")
-        self.window.geometry("400x300")
+        self.window.geometry("400x240")
         self.window.transient(parent)
 
         frame = ttk.Frame(self.window)
@@ -16,7 +16,7 @@ class HelpWindow:
         ttk.Button(frame, text="1", command=self.help1).pack(pady=10)
         ttk.Button(frame, text="2", command=self.help2).pack(pady=10)
         ttk.Button(frame, text="3", command=self.help3).pack(pady=10)
-        ttk.Button(frame, text="Close", command=self.window.destroy).pack(pady=10)
+        ttk.Button(frame, text="4", command=self.help4).pack(pady=10)
 
         self.window.update_idletasks()
         center_window(self.window)
@@ -29,4 +29,7 @@ class HelpWindow:
         pass
     
     def help3(self):
+        pass
+    
+    def help4(self):
         pass
