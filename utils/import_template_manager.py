@@ -269,7 +269,7 @@ class TemplateDialog:
         accounts = [acc['name'] for acc in self.db.get_accounts()]
         account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var, values=accounts, state='readonly')
         account_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
-        account_combo.current(0)
+        account_combo.current(0) # Set to first option
 
         ttk.Label(self.dialog, text="Date Column:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.date_col_var = tk.StringVar(value=template['date_column'] if template else 'Date')
@@ -340,7 +340,7 @@ class TemplateDialog:
         self.dialog.deiconify()
     
     def toggle_amount_mode(self):
-        """Enable/disable amount fields based on selected mode (single vs split)."""
+        "Enable/disable amount fields based on selected mode (single vs split)."
         if self.amount_mode_var.get() == 'single':
             self.amount_entry.config(state='normal')
             self.debit_entry.config(state='disabled')
@@ -351,8 +351,9 @@ class TemplateDialog:
             self.credit_entry.config(state='normal')
 
     def save(self):
+        new_name = self.name_var.get()
         # Validate basic required fields
-        if not self.name_var.get() or not self.account_var.get():
+        if not new_name or not self.account_var.get():
             messagebox.showerror("Error", "Template name and account are required")
             return
 
@@ -371,12 +372,17 @@ class TemplateDialog:
             if not debit_col or not credit_col:
                 messagebox.showerror("Error", "Both debit and credit columns are required")
                 return
+            
+        curr_template_names = [n['template_name'] for n in self.db.get_import_templates()]
 
         # Either update an existing template or create a new one
         if self.template:
+            if new_name != self.template['template_name'] and new_name in curr_template_names:
+                messagebox.showerror("Error", "Template name already exists")
+                return
             self.db.update_import_template(
                 template_id=self.template['id'],
-                template_name=self.name_var.get(),
+                template_name=new_name,
                 account_name=self.account_var.get(),
                 date_column=self.date_col_var.get(),
                 description_column=self.desc_col_var.get(),
@@ -389,8 +395,11 @@ class TemplateDialog:
                 notes=self.notes_var.get()
             )
         else:
+            if new_name in curr_template_names:
+                messagebox.showerror("Error", "Template name already exists")
+                return
             self.db.add_import_template(
-                template_name=self.name_var.get(),
+                template_name=new_name,
                 account_name=self.account_var.get(),
                 date_column=self.date_col_var.get(),
                 description_column=self.desc_col_var.get(),
@@ -408,7 +417,8 @@ class TemplateDialog:
 
         self.dialog.destroy()
 
-
+# Dialog to add or edit a description rule. Rules are evaluated in order for a template and can 
+# transform descriptions, assign categories, or mark transactions to be ignored.
 class RuleDialog:
     def __init__(self, parent, db: DatabaseManager, template_id: int, rule=None, callback=None):
         self.db = db
@@ -416,9 +426,6 @@ class RuleDialog:
         self.rule = rule
         self.callback = callback
 
-        # Dialog to add or edit a description rule. Rules are evaluated
-        # in order for a template and can transform descriptions, assign
-        # categories, or mark transactions to be ignored.
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Edit Rule" if rule else "Add Rule")
@@ -478,24 +485,33 @@ class RuleDialog:
             messagebox.showerror("Error", "Replacement is required when not ignoring")
             return
 
+        # Unique rule pattern check vars (don't want two rules for the same situation, mainly as a courtesy to the user)
+        rules = self.db.get_description_rules(self.template_id)
+        curr_patterns = [p['pattern'] for p in rules]
+        new_pattern = self.pattern_var.get()
+
         # Apply the change: update existing rule or append as a new ordered rule
-        if self.rule:
+        if self.rule: # Checking for duplicate patterns
+            if self.rule['pattern'] != new_pattern and new_pattern in curr_patterns:
+                messagebox.showerror("Error", "Pattern already used in a another rule")
+                return
             self.db.update_description_rule(
                 rule_id=self.rule['id'],
                 rule_order=self.rule['rule_order'],
-                pattern=self.pattern_var.get(),
+                pattern=new_pattern,
                 replacement=self.replacement_var.get(),
                 category=self.category_var.get() or None,
                 ignore=self.ignore_var.get()
             )
-        else:
-            rules = self.db.get_description_rules(self.template_id)
-            next_order = len(rules)
-
+        else: # Checking for duplicate patterns
+            if new_pattern in curr_patterns:
+                messagebox.showerror("Error", "Pattern already has a rule applied")
+                return
+            next_order = len(rules) # Incremenet order for new rule
             self.db.add_description_rule(
                 template_id=self.template_id,
                 rule_order=next_order,
-                pattern=self.pattern_var.get(),
+                pattern=new_pattern,
                 replacement=self.replacement_var.get(),
                 category=self.category_var.get() or None,
                 ignore=self.ignore_var.get()

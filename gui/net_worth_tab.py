@@ -657,7 +657,7 @@ class TemplateDialog:
 
         ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.type_var = tk.StringVar(value=template['asset_type'] if template else 'Cash')
-        type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var)
+        type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var, state='readonly')
         type_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
         type_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
@@ -678,17 +678,26 @@ class TemplateDialog:
         self.dialog.deiconify()
 
     def save(self):
+        # Unique name checking vars
+        curr_names = [n['asset_name'] for n in self.db.get_asset_templates()]
+        new_name = self.asset_var.get()
         # Persist template changes and refresh caller view
         if self.template:
+            if new_name != self.template['asset_name'] and new_name in curr_names:
+                messagebox.showerror("Error", "An entry with that name already exists")
+                return
             self.db.update_asset_template(
                 template_id=self.template['id'],
-                asset_name=self.asset_var.get(),
+                asset_name=new_name,
                 asset_type=self.type_var.get(),
                 notes=self.notes_var.get()
             )
         else:
+            if new_name in curr_names:
+                messagebox.showerror("Error", "An entry with that name already exists")
+                return
             self.db.add_asset_template(
-                asset_name=self.asset_var.get(),
+                asset_name=new_name,
                 asset_type=self.type_var.get(),
                 notes=self.notes_var.get()
             )
