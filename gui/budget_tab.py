@@ -106,7 +106,7 @@ class BudgetDialog:
         self.dialog.withdraw()
         # Toplevel dialog used for adding or editing a budget target
         self.dialog.title("Edit Budget" if budget else "Add Budget")
-        self.dialog.geometry("400x250")
+        self.dialog.geometry("400x230")
         self.dialog.transient(parent)
         
         vcmd_positive_whole_dollars = (self.dialog.register(validate_money_string),"%P",False,False) # Digit validation registration

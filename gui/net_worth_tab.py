@@ -553,7 +553,7 @@ class TemplateManagerDialog:
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Manage Asset Template")
-        self.dialog.geometry("700x500")
+        self.dialog.geometry("700x600")
         self.dialog.transient(parent)
 
         info_label = tk.Label(self.dialog,
@@ -587,7 +587,6 @@ class TemplateManagerDialog:
         ttk.Button(button_frame, text="Add Entry", style='Accent.TButton', command=self.add_template).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Edit Entry", command=self.edit_template).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Delete Entry", command=self.delete_template).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Close", command=self.dialog.destroy).pack(side='left', padx=5)
 
         # Load templates into the list when dialog opens
         self.refresh_templates()
@@ -648,7 +647,7 @@ class TemplateDialog:
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Add Template Entry" if not template else "Edit Template Entry")
-        self.dialog.geometry("400x220")
+        self.dialog.geometry("300x230")
         self.dialog.transient(parent)
 
         ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')

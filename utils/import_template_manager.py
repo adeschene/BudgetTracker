@@ -10,7 +10,7 @@ class ImportTemplateManager:
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Import Template Manager")
-        self.dialog.geometry("1200x600")
+        self.dialog.geometry("1200x520")
         self.dialog.transient(parent)
         
         main_frame = ttk.Frame(self.dialog)
@@ -41,7 +41,7 @@ class ImportTemplateManager:
         self.template_tree.bind('<<TreeviewSelect>>', self.on_template_select)
         
         button_frame = ttk.Frame(left_frame)
-        button_frame.pack(pady=10)
+        button_frame.pack(pady=20)
         
         ttk.Button(button_frame, text="Add Template", style='Accent.TButton', command=self.add_template).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Edit Template", command=self.edit_template).pack(side='left', padx=5)
@@ -75,15 +75,13 @@ class ImportTemplateManager:
         self.rules_tree.pack(fill='both', expand=True)
         
         rules_button_frame = ttk.Frame(right_frame)
-        rules_button_frame.pack(pady=10)
+        rules_button_frame.pack(pady=20)
         
         ttk.Button(rules_button_frame, text="Add Rule", style='Accent.TButton', command=self.add_rule).pack(side='left', padx=5)
         ttk.Button(rules_button_frame, text="Edit Rule", command=self.edit_rule).pack(side='left', padx=5)
         ttk.Button(rules_button_frame, text="Delete Rule", command=self.delete_rule).pack(side='left', padx=5)
         ttk.Button(rules_button_frame, text="Move Up", command=self.move_rule_up).pack(side='left', padx=5)
         ttk.Button(rules_button_frame, text="Move Down", command=self.move_rule_down).pack(side='left', padx=5)
-        
-        ttk.Button(self.dialog, text="Close", command=self.dialog.destroy).pack(pady=10)
         
         # Load existing templates and rules into the UI
         self.refresh_templates()
@@ -429,7 +427,7 @@ class RuleDialog:
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Edit Rule" if rule else "Add Rule")
-        self.dialog.geometry("500x350")
+        self.dialog.geometry("500x280")
         self.dialog.transient(parent)
 
         ttk.Label(self.dialog, text="Pattern (Regex):").grid(row=0, column=0, padx=10, pady=10, sticky='w')
