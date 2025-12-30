@@ -206,9 +206,9 @@ class TransactionsTab:
         for trans in filtered:
             # Format amount for display, show negative amounts with a leading '-'
             if trans['amount'] < 0:
-                amount_str = f"-${abs(trans['amount']/100):.2f}"
+                amount_str = f"-${abs(Decimal(trans['amount'])/100):.2f}"
             else:
-                amount_str = f"${trans['amount']/100:.2f}"
+                amount_str = f"${Decimal(trans['amount'])/100:.2f}"
 
             # Display dates in mm-dd-yyyy format
             converted_date = datetime.strptime(trans['date'],"%Y-%m-%d").strftime("%m-%d-%Y")
@@ -439,7 +439,7 @@ class TransactionsTab:
                 transaction_id=transaction_id,
                 date=transaction['date'],
                 description=transaction['description'],
-                amount=int(Decimal(transaction['amount'])*100),  # Convert Decimal to int
+                amount=int(Decimal(transaction['amount'])*100),  # Convert from Decimal to int
                 category=transaction['category'],
                 account=transaction['account'],
                 transaction_type=transaction_type,
@@ -489,7 +489,7 @@ class TransactionDialog:
         ttk.Entry(self.dialog, textvariable=self.desc_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
         
         ttk.Label(self.dialog, text="Amount:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
-        self.amount_var = tk.StringVar(value=str(transaction['amount']/100) if transaction else '') # Convert to decimal
+        self.amount_var = tk.StringVar(value=str(Decimal(transaction['amount'])/100) if transaction else '') # Convert to decimal
         ttk.Entry(self.dialog, validate='all', validatecommand=vcmd_decimal_dollar, textvariable=self.amount_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
         tk.Label(self.dialog, text='Please enter negative values for expenses\n(purchases, withdrawals, etc.)', fg='gray').grid(row=3, column=1, padx=5, sticky='ew')
         
@@ -525,7 +525,7 @@ class TransactionDialog:
     
     def save(self):
         try:
-            amount = int(float(self.amount_var.get()) * 100) # Convert from decimal
+            amount = int(Decimal(self.amount_var.get()) * 100) # Convert from decimal
             transaction_type = 'income' if amount > 0 else 'expense'
             
             if self.transaction:
