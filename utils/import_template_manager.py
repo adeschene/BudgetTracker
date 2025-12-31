@@ -27,15 +27,17 @@ class ImportTemplateManager:
         scrollbar = ttk.Scrollbar(tree_frame)
         scrollbar.pack(side='right', fill='y')
         
-        self.template_tree = ttk.Treeview(tree_frame, columns=('Template', 'Account'), 
+        self.template_tree = ttk.Treeview(tree_frame, columns=('Template', 'Account', 'Notes'), 
                                          show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.template_tree.yview)
         
         self.template_tree.heading('Template', text='Template Name')
         self.template_tree.heading('Account', text='Account')
+        self.template_tree.heading('Notes', text='Notes')
         
         self.template_tree.column('Template', width=150, anchor='center')
-        self.template_tree.column('Account', width=100, anchor='center')
+        self.template_tree.column('Account', width=150, anchor='center')
+        self.template_tree.column('Notes', width=180)
         
         self.template_tree.pack(fill='both', expand=True)
         self.template_tree.bind('<<TreeviewSelect>>', self.on_template_select)
@@ -68,9 +70,9 @@ class ImportTemplateManager:
         self.rules_tree.heading('Category', text='Category')
         
         self.rules_tree.column('Order', width=20, anchor='center')
-        self.rules_tree.column('Pattern', width=300)
-        self.rules_tree.column('Replacement', width=200, anchor='center')
-        self.rules_tree.column('Category', width=100, anchor='center')
+        self.rules_tree.column('Pattern', width=240, anchor='center')
+        self.rules_tree.column('Replacement', width=150, anchor='center')
+        self.rules_tree.column('Category', width=120, anchor='center')
         
         self.rules_tree.pack(fill='both', expand=True)
         
@@ -101,7 +103,8 @@ class ImportTemplateManager:
             # Display template name and linked account; keep id in tags
             self.template_tree.insert('', 'end', values=(
                 template['template_name'],
-                template['account_name']
+                template['account_name'],
+                template['notes']
             ), tags=(template['id'],))
     
     def on_template_select(self, event):
