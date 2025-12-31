@@ -73,7 +73,8 @@ The app can handle various CSV formats. It looks for columns containing:
 - **Date**: "date", "transaction date", "posted date"
 - **Description**: "description", "memo", "details", "payee"
 - **Amount**: "amount", "debit", "credit", "transaction amount"
-For the best experience, create/use custom import templates for each statement format
+
+For the best experience, be sure to create/use custom import templates for each statement format
 
 Supported date formats: YYYY-MM-DD, MM/DD/YYYY, MM/DD/YY, and more.
 
