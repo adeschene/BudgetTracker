@@ -43,7 +43,7 @@ class VisualizationsTab(ttk.Frame):
                                         bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                         maxdate=datetime.now(), day=1)
         self.start_date_picker.pack(side='left', padx=5)
-        self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_charts())
+        self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.on_inner_tab_change(None))
 
         ttk.Label(control_frame, text="End:").pack(side='left', padx=5)
         self.end_date_picker = DateEntry(control_frame, width=10, firstweekday='sunday',
@@ -57,89 +57,98 @@ class VisualizationsTab(ttk.Frame):
                                         bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                         maxdate=datetime.now())
         self.end_date_picker.pack(side='left', padx=5)
-        self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.refresh_charts())
+        self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.on_inner_tab_change(None))
 
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
 
         # Create notebook to hold multiple chart tabs
-        tabs = ttk.Notebook(self)
-        tabs.pack(fill='both', expand=True, padx=10, pady=4)
+        self.inner_notebook = ttk.Notebook(self)
+        self.inner_notebook.pack(fill='both', expand=True, padx=10, pady=4)
+
+        self.chart_map = {} # Tab-to-function mapping dictionary
 
         # --- Net Worth Tab ---
-        net_tab = ttk.Frame(tabs)
-        tabs.add(net_tab, text='Net Worth Over Time')
+        net_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(net_tab, text='Net Worth Over Time')
         net_worth_frame = ttk.Frame(net_tab)
         net_worth_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure1 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax1 = self.figure1.add_subplot(111, facecolor='#444445')
         self.canvas1 = FigureCanvasTkAgg(self.figure1, net_worth_frame)
         self.canvas1.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(net_tab)] = self.refresh_net_worth_chart
 
         # --- Income, Expenses, & Savings Tab ---
-        mixed_tab = ttk.Frame(tabs)
-        tabs.add(mixed_tab, text='Money In/Out')
+        mixed_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(mixed_tab, text='Money In/Out')
         mixed_frame = ttk.Frame(mixed_tab)
         mixed_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure2 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax2 = self.figure2.add_subplot(111, facecolor='#444445')
         self.canvas2 = FigureCanvasTkAgg(self.figure2, mixed_frame)
         self.canvas2.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(mixed_tab)] = self.refresh_mixed_chart
 
         # --- Income Over Time Tab ---
-        income_tab = ttk.Frame(tabs)
-        tabs.add(income_tab, text='Income')
+        income_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(income_tab, text='Income')
         income_frame = ttk.Frame(income_tab)
         income_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure3 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax3 = self.figure3.add_subplot(111, facecolor='#444445')
         self.canvas3 = FigureCanvasTkAgg(self.figure3, income_frame)
         self.canvas3.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(income_tab)] = self.refresh_income_chart
 
         # --- Expenses Over Time Tab ---
-        expenses_time_tab = ttk.Frame(tabs)
-        tabs.add(expenses_time_tab, text='Expenses')
-        expenses_time_frame = ttk.Frame(expenses_time_tab)
+        expenses_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(expenses_tab, text='Expenses')
+        expenses_time_frame = ttk.Frame(expenses_tab)
         expenses_time_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure4 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax4 = self.figure4.add_subplot(111, facecolor='#444445')
         self.canvas4 = FigureCanvasTkAgg(self.figure4, expenses_time_frame)
         self.canvas4.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(expenses_tab)] = self.refresh_expenses_chart
 
         # --- Savings Over Time Tab ---
-        savings_tab = ttk.Frame(tabs)
-        tabs.add(savings_tab, text='Savings')
+        savings_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(savings_tab, text='Savings')
         savings_frame = ttk.Frame(savings_tab)
         savings_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure5 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax5 = self.figure5.add_subplot(111, facecolor='#444445')
         self.canvas5 = FigureCanvasTkAgg(self.figure5, savings_frame)
         self.canvas5.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(savings_tab)] = self.refresh_savings_chart
 
         # --- Expense Breakdown Tab (pie) ---
-        expense_tab = ttk.Frame(tabs)
-        tabs.add(expense_tab, text='Expense Breakdown')
-        expense_frame = ttk.Frame(expense_tab)
+        expense_bd_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(expense_bd_tab, text='Expense Breakdown')
+        expense_frame = ttk.Frame(expense_bd_tab)
         expense_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure6 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax6 = self.figure6.add_subplot(111, facecolor='#444445')
         self.canvas6 = FigureCanvasTkAgg(self.figure6, expense_frame)
         self.canvas6.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(expense_bd_tab)] = self.refresh_expense_breakdown_chart
 
         # --- Income Breakdown Tab (pie) ---
-        income_pie_tab = ttk.Frame(tabs)
-        tabs.add(income_pie_tab, text='Income Breakdown')
-        income_pie_frame = ttk.Frame(income_pie_tab)
+        income_bd_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(income_bd_tab, text='Income Breakdown')
+        income_pie_frame = ttk.Frame(income_bd_tab)
         income_pie_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure7 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax7 = self.figure7.add_subplot(111, facecolor='#444445')
         self.canvas7 = FigureCanvasTkAgg(self.figure7, income_pie_frame)
         self.canvas7.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(income_bd_tab)] = self.refresh_income_breakdown_chart
 
         # --- Category Drill Down Tab ---
-        cat_tab = ttk.Frame(tabs)
-        tabs.add(cat_tab, text='Category Drill Down')
-        cat_control = ttk.Frame(cat_tab)
+        cat_bd_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(cat_bd_tab, text='Category Drill Down')
+        cat_control = ttk.Frame(cat_bd_tab)
         cat_control.pack(fill='x', padx=5, pady=5)
 
         ttk.Label(cat_control, text='Category:').pack(side='left', padx=(4, 6))
@@ -148,17 +157,18 @@ class VisualizationsTab(ttk.Frame):
         self.category_combo.pack(side='left')
         self.category_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_category_drilldown_chart())
 
-        cat_frame = ttk.Frame(cat_tab)
+        cat_frame = ttk.Frame(cat_bd_tab)
         cat_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure8 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax8 = self.figure8.add_subplot(111, facecolor='#444445')
         self.canvas8 = FigureCanvasTkAgg(self.figure8, cat_frame)
         self.canvas8.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(cat_bd_tab)] = self.refresh_category_drilldown_chart
 
         # --- Keyword Drill Down Tab ---
-        kw_tab = ttk.Frame(tabs)
-        tabs.add(kw_tab, text='Keyword Drill Down')
-        kw_control = ttk.Frame(kw_tab)
+        kw_bd_tab = ttk.Frame(self.inner_notebook)
+        self.inner_notebook.add(kw_bd_tab, text='Keyword Drill Down')
+        kw_control = ttk.Frame(kw_bd_tab)
         kw_control.pack(fill='x', padx=5, pady=5)
 
         ttk.Label(kw_control, text='Keyword:').pack(side='left', padx=(4, 6))
@@ -222,16 +232,27 @@ class VisualizationsTab(ttk.Frame):
 
         ttk.Button(kw_control, text='Clear', command=self._clear_keyword_drilldown_vals).pack(side='right', padx=5)
 
-        kw_frame = ttk.Frame(kw_tab)
+        kw_frame = ttk.Frame(kw_bd_tab)
         kw_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure9 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax9 = self.figure9.add_subplot(111, facecolor='#444445')
         self.canvas9 = FigureCanvasTkAgg(self.figure9, kw_frame)
         self.canvas9.get_tk_widget().pack(fill='both', expand=True)
+        self.chart_map[str(kw_bd_tab)] = self.refresh_keyword_drilldown_chart
+
+        self.inner_notebook.bind("<<NotebookTabChanged>>", self.on_inner_tab_change)
+
+    # Refresh only the currently visible chart
+    def on_inner_tab_change(self, event):
+        selected_tab_id = self.inner_notebook.select()
+        # Look up the refresh function in the map and run it
+        if selected_tab_id in self.chart_map:
+            refresh_function = self.chart_map[selected_tab_id]
+            refresh_function()
 
     # Initial draw of all charts using current default period
     def on_tab_opened(self): # Trigger refresh when switching to tab from another
-        self.refresh_charts()
+        self.on_inner_tab_change(None)
 
     # Enable date pickers when using custom timeframe
     def on_period_change(self, event=None):
@@ -241,8 +262,8 @@ class VisualizationsTab(ttk.Frame):
         else:
             self.start_date_picker.config(state='disabled')
             self.end_date_picker.config(state='disabled')
-        # Regenerate report whenever the selected period changes
-        self.refresh_charts()
+        # Refresh active chart whenever the selected period changes
+        self.on_inner_tab_change(None)
 
     def get_date_range(self):
         # Determine start and end dates based on selected period or custom range
@@ -287,19 +308,6 @@ class VisualizationsTab(ttk.Frame):
 
         # Return ISO date strings useful for DB queries
         return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
-
-    def refresh_charts(self):
-        # Refresh each visualization panel. Each function queries the DB
-        # and redraws its respective matplotlib axes and canvas.
-        self.refresh_net_worth_chart()
-        self.refresh_mixed_chart()
-        self.refresh_income_chart()
-        self.refresh_expenses_chart()
-        self.refresh_savings_chart()
-        self.refresh_expense_breakdown_chart()
-        self.refresh_income_breakdown_chart()
-        self.refresh_category_drilldown_chart()
-        self.refresh_keyword_drilldown_chart()
 
     def _month_range(self, start_date: str, end_date: str):
         # return list of YYYY-MM strings from start to end inclusive
