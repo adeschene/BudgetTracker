@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime, timedelta
+from decimal import Decimal
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
 
@@ -136,8 +137,8 @@ class ReportsTab:
         transactions = self.db.get_transactions(start_date, end_date)
         
         # Aggregate simple totals for the report
-        total_income = sum(t['amount'] for t in transactions if t['amount'] > 0)
-        total_expenses = sum(abs(t['amount']) for t in transactions if t['amount'] < 0)
+        total_income = sum(Decimal(t['amount'])/100 for t in transactions if t['amount'] > 0)
+        total_expenses = sum(abs(Decimal(t['amount'])/100) for t in transactions if t['amount'] < 0)
         net_income = total_income - total_expenses
         
         self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
@@ -158,8 +159,8 @@ class ReportsTab:
             sorted_categories = sorted(spending_by_category.items(), key=lambda x: x[1], reverse=True)
 
             for category, amount in sorted_categories:
-                percentage = (amount / total_expenses * 100) if total_expenses > 0 else 0
-                self.report_text.insert('end', f"{category:<30} ${amount:>12,.2f}  ({percentage:>5.1f}%)\n")
+                percentage = (Decimal(amount) / total_expenses) if total_expenses > 0 else 0
+                self.report_text.insert('end', f"{category:<30} ${Decimal(amount)/100:>12,.2f}  ({percentage:>5.1f}%)\n")
 
             self.report_text.insert('end', "\n")
 
@@ -178,7 +179,7 @@ class ReportsTab:
             for budget in budget_targets:
                 category = budget['category']
                 budget_amount = budget['monthly_target']
-                actual_amount = spending_by_category.get(category, 0)
+                actual_amount = Decimal(spending_by_category.get(category, 0))/100
                 difference = budget_amount - actual_amount
 
                 total_budget += budget_amount
@@ -209,8 +210,8 @@ class ReportsTab:
             sorted_income = sorted(income_by_category.items(), key=lambda x: x[1], reverse=True)
             
             for category, amount in sorted_income:
-                percentage = (amount / total_income * 100) if total_income > 0 else 0
-                self.report_text.insert('end', f"{category:<30} ${amount:>12,.2f}  ({percentage:>5.1f}%)\n")
+                percentage = (Decimal(amount) / total_income) if total_income > 0 else 0
+                self.report_text.insert('end', f"{category:<30} ${Decimal(amount)/100:>12,.2f}  ({percentage:>5.1f}%)\n")
 
             self.report_text.insert('end', "\n")
         
@@ -235,9 +236,9 @@ class ReportsTab:
                     continue
 
                 total_balance += value
-                self.report_text.insert('end', f"{account.get('asset_name','Unknown'):<30} ({atype:<15}) ${value:>12,.2f}\n")
+                self.report_text.insert('end', f"{account.get('asset_name','Unknown'):<30} ({atype:<15}) ${value:>12,.0f}\n")
 
-            self.report_text.insert('end', f"\n{'Total:':<30} {'':<15} ${total_balance:>12,.2f}\n\n")
+            self.report_text.insert('end', f"\n{'Total:':<30} {'':<15} ${total_balance:>12,.0f}\n\n")
 
             self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             self.report_text.insert('end', "NET WORTH SUMMARY\n")
