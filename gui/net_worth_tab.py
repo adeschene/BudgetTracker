@@ -189,6 +189,10 @@ class NetWorthTab(ttk.Frame):
         if not selection:
             messagebox.showwarning("Warning", "Please select an entry to edit")
             return
+        
+        if len(selection) > 1:
+            messagebox.showwarning("Error", "Only one entry can be edited at a time")
+            return
 
         entry_id = self.tree.item(selection[0])['tags'][0]
         start_date, end_date = self.get_month_date_range()
@@ -202,12 +206,16 @@ class NetWorthTab(ttk.Frame):
     def delete_entry(self):
         selection = self.tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select an entry to delete")
+            messagebox.showwarning("Warning", "Please select entry(s) to delete")
             return
 
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this entry?"):
-            entry_id = self.tree.item(selection[0])['tags'][0]
-            self.db.delete_net_worth_entry(entry_id)
+        count = len(selection)
+        message = f"Delete {count} entries?" if count > 1 else "Delete this entry?"
+
+        if messagebox.askyesno("Confirm", message):
+            for item in selection:
+                entry_id = self.tree.item(item)['tags'][0]
+                self.db.delete_net_worth_entry(entry_id)
             self.refresh_data()
 
     def apply_template(self):
@@ -622,6 +630,10 @@ class TemplateManagerDialog:
         if not selection:
             messagebox.showwarning("Warning", "Please select an entry to edit")
             return
+        
+        if len(selection) > 1:
+            messagebox.showwarning("Error", "Only one entry can be edited at a time")
+            return
 
         template_id = self.tree.item(selection[0])['tags'][0]
         templates = self.db.get_asset_templates()
@@ -633,12 +645,16 @@ class TemplateManagerDialog:
     def delete_template(self):
         selection = self.tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select an entry to delete")
+            messagebox.showwarning("Warning", "Please select entry(s) to delete")
             return
 
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this entry?"):
-            template_id = self.tree.item(selection[0])['tags'][0]
-            self.db.delete_asset_template(template_id)
+        count = len(selection)
+        message = f"Delete {count} entries?" if count > 1 else "Delete this entry?"
+
+        if messagebox.askyesno("Confirm", message):
+            for item in selection:
+                template_id = self.tree.item(item)['tags'][0]
+                self.db.delete_asset_template(template_id)
             self.refresh_templates()
 
 class TemplateDialog:

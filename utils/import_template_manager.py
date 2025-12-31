@@ -140,6 +140,10 @@ class ImportTemplateManager:
             messagebox.showwarning("Warning", "Please select a template to edit")
             return
         
+        if len(selection) > 1:
+            messagebox.showwarning("Error", "Only one template can be edited at a time")
+            return
+        
         template_id = self.template_tree.item(selection[0])['tags'][0]
         template = self.db.get_import_template(template_id)
         
@@ -149,12 +153,16 @@ class ImportTemplateManager:
     def delete_template(self):
         selection = self.template_tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select a template to delete")
+            messagebox.showwarning("Warning", "Please select template(s) to delete")
             return
-        
-        if messagebox.askyesno("Confirm", "Delete this template and all its rules?"):
-            template_id = self.template_tree.item(selection[0])['tags'][0]
-            self.db.delete_import_template(template_id)
+
+        count = len(selection)
+        message = f"Delete {count} templates and all of their rules?" if count > 1 else "Delete this template and all of its rules?"
+
+        if messagebox.askyesno("Confirm", message):
+            for item in selection:
+                template_id = self.template_tree.item(item)['tags'][0]
+                self.db.delete_import_template(template_id)
             self.refresh_templates()
             self.refresh_rules()
     
@@ -173,6 +181,10 @@ class ImportTemplateManager:
             messagebox.showwarning("Warning", "Please select a rule to edit")
             return
         
+        if len(selection) > 1:
+            messagebox.showwarning("Error", "Only one rule can be edited at a time")
+            return
+        
         rule_id = self.rules_tree.item(selection[0])['tags'][0]
         template_selection = self.template_tree.selection()
         template_id = self.template_tree.item(template_selection[0])['tags'][0]
@@ -186,12 +198,16 @@ class ImportTemplateManager:
     def delete_rule(self):
         selection = self.rules_tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select a rule to delete")
+            messagebox.showwarning("Warning", "Please select rule(s) to delete")
             return
-        
-        if messagebox.askyesno("Confirm", "Delete this rule?"):
-            rule_id = self.rules_tree.item(selection[0])['tags'][0]
-            self.db.delete_description_rule(rule_id)
+
+        count = len(selection)
+        message = f"Delete {count} rules?" if count > 1 else "Delete this rule?"
+
+        if messagebox.askyesno("Confirm", message):
+            for item in selection:
+                rule_id = self.rules_tree.item(item)['tags'][0]
+                self.db.delete_description_rule(rule_id)
             self.refresh_rules()
     
     def move_rule_up(self):

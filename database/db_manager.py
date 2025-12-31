@@ -300,6 +300,13 @@ class DatabaseManager:
 
         conn.commit()
         conn.close()
+
+    def delete_account(self, account_id: int):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM accounts WHERE id = ?', (account_id,))
+        conn.commit()
+        conn.close()
     
     def get_accounts(self) -> List[Dict]:
         conn = self.get_connection()

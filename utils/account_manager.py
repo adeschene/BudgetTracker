@@ -30,7 +30,6 @@ class AccountManager:
         ttk.Button(button_frame, text="Add Account", style='Accent.TButton', command=self.add_account).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Edit Account", command=self.edit_account).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Delete Account", command=self.delete_account).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Close", command=self.window.destroy).pack(side='left', padx=5)
 
         self.refresh_accounts()
         
@@ -55,6 +54,10 @@ class AccountManager:
         if not selection:
             messagebox.showwarning("Warning", "Please select an account to edit")
             return
+        
+        if len(selection) > 1:
+            messagebox.showwarning("Error", "Only one account can be edited at a time")
+            return
 
         account_id = int(self.tree.item(selection[0])['tags'][0])
         accounts = self.db.get_accounts()
@@ -66,17 +69,16 @@ class AccountManager:
     def delete_account(self):
         selection = self.tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select an account to delete")
+            messagebox.showwarning("Warning", "Please select account(s) to delete")
             return
 
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this account?"):
-            account_id = int(self.tree.item(selection[0])['tags'][0])
-            # Direct SQL here to ensure immediate removal; then refresh list
-            conn = self.db.get_connection()
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM accounts WHERE id = ?', (account_id,))
-            conn.commit()
-            conn.close()
+        count = len(selection)
+        message = f"Delete {count} accounts?" if count > 1 else "Delete this account?"
+
+        if messagebox.askyesno("Confirm", message):
+            for item in selection:
+                account_id = self.tree.item(item)['tags'][0]
+                self.db.delete_account(account_id)
             self.refresh_accounts()
 
 

@@ -77,6 +77,10 @@ class BudgetTab(ttk.Frame):
             messagebox.showwarning("Warning", "Please select a budget to edit")
             return
         
+        if len(selection) > 1:
+            messagebox.showwarning("Error", "Only one budget can be edited at a time")
+            return
+        
         budget_id = self.tree.item(selection[0])['tags'][0]
         budgets = self.db.get_budget_targets()
         budget = next((b for b in budgets if b['id'] == budget_id), None)
@@ -88,12 +92,16 @@ class BudgetTab(ttk.Frame):
     def delete_budget(self):
         selection = self.tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select a budget to delete")
+            messagebox.showwarning("Warning", "Please select budget target(s) to delete")
             return
-        
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this budget target?"):
-            budget_id = self.tree.item(selection[0])['tags'][0]
-            self.db.delete_budget_target(budget_id)
+
+        count = len(selection)
+        message = f"Delete {count} budget targets?" if count > 1 else "Delete this budget target?"
+
+        if messagebox.askyesno("Confirm", message):
+            for item in selection:
+                budget_id = self.tree.item(item)['tags'][0]
+                self.db.delete_budget_target(budget_id)
             self.refresh_budgets()
 
 

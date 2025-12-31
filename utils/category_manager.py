@@ -32,7 +32,6 @@ class CategoryManager:
         ttk.Button(button_frame, text="Add Category", style='Accent.TButton', command=self.add_category).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Edit Category", command=self.edit_category).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Delete Category", command=self.delete_category).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Close", command=self.window.destroy).pack(side='left', padx=5)
         
         self.refresh_categories()
         
@@ -91,6 +90,10 @@ class CategoryManager:
         if not selection:
             messagebox.showwarning("Warning", "Please select a category to edit")
             return
+        
+        if len(selection) > 1:
+            messagebox.showwarning("Error", "Only one category can be edited at a time")
+            return
 
         category_id = int(self.tree.item(selection[0])['tags'][0])
         categories = self.db.get_categories()
@@ -143,10 +146,15 @@ class CategoryManager:
     def delete_category(self):
         selection = self.tree.selection()
         if not selection:
-            messagebox.showwarning("Warning", "Please select a category to delete")
+            messagebox.showwarning("Warning", "Please select category(s) to delete")
             return
 
-        category_id = int(self.tree.item(selection[0])['tags'][0])
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this category?"):
-            self.db.delete_category(category_id)
+        count = len(selection)
+        message = f"Delete {count} categories?" if count > 1 else "Delete this category?"
+
+        if messagebox.askyesno("Confirm", message):
+            # Delete each selected category and refresh view
+            for item in selection:
+                category_id = self.tree.item(item)['tags'][0]
+                self.db.delete_category(category_id)
             self.refresh_categories()

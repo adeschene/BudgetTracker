@@ -305,6 +305,10 @@ class TransactionsTab(ttk.Frame):
         if not selection:
             messagebox.showwarning("Warning", "Please select a transaction to edit")
             return
+        
+        if len(selection) > 1:
+            messagebox.showwarning("Error", "Only one transaction can be edited at a time")
+            return
 
         transaction_id = self.tree.item(selection[0])['tags'][0]
         transactions = self.db.get_transactions()
@@ -321,7 +325,7 @@ class TransactionsTab(ttk.Frame):
             return
 
         count = len(selection)
-        message = f"Are you sure you want to delete {count} transaction(s)?"
+        message = f"Delete {count} transactions?" if count > 1 else "Delete this transaction?"
 
         if messagebox.askyesno("Confirm", message):
             # Delete each selected transaction and refresh view
