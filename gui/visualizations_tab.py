@@ -276,9 +276,8 @@ class VisualizationsTab(ttk.Frame):
                 end = today
             case 'Last Month':
                 first_of_this_month = today.replace(day=1)
-                last_month_end = first_of_this_month - timedelta(days=1)
-                start = last_month_end.replace(day=1)
-                end = last_month_end
+                end = first_of_this_month - timedelta(days=1)
+                start = end.replace(day=1)
             case 'Last Two Months':
                 first_of_this_month = today.replace(day=1)
                 last_month_end = first_of_this_month - timedelta(days=1)

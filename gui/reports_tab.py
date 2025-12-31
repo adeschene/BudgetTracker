@@ -25,7 +25,7 @@ class ReportsTab(ttk.Frame):
 
         self.period_var = tk.StringVar(value='This Month')
         period_combo = ttk.Combobox(control_frame, textvariable=self.period_var, width=15)
-        period_combo['values'] = ['This Month', 'Last Month', 'This Year', 'Last Year', 'All Time', 'Custom']
+        period_combo['values'] = ['This Month', 'Last Month', 'Last Two Months', 'Last Three Months', 'This Year', 'Last Year', 'All Time', 'Custom']
         period_combo.pack(side='left', padx=5)
         period_combo.bind('<<ComboboxSelected>>', self.on_period_change)
 
@@ -91,25 +91,40 @@ class ReportsTab(ttk.Frame):
         period = self.period_var.get()
         today = datetime.now()
 
-        if period == 'This Month':
-            start = today.replace(day=1)
-            end = today
-        elif period == 'Last Month':
-            first_this_month = today.replace(day=1)
-            end = first_this_month - timedelta(days=1)
-            start = end.replace(day=1)
-        elif period == 'This Year':
-            start = today.replace(month=1, day=1)
-            end = today
-        elif period == 'Last Year':
-            start = today.replace(year=today.year-1, month=1, day=1)
-            end = today.replace(year=today.year-1, month=12, day=31)
-        elif period == 'Custom':
-            start_date = self.start_date_picker.get_date()
-            end_date = self.end_date_picker.get_date()
-            return start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
-        else:
-            return None, None
+        match period:
+            case 'This Month':
+                start = today.replace(day=1)
+                end = today
+            case 'Last Month':
+                first_this_month = today.replace(day=1)
+                end = first_this_month - timedelta(days=1)
+                start = end.replace(day=1)
+            case 'Last Two Months':
+                first_of_this_month = today.replace(day=1)
+                last_month_end = first_of_this_month - timedelta(days=1)
+                start = last_month_end.replace(day=1)
+                end = today
+            case 'Last Three Months':
+                this_month = today.month
+                this_year = today.year
+                match this_month:
+                    case 2: start_month = 12
+                    case 1: start_month = 11
+                    case _: start_month = this_month - 2
+                start_year = this_year - 1 if start_month == (12 or 11) else this_year
+                start = today.replace(year=start_year, month=start_month, day=1)
+                end = today
+            case 'This Year':
+                start = today.replace(month=1, day=1)
+                end = today
+            case 'Last Year':
+                start = today.replace(year=today.year-1, month=1, day=1)
+                end = today.replace(year=today.year-1, month=12, day=31)
+            case 'Custom':
+                start = self.start_date_picker.get_date()
+                end = self.end_date_picker.get_date()
+            case _: # All Time chosen, handled case-by-case in refresh methods
+                return None, None
 
         # Return start and end dates as ISO strings for DB queries
         return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
