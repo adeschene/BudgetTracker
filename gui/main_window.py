@@ -39,6 +39,16 @@ class MainWindow:
         self.notebook = ttk.Notebook(self.control_frame)
         self.notebook.grid(row=0, column=0, sticky='nsew')
 
+        # Triggers the on_tab_opened function within a tab class when switching to it, if it exists
+        def on_tab_change(event):
+            notebook = event.widget
+            new_tab_id = notebook.select()
+            new_tab = self.root.nametowidget(new_tab_id)
+            if hasattr(new_tab,"on_tab_opened"):
+                new_tab.on_tab_opened()
+
+        self.notebook.bind("<<NotebookTabChanged>>", on_tab_change) # Optional tab switching function execution
+
         # Create each top-level tab, passing the shared DatabaseManager
         self.transactions_tab = TransactionsTab(self.notebook, self.db)
         self.net_worth_tab = NetWorthTab(self.notebook, self.db)
@@ -47,11 +57,11 @@ class MainWindow:
         self.reports_tab = ReportsTab(self.notebook, self.db)
 
         # Attach tabs to the notebook
-        self.notebook.add(self.transactions_tab.frame, text="Transactions")
-        self.notebook.add(self.net_worth_tab.frame, text="Net Worth")
-        self.notebook.add(self.budget_tab.frame, text="Budget")
-        self.notebook.add(self.visualizations_tab.frame, text="Visualizations")
-        self.notebook.add(self.reports_tab.frame, text="Reports")
+        self.notebook.add(self.transactions_tab, text="Transactions")
+        self.notebook.add(self.net_worth_tab, text="Net Worth")
+        self.notebook.add(self.budget_tab, text="Budget")
+        self.notebook.add(self.visualizations_tab, text="Visualizations")
+        self.notebook.add(self.reports_tab, text="Reports")
 
         # Create settings button with cogwheel icon
         full_settings_img = Image.open('assets\cogwheel.png')

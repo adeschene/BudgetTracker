@@ -5,19 +5,19 @@ from decimal import Decimal
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
 
-class ReportsTab:
+class ReportsTab(ttk.Frame):
     # Class variables
     top_btm_separator_mult = 80 # The number of hyphens used to separate sections in reports
     inner_separator_mult = 160 # The number of '=' used to signal top and bottom of reports
 
-    def __init__(self, parent, db: DatabaseManager):
+    def __init__(self, parent, db: DatabaseManager, **kwargs):
+        super().__init__(parent, **kwargs) # Initialize tab frame
         self.db = db
-        self.frame = ttk.Frame(parent)
 
         self.setup_ui()
 
     def setup_ui(self):
-        control_frame = ttk.Frame(self.frame)
+        control_frame = ttk.Frame(self)
         control_frame.pack(fill='x', padx=10, pady=10)
 
         # Time period selection logic
@@ -61,9 +61,7 @@ class ReportsTab:
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
 
-        self.generate_button = ttk.Button(control_frame, text="Generate Report", style='Accent.TButton', command=self.generate_report).pack(side='left', padx=5)
-
-        report_frame = ttk.Frame(self.frame)
+        report_frame = ttk.Frame(self)
         report_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         scrollbar = ttk.Scrollbar(report_frame)
@@ -74,7 +72,7 @@ class ReportsTab:
         scrollbar.config(command=self.report_text.yview)
         self.report_text.pack(fill='both', expand=True)
 
-        # Automatically generate an initial report on launch
+    def on_tab_opened(self): # Trigger refresh when switching to tab from another
         self.generate_report()
 
     # Enable date pickers when using custom timeframe

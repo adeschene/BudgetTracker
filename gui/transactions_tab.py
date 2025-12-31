@@ -5,27 +5,27 @@ from tkcalendar import DateEntry
 from decimal import Decimal, InvalidOperation
 from database.db_manager import DatabaseManager
 from utils.csv_importer import CSVImporter, ImportDialog
+from utils.import_template_manager import ImportTemplateManager
 from utils.helpers import center_window, fuzzy_match, exact_match, validate_money_string
 
-class TransactionsTab:
-    def __init__(self, parent, db: DatabaseManager):
+class TransactionsTab(ttk.Frame):
+    def __init__(self, parent, db: DatabaseManager, **kwargs):
+        super().__init__(parent, **kwargs) # Initialize tab frame
         # Database manager and reference to parent and top-level root
         self.db = db
         self.parent = parent
         self.root = parent.winfo_toplevel()
         self.csv_importer = CSVImporter(self.db) # CSV import helper
 
-        # Container frame for this tab and sorting state
-        self.frame = ttk.Frame(self.parent)
+        # Sorting state
         self.sort_column = None
         self.sort_reverse = False
 
         # Build UI and populate data
         self.setup_ui()
-        self.refresh_transactions()
     
     def setup_ui(self):
-        top_frame = ttk.Frame(self.frame)
+        top_frame = ttk.Frame(self)
         top_frame.pack(padx=10, pady=10)
 
         ttk.Label(top_frame, text="Filters:").pack(side='left', padx=5)
@@ -124,7 +124,7 @@ class TransactionsTab:
         # Filter clear button
         ttk.Button(top_frame, text="Clear", command=self.clear_filters).pack(side='left', padx=5)
         
-        tree_frame = ttk.Frame(self.frame)
+        tree_frame = ttk.Frame(self)
         tree_frame.pack(fill='both', expand=True, padx=10, pady=5)
         
         scrollbar = ttk.Scrollbar(tree_frame)
@@ -154,21 +154,24 @@ class TransactionsTab:
 
         self.tree.pack(fill='both', expand=True)
         
-        top_button_frame = ttk.Frame(self.frame)
+        top_button_frame = ttk.Frame(self)
         top_button_frame.pack(pady=5)
 
         # Action buttons
         ttk.Button(top_button_frame, text="Import CSV", style='Accent.TButton', command=self.import_csv).pack(side='left', padx=5)
+        ttk.Button(top_button_frame, text="Manage Templates", command=self.manage_import_templates).pack(side='left', padx=5)
 
-        ttk.Separator(top_button_frame, orient='vertical').pack(side='left', fill='y', padx=20, pady=2)
+        ttk.Separator(top_button_frame, orient='vertical').pack(side='left', fill='y', padx=10, pady=2)
 
-        ttk.Button(top_button_frame, text="Add Transaction", command=self.add_transaction).pack(side='left', padx=5)
+        ttk.Button(top_button_frame, text="Add Transaction", style='Accent.TButton', command=self.add_transaction).pack(side='left', padx=5)
         ttk.Button(top_button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
         ttk.Button(top_button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
 
-        ttk.Separator(top_button_frame, orient='vertical').pack(side='left', fill='y', padx=20, pady=2)
+    def on_tab_opened(self): # Trigger refresh when switching to tab from another
+        self.refresh_transactions()
 
-        ttk.Button(top_button_frame, text="Refresh", command=self.refresh_transactions).pack(side='left', padx=5)
+    def manage_import_templates(self):
+        ImportTemplateManager(self, self.db)
     
     def update_category_list(self):
         categories = self.db.get_categories()
@@ -295,7 +298,7 @@ class TransactionsTab:
     
     def add_transaction(self):
         # Open a dialog to add a new transaction; refresh on save
-        TransactionDialog(self.frame, self.db, callback=self.refresh_transactions)
+        TransactionDialog(self, self.db, callback=self.refresh_transactions)
 
     def edit_transaction(self):
         selection = self.tree.selection()
@@ -309,7 +312,7 @@ class TransactionsTab:
 
         if transaction:
             # Edit the selected transaction using the dialog
-            TransactionDialog(self.frame, self.db, transaction=transaction, callback=self.refresh_transactions)
+            TransactionDialog(self, self.db, transaction=transaction, callback=self.refresh_transactions)
 
     def delete_transaction(self):
         selection = self.tree.selection()

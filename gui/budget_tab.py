@@ -3,23 +3,23 @@ from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
 from utils.helpers import center_window, validate_money_string
 
-class BudgetTab:
-    def __init__(self, parent, db: DatabaseManager):
+class BudgetTab(ttk.Frame):
+    def __init__(self, parent, db: DatabaseManager, **kwargs):
+        super().__init__(parent, **kwargs) # Initialize tab frame
         # Store the database manager and create a containing frame
         self.db = db
-        self.frame = ttk.Frame(parent)
 
         # Build UI widgets for the Budget tab
         self.setup_ui()
     
     def setup_ui(self):
         # Top info label explaining the purpose of this tab
-        info_frame = ttk.Frame(self.frame)
+        info_frame = ttk.Frame(self)
         info_frame.pack(fill='x', padx=10, pady=10)
 
         ttk.Label(info_frame, text="Set monthly budget targets for each expense category").pack()
         
-        tree_frame = ttk.Frame(self.frame)
+        tree_frame = ttk.Frame(self)
         tree_frame.pack(fill='both', expand=True, padx=10, pady=10)
         
         scrollbar = ttk.Scrollbar(tree_frame)
@@ -40,13 +40,14 @@ class BudgetTab:
         
         self.tree.pack(fill='both', expand=True)
         
-        button_frame = ttk.Frame(self.frame)
+        button_frame = ttk.Frame(self)
         button_frame.pack(pady=10)
         
         ttk.Button(button_frame, text="Add Budget", style='Accent.TButton', command=self.add_budget).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Edit Budget", command=self.edit_budget).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Delete Budget", command=self.delete_budget).pack(side='left', padx=5)
-        
+
+    def on_tab_opened(self): # Trigger refresh when switching to tab from another
         self.refresh_budgets()
     
     def refresh_budgets(self):
@@ -68,7 +69,7 @@ class BudgetTab:
     
     def add_budget(self):
         # Open dialog to create a new budget target; refresh after save
-        BudgetDialog(self.frame, self.db, callback=self.refresh_budgets)
+        BudgetDialog(self, self.db, callback=self.refresh_budgets)
     
     def edit_budget(self):
         selection = self.tree.selection()
@@ -82,7 +83,7 @@ class BudgetTab:
         
         if budget:
             # Open dialog pre-filled with the selected budget for editing
-            BudgetDialog(self.frame, self.db, budget=budget, callback=self.refresh_budgets)
+            BudgetDialog(self, self.db, budget=budget, callback=self.refresh_budgets)
     
     def delete_budget(self):
         selection = self.tree.selection()

@@ -6,20 +6,19 @@ from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
 from utils.helpers import center_window, validate_money_string
 
-class NetWorthTab:
-    def __init__(self, parent, db: DatabaseManager):
+class NetWorthTab(ttk.Frame):
+    def __init__(self, parent, db: DatabaseManager, **kwargs):
+        super().__init__(parent, **kwargs) # Initialize tab frame
         self.db = db
-        self.frame = ttk.Frame(parent)
 
         now = datetime.now()
         self.current_month = now.month
         self.current_year = now.year
 
         self.setup_ui()
-        self.refresh_data()
 
     def setup_ui(self):
-        month_selector_frame = ttk.Frame(self.frame)
+        month_selector_frame = ttk.Frame(self)
         month_selector_frame.pack(fill='x', padx=10, pady=10)
 
         ttk.Label(month_selector_frame, text="Month:", font=('Arial', 10, 'bold')).pack(side='left', padx=5)
@@ -35,7 +34,7 @@ class NetWorthTab:
 
         self.update_month_label()
 
-        summary_frame = ttk.Labelframe(self.frame, text="Net Worth Summary")
+        summary_frame = ttk.Labelframe(self, text="Net Worth Summary")
         summary_frame.pack(fill='x', padx=10, pady=10)
 
         self.total_label = tk.Label(summary_frame, text="Total Net Worth: $0",
@@ -48,7 +47,7 @@ class NetWorthTab:
         self.breakdown_text = tk.Text(breakdown_frame, height=5, width=50, state='disabled')
         self.breakdown_text.pack()
 
-        entries_frame = ttk.Labelframe(self.frame, text="Net Worth Entries for Selected Month")
+        entries_frame = ttk.Labelframe(self, text="Net Worth Entries for Selected Month")
         entries_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         tree_frame = ttk.Frame(entries_frame)
@@ -83,10 +82,15 @@ class NetWorthTab:
         
         ttk.Button(button_frame, text="Apply Template", style='Accent.TButton', command=self.apply_template).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Manage Template", command=self.manage_templates).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Add Entry", command=self.add_entry).pack(side='left', padx=5)
+
+        ttk.Separator(button_frame, orient='vertical').pack(side='left', fill='y', padx=10, pady=2)
+
+        ttk.Button(button_frame, text="Add Entry", style='Accent.TButton', command=self.add_entry).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Edit Entry", command=self.edit_entry).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Delete Entry", command=self.delete_entry).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Refresh", command=self.refresh_data).pack(side='left', padx=5)
+
+    def on_tab_opened(self): # Trigger refresh when switching to tab from another
+        self.refresh_data()
 
     def update_month_label(self):
         month_name = datetime(self.current_year, self.current_month, 1).strftime('%B %Y')
@@ -177,7 +181,7 @@ class NetWorthTab:
 
     def add_entry(self):
         start_date, end_date = self.get_month_date_range()
-        NetWorthDialog(self.frame, self.db, callback=self.refresh_data, start_date=start_date, end_date=end_date,
+        NetWorthDialog(self, self.db, callback=self.refresh_data, start_date=start_date, end_date=end_date,
                       default_month=self.current_month, default_year=self.current_year)
 
     def edit_entry(self):
@@ -192,7 +196,7 @@ class NetWorthTab:
         entry = next((e for e in entries if e['id'] == entry_id), None)
 
         if entry:
-            NetWorthDialog(self.frame, self.db, entry=entry, callback=self.refresh_data, start_date=start_date, end_date=end_date,
+            NetWorthDialog(self, self.db, entry=entry, callback=self.refresh_data, start_date=start_date, end_date=end_date,
                           default_month=self.current_month, default_year=self.current_year)
 
     def delete_entry(self):
@@ -232,10 +236,10 @@ class NetWorthTab:
             return
 
         # Open a dialog to enter initial values and apply selected templates
-        ApplyTemplateDialog(self.frame, self.db, templates_to_add, self.current_year, self.current_month, self.refresh_data)
+        ApplyTemplateDialog(self, self.db, templates_to_add, self.current_year, self.current_month, self.refresh_data)
 
     def manage_templates(self):
-        TemplateManagerDialog(self.frame, self.db)
+        TemplateManagerDialog(self, self.db)
 
     def on_double_click(self, event):
         region = self.tree.identify_region(event.x, event.y)

@@ -9,16 +9,16 @@ from matplotlib.figure import Figure
 from database.db_manager import DatabaseManager
 from utils.helpers import fuzzy_match, exact_match
 
-class VisualizationsTab:
-    def __init__(self, parent, db: DatabaseManager):
+class VisualizationsTab(ttk.Frame):
+    def __init__(self, parent, db: DatabaseManager, **kwargs):
+        super().__init__(parent, **kwargs) # Initialize tab frame
         self.db = db
-        self.frame = ttk.Frame(parent)
 
         self.setup_ui()
 
     def setup_ui(self):
         # Shared controls above tabs
-        control_frame = ttk.Frame(self.frame)
+        control_frame = ttk.Frame(self)
         control_frame.pack(fill='x', padx=10, pady=6)
 
         ttk.Label(control_frame, text='Period:').pack(side='left', padx=(4, 6))
@@ -62,10 +62,8 @@ class VisualizationsTab:
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
 
-        ttk.Button(control_frame, text='Refresh', style='Accent.TButton', command=self.refresh_charts).pack(side='right', padx=5)
-
         # Create notebook to hold multiple chart tabs
-        tabs = ttk.Notebook(self.frame)
+        tabs = ttk.Notebook(self)
         tabs.pack(fill='both', expand=True, padx=10, pady=4)
 
         # --- Net Worth Tab ---
@@ -231,7 +229,8 @@ class VisualizationsTab:
         self.canvas9 = FigureCanvasTkAgg(self.figure9, kw_frame)
         self.canvas9.get_tk_widget().pack(fill='both', expand=True)
 
-        # Initial draw of all charts using current default period
+    # Initial draw of all charts using current default period
+    def on_tab_opened(self): # Trigger refresh when switching to tab from another
         self.refresh_charts()
 
     # Enable date pickers when using custom timeframe
