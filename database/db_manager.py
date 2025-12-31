@@ -656,10 +656,15 @@ class DatabaseManager:
                             replacement: str, category: str = None, ignore: int = 0):
         conn = self.get_connection()
         cursor = conn.cursor()
+        # Automatically find the next order index
+        cursor.execute('SELECT COALESCE(MAX(rule_order), -1) + 1 FROM description_rules WHERE template_id = ?', (template_id,))
+        next_order = cursor.fetchone()[0]
+        
         cursor.execute('''
             INSERT INTO description_rules (template_id, rule_order, pattern, replacement, category, ignore)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (template_id, rule_order, pattern, replacement, category, ignore))
+        ''', (template_id, next_order, pattern, replacement, category, ignore))
+        
         rule_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -705,7 +710,22 @@ class DatabaseManager:
     def delete_description_rule(self, rule_id: int):
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('DELETE FROM description_rules WHERE id = ?', (rule_id,))
+        # Get the template_id and rule_order of the rule being deleted
+        cursor.execute('SELECT template_id, rule_order FROM description_rules WHERE id = ?', (rule_id,))
+        row = cursor.fetchone()
+        
+        if row:
+            template_id, deleted_order = row
+            
+            # Delete the rule
+            cursor.execute('DELETE FROM description_rules WHERE id = ?', (rule_id,))
+            
+            # Shift all subsequent rules down by 1
+            cursor.execute('''
+                UPDATE description_rules 
+                SET rule_order = rule_order - 1 
+                WHERE template_id = ? AND rule_order > ?
+            ''', (template_id, deleted_order))
         conn.commit()
         conn.close()
 
