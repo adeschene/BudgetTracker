@@ -1,6 +1,7 @@
 import tkinter as tk
 import sqlite3
 from tkinter import ttk, messagebox
+from utils.editable_tree import EditableTree
 from utils.helpers import center_window
 
 class CategoryManager:
@@ -16,15 +17,21 @@ class CategoryManager:
         frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
         
-        self.tree = ttk.Treeview(frame, columns=('Name', 'Type', 'Keywords'), show='headings')
+        self.tree = EditableTree(frame, columns=('Name', 'Type', 'Keywords'), editable_columns=['Name', 'Type', 'Keywords'],
+                    on_commit_callback=self.handle_db_update, get_options_callback=self.get_dd_values, show='headings')
+        
         self.tree.heading('Name', text='Name')
         self.tree.heading('Type', text='Type')
         self.tree.heading('Keywords', text='Keywords')
+
         # Keep Name and Type fixed; let Keywords expand when window is resized
         self.tree.column('Name', width=120, minwidth=75, stretch=False)
-        self.tree.column('Type', anchor='center', width=80, minwidth=50, stretch=False)
+        self.tree.column('Type', anchor='center', width=100, minwidth=50, stretch=False)
         self.tree.column('Keywords', width=375, minwidth=100, stretch=True)
+        
         self.tree.pack(fill='both', expand=True)
+        
+        self.tree.bind("<Delete>", lambda e: self.delete_category()) # Enable delete key to remove items
         
         button_frame = ttk.Frame(self.window)
         button_frame.pack(pady=10)
@@ -158,3 +165,40 @@ class CategoryManager:
                 category_id = self.tree.item(item)['tags'][0]
                 self.db.delete_category(category_id)
             self.refresh_categories()
+
+    def get_dd_values(self, column_name):
+        # Provides values for inline combobox editing
+        if column_name == 'Type':
+            return ['Income','Expense']
+        return None # Entry field
+    
+    def handle_db_update(self, row_id, column_name, new_value):
+        # Get db ID from tags
+        entry_id = self.tree.item(row_id)['tags'][0]
+        self.update_category_field(entry_id, column_name, new_value)
+
+    def update_category_field(self, category_id, field_name, new_value):
+        categories = self.db.get_categories()
+        category = next((t for t in categories if t['id'] == category_id), None)
+        if not category:
+            return
+
+        try:
+            # Update the in-memory category dict then persist
+            if field_name == 'Name':
+                category['name'] = new_value
+            elif field_name == 'Type':
+                category['type'] = new_value
+            elif field_name == 'Keywords':
+                category['keywords'] = new_value
+
+            self.db.update_category(
+                category_id=category_id,
+                name=category['name'],
+                cat_type=category['type'],
+                keywords=category['keywords']
+            )
+            # Refresh view to show updated values
+            self.refresh_categories()
+        except (ValueError):
+            messagebox.showerror("Error", "Invalid value entered")

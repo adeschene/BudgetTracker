@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
+from utils.editable_tree import EditableTree
 from utils.helpers import center_window
 
 class ImportTemplateManager:
@@ -27,8 +28,8 @@ class ImportTemplateManager:
         scrollbar = ttk.Scrollbar(tree_frame)
         scrollbar.pack(side='right', fill='y')
         
-        self.template_tree = ttk.Treeview(tree_frame, columns=('Template', 'Account', 'Notes'), 
-                                         show='headings', yscrollcommand=scrollbar.set)
+        self.template_tree = EditableTree(tree_frame, columns=('Template', 'Account', 'Notes'), editable_columns=['Template', 'Account', 'Notes'],
+            on_commit_callback=self.handle_template_db_update, get_options_callback=self.get_template_dd_values, show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.template_tree.yview)
         
         self.template_tree.heading('Template', text='Template Name')
@@ -41,6 +42,7 @@ class ImportTemplateManager:
         
         self.template_tree.pack(fill='both', expand=True)
         self.template_tree.bind('<<TreeviewSelect>>', self.on_template_select)
+        self.template_tree.bind("<Delete>", lambda e: self.delete_template()) # Enable delete key to remove items
         
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(pady=20)
@@ -60,8 +62,8 @@ class ImportTemplateManager:
         rules_scrollbar = ttk.Scrollbar(rules_tree_frame)
         rules_scrollbar.pack(side='right', fill='y')
         
-        self.rules_tree = ttk.Treeview(rules_tree_frame, columns=('Order', 'Pattern', 'Replacement', 'Category'),
-                                      show='headings', yscrollcommand=rules_scrollbar.set)
+        self.rules_tree = EditableTree(rules_tree_frame, columns=('Order', 'Pattern', 'Replacement', 'Category'), editable_columns=['Pattern', 'Replacement', 'Category'],
+                on_commit_callback=self.handle_rule_db_update, get_options_callback=self.get_rule_dd_values, show='headings', yscrollcommand=rules_scrollbar.set)
         rules_scrollbar.config(command=self.rules_tree.yview)
         
         self.rules_tree.heading('Order', text='#')
@@ -75,6 +77,8 @@ class ImportTemplateManager:
         self.rules_tree.column('Category', width=120, anchor='center')
         
         self.rules_tree.pack(fill='both', expand=True)
+        
+        self.rules_tree.bind("<Delete>", lambda e: self.delete_rule()) # Enable delete key to remove items
         
         rules_button_frame = ttk.Frame(right_frame)
         rules_button_frame.pack(pady=20)
@@ -110,27 +114,6 @@ class ImportTemplateManager:
     def on_template_select(self, event):
         self.refresh_rules()
     
-    def refresh_rules(self):
-        # Clear rules list and populate with rules for selected template
-        for item in self.rules_tree.get_children():
-            self.rules_tree.delete(item)
-        
-        selection = self.template_tree.selection()
-        if not selection:
-            return
-        
-        template_id = self.template_tree.item(selection[0])['tags'][0]
-        rules = self.db.get_description_rules(template_id)
-        
-        for rule in rules:
-            # Show human-friendly 1-based order along with regex and replacement
-            self.rules_tree.insert('', 'end', values=(
-                rule['rule_order'] + 1,
-                rule['pattern'],
-                rule['replacement'],
-                rule['category'] or ''
-            ), tags=(rule['id'],))
-    
     def add_template(self):
         TemplateDialog(self.dialog, self.db, callback=self.refresh_templates)
     
@@ -165,6 +148,79 @@ class ImportTemplateManager:
                 self.db.delete_import_template(template_id)
             self.refresh_templates()
             self.refresh_rules()
+
+    def get_template_dd_values(self, column_name):
+        # Provides values for inline combobox editing
+        if column_name == 'Account':
+            return [a['name'] for a in self.db.get_accounts()]
+        return None # Entry field
+    
+    def handle_template_db_update(self, row_id, column_name, new_value):
+        # Get db ID from tags
+        template_id = self.template_tree.item(row_id)['tags'][0]
+        self.update_template_field(template_id, column_name, new_value)
+
+    def update_template_field(self, template_id, field_name, new_value):
+        templates = self.db.get_import_templates()
+        template = next((t for t in templates if t['id'] == template_id), None)
+        if not template:
+            return
+        
+        try:
+            # Update the in-memory template dict then persist
+            if field_name == 'Template':
+                # Check for duplicate template names
+                curr_template_names = [n['template_name'] for n in self.db.get_import_templates()]
+                if new_value != template['template_name'] and new_value in curr_template_names:
+                    messagebox.showerror("Error", "Template name already exists")
+                    return
+                template['template_name'] = new_value
+            elif field_name == 'Account':
+                template['account_name'] = new_value
+            elif field_name == 'Notes':
+                template['notes'] = new_value
+
+            self.db.update_import_template(
+                template_id=template_id,
+                template_name=template['template_name'],
+                account_name=template['account_name'],
+                date_column=template['date_column'],
+                description_column=template['description_column'],
+                description2_column=template['description2_column'],
+                description_delimiter=template['description_delimiter'],
+                amount_column=template['amount_column'],
+                debit_column=template['debit_column'],
+                credit_column=template['credit_column'],
+                skip_rows=template['skip_rows'],
+                notes=template['notes']
+            )
+            # Refresh view to show updated values
+            self.refresh_templates()
+        except (ValueError):
+            messagebox.showerror("Error", "Invalid value entered")
+
+    #--------------------------------Rule methods-----------------------------------
+    
+    def refresh_rules(self):
+        # Clear rules list and populate with rules for selected template
+        for item in self.rules_tree.get_children():
+            self.rules_tree.delete(item)
+        
+        selection = self.template_tree.selection()
+        if not selection:
+            return
+        
+        template_id = self.template_tree.item(selection[0])['tags'][0]
+        rules = self.db.get_description_rules(template_id)
+        
+        for rule in rules:
+            # Show human-friendly 1-based order along with regex and replacement
+            self.rules_tree.insert('', 'end', values=(
+                rule['rule_order'] + 1,
+                rule['pattern'],
+                rule['replacement'],
+                rule['category'] or ''
+            ), tags=(rule['id'],))
     
     def add_rule(self):
         selection = self.template_tree.selection()
@@ -262,6 +318,51 @@ class ImportTemplateManager:
         new_items = self.rules_tree.get_children()
         self.rules_tree.selection_set(new_items[index+1])
 
+    def get_rule_dd_values(self, column_name):
+        # Provides values for inline combobox editing
+        if column_name == 'Category':
+            return [c['name'] for c in self.db.get_categories()]
+        return None # Entry field
+    
+    def handle_rule_db_update(self, row_id, column_name, new_value):
+        # Get db IDs from tags
+        rule_id = self.rules_tree.item(row_id)['tags'][0]
+        template_selection = self.template_tree.selection()
+        template_id = self.template_tree.item(template_selection[0])['tags'][0]
+        self.update_rule_field(template_id, rule_id, column_name, new_value)
+
+    def update_rule_field(self, template_id, rule_id, field_name, new_value):
+        rules = self.db.get_description_rules(template_id)
+        rule = next((r for r in rules if r['id'] == rule_id), None)
+        if not rule:
+            return
+        
+        try:
+            # Update the in-memory rule dict then persist
+            if field_name == 'Pattern':
+                # Check for duplicate rule pattern names
+                curr_patterns = [p['pattern'] for p in rules]
+                if new_value != rule['pattern'] and new_value in curr_patterns:
+                    messagebox.showerror("Error", "Pattern already used in a another rule")
+                    return
+                rule['pattern'] = new_value
+            if field_name == 'Replacement':
+                rule['replacement'] = new_value
+            elif field_name == 'Category':
+                rule['category'] = new_value
+
+            self.db.update_description_rule(
+                rule_id=rule_id,
+                rule_order=rule['rule_order'],
+                pattern=rule['pattern'],
+                replacement=rule['replacement'],
+                category=rule['category'],
+                ignore=rule['ignore']
+            )
+            # Refresh view to show updated values
+            self.refresh_rules()
+        except (ValueError):
+            messagebox.showerror("Error", "Invalid value entered")
 
 class TemplateDialog:
     def __init__(self, parent, db: DatabaseManager, template=None, callback=None):

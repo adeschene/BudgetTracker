@@ -4,6 +4,7 @@ from datetime import datetime
 from calendar import monthrange
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
+from utils.editable_tree import EditableTree
 from utils.helpers import center_window, validate_money_string
 
 class NetWorthTab(ttk.Frame):
@@ -14,6 +15,8 @@ class NetWorthTab(ttk.Frame):
         now = datetime.now()
         self.current_month = now.month
         self.current_year = now.year
+
+        self.asset_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
 
         self.setup_ui()
 
@@ -56,8 +59,9 @@ class NetWorthTab(ttk.Frame):
         scrollbar = ttk.Scrollbar(tree_frame)
         scrollbar.pack(side='right', fill='y')
 
-        self.tree = ttk.Treeview(tree_frame, columns=('Date', 'Asset', 'Type', 'Value', 'Notes'),
-                                 show='headings', yscrollcommand=scrollbar.set)
+        self.tree = EditableTree(tree_frame, columns=('Date', 'Asset', 'Type', 'Value', 'Notes'), editable_columns=['Asset', 'Type', 'Value', 'Notes'],
+                    on_commit_callback=self.handle_db_update, get_options_callback=self.get_dd_values, get_validation_callback=self.provide_validation,
+                    show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
 
         self.tree.heading('Date', text='Date')
@@ -72,10 +76,9 @@ class NetWorthTab(ttk.Frame):
         self.tree.column('Value', width=120, anchor='center')
         self.tree.column('Notes', width=200)
 
-        # Double-click allows inline editing of entries (asset/type/value/notes)
-        self.tree.bind('<Double-Button-1>', self.on_double_click)
-
         self.tree.pack(fill='both', expand=True)
+        
+        self.tree.bind("<Delete>", lambda e: self.delete_entry()) # Enable delete key to remove items
 
         button_frame = ttk.Frame(entries_frame)
         button_frame.pack(pady=10)
@@ -247,98 +250,34 @@ class NetWorthTab(ttk.Frame):
         ApplyTemplateDialog(self, self.db, templates_to_add, self.current_year, self.current_month, self.refresh_data)
 
     def manage_templates(self):
-        TemplateManagerDialog(self, self.db)
+        TemplateManagerDialog(self, self.db, asset_types=self.asset_types)
 
-    def on_double_click(self, event):
-        region = self.tree.identify_region(event.x, event.y)
-        if region != "cell":
-            return
-
-        column = self.tree.identify_column(event.x)
-        row_id = self.tree.identify_row(event.y)
-
-        if not row_id:
-            return
-
-        column_index = int(column.replace('#', '')) - 1
-        column_names = ['Date', 'Asset', 'Type', 'Value', 'Notes']
-        column_name = column_names[column_index]
-
-        # Allow editing of asset name, type, value and notes
-        if column_name not in ['Asset', 'Type', 'Value', 'Notes']:
-            return
-
-        entry_id = self.tree.item(row_id)['tags'][0]
-        current_value = self.tree.item(row_id)['values'][column_index]
-
-        x, y, width, height = self.tree.bbox(row_id, column)
-
+    def provide_validation(self, column_name):
+        if column_name == 'Value':
+            return (validate_money_string, 'True', 'False')
+        return None
+            
+    def get_dd_values(self, column_name):
+        # Provides values for inline combobox editing
         if column_name == 'Type':
-            self.edit_cell_combobox(row_id, column_name, column_index, entry_id, current_value, x, y, width, height)
-        else:
-            self.edit_cell_entry(row_id, column_name, column_index, entry_id, current_value, x, y, width, height)
-
-    def edit_cell_entry(self, row_id, column_name, column_index, entry_id, current_value, x, y, width, height):
-        if column_name == 'Value':
-            vcmd_decimal_dollar = (self.tree.register(validate_money_string), "%P", True, False) # Digit validation registration
-            current_value = str(current_value).replace('$', '').replace(',', '')
-
-        edit_var = tk.StringVar(value=current_value)
-        if column_name == 'Value':
-            edit_entry = ttk.Entry(self.tree, validate='key', validatecommand=vcmd_decimal_dollar, textvariable=edit_var)
-        else:
-            edit_entry = ttk.Entry(self.tree, textvariable=edit_var)
-        edit_entry.place(x=x, y=y, width=width, height=height)
-        edit_entry.focus_set()
-        edit_entry.select_range(0, tk.END)
-
-        # Commit the inline edit to the DB via update_entry_field
-        def save_edit(event=None):
-            new_value = edit_var.get()
-            edit_entry.destroy()
-            self.update_entry_field(entry_id, column_name, new_value)
-
-        def cancel_edit(event=None):
-            edit_entry.destroy()
-
-        edit_entry.bind('<Return>', save_edit)
-        edit_entry.bind('<Escape>', cancel_edit)
-        edit_entry.bind('<FocusOut>', save_edit)
-
-    def edit_cell_combobox(self, row_id, column_name, column_index, entry_id, current_value, x, y, width, height):
-        edit_var = tk.StringVar(value=current_value)
-        edit_combo = ttk.Combobox(self.tree, textvariable=edit_var, state='readonly')
-        edit_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
-        edit_combo.place(x=x, y=y, width=width, height=height)
-        edit_combo.focus_set()
-
-        # Commit combobox selection to update the entry
-        def save_edit(event=None):
-            if edit_combo.winfo_exists():
-                new_value = edit_var.get()
-                edit_combo.destroy()
-                self.update_entry_field(entry_id, column_name, new_value)
-
-        def cancel_edit(event=None):
-            if edit_combo.winfo_exists():
-                edit_combo.destroy()
-
-        edit_combo.bind('<<ComboboxSelected>>', save_edit)
-        edit_combo.bind('<Return>', save_edit)
-        edit_combo.bind('<Escape>', cancel_edit)
+            return self.asset_types
+        return None # Entry field
+    
+    def handle_db_update(self, row_id, column_name, new_value):
+        # Get db ID from tags
+        entry_id = self.tree.item(row_id)['tags'][0]
+        self.update_entry_field(entry_id, column_name, new_value)
 
     def update_entry_field(self, entry_id, field_name, new_value):
         start_date, end_date = self.get_month_date_range()
         entries = self.db.get_net_worth_entries(start_date, end_date)
         entry = next((e for e in entries if e['id'] == entry_id), None)
-
         if not entry:
             return
 
         try:
-            # Update the in-memory entry and persist change
+            # Update the in-memory category dict then persist
             if field_name == 'Asset':
-                # Check for duplicate names before saving
                 entry_names = [e['asset_name'] for e in entries]
                 if new_value != entry['asset_name'] and new_value in entry_names:
                     messagebox.showerror("Error", "An entry already exists by that name")
@@ -355,14 +294,13 @@ class NetWorthTab(ttk.Frame):
                 entry_id=entry_id,
                 date=entry['date'],
                 asset_name=entry['asset_name'],
-                asset_type=entry['asset_type'],
                 value=entry['value'],
+                asset_type=entry['asset_type'],
                 notes=entry['notes']
             )
-
-            # Refresh display after successful update
+            # Refresh view to show updated values
             self.refresh_data()
-        except ValueError:
+        except (ValueError):
             messagebox.showerror("Error", "Invalid value entered")
 
 class NetWorthDialog:
@@ -559,8 +497,9 @@ class ApplyTemplateDialog:
             messagebox.showerror("Error", "Please enter valid numeric values for all assets")
 
 class TemplateManagerDialog:
-    def __init__(self, parent, db: DatabaseManager):
+    def __init__(self, parent, db: DatabaseManager, asset_types):
         self.db = db
+        self.asset_types = asset_types
 
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
@@ -579,8 +518,9 @@ class TemplateManagerDialog:
         scrollbar = ttk.Scrollbar(tree_frame)
         scrollbar.pack(side='right', fill='y')
 
-        self.tree = ttk.Treeview(tree_frame, columns=('Asset', 'Type', 'Notes'),
-                                show='headings', yscrollcommand=scrollbar.set)
+        self.tree = EditableTree(tree_frame, columns=('Asset', 'Type', 'Notes'), editable_columns=['Asset', 'Type', 'Notes'],
+                    on_commit_callback=self.handle_db_update, get_options_callback=self.get_dd_values,
+                    show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
 
         self.tree.heading('Asset', text='Name')
@@ -592,6 +532,8 @@ class TemplateManagerDialog:
         self.tree.column('Notes', width=220)
 
         self.tree.pack(fill='both', expand=True)
+        
+        self.tree.bind("<Delete>", lambda e: self.delete_template()) # Enable delete key to remove items
 
         button_frame = ttk.Frame(self.dialog)
         button_frame.pack(pady=10)
@@ -623,7 +565,7 @@ class TemplateManagerDialog:
             self.tree.insert('', 'end', values=display_values, tags=(template['id'],))
 
     def add_template(self):
-        TemplateDialog(self.dialog, self.db, callback=self.refresh_templates)
+        TemplateDialog(self.dialog, self.db, asset_types=self.asset_types, callback=self.refresh_templates)
 
     def edit_template(self):
         selection = self.tree.selection()
@@ -640,7 +582,7 @@ class TemplateManagerDialog:
         template = next((t for t in templates if t['id'] == template_id), None)
 
         if template:
-            TemplateDialog(self.dialog, self.db, template=template, callback=self.refresh_templates)
+            TemplateDialog(self.dialog, self.db, asset_types=self.asset_types, template=template, callback=self.refresh_templates)
 
     def delete_template(self):
         selection = self.tree.selection()
@@ -656,10 +598,50 @@ class TemplateManagerDialog:
                 template_id = self.tree.item(item)['tags'][0]
                 self.db.delete_asset_template(template_id)
             self.refresh_templates()
+            
+    def get_dd_values(self, column_name):
+        # Provides values for inline combobox editing
+        if column_name == 'Type':
+            return self.asset_types
+        return None # Entry field
+    
+    def handle_db_update(self, row_id, column_name, new_value):
+        # Get db ID from tags
+        entry_id = self.tree.item(row_id)['tags'][0]
+        self.update_budget_field(entry_id, column_name, new_value)
+
+    def update_budget_field(self, entry_id, field_name, new_value):
+        entries = self.db.get_asset_templates()
+        entry = next((e for e in entries if e['id'] == entry_id), None)
+        if not entry:
+            return
+
+        # Update the in-memory asset dict then persist
+        if field_name == 'Asset':
+            # Unique name checking vars
+            curr_names = [n['asset_name'] for n in self.db.get_asset_templates()]
+            if new_value != entry['asset_name'] and new_value in curr_names:
+                messagebox.showerror("Error", "An entry with that name already exists")
+                return
+            entry['asset_name'] = new_value
+        elif field_name == 'Type':
+            entry['asset_type'] = new_value
+        elif field_name == 'Notes':
+            entry['notes'] = new_value
+
+        self.db.update_asset_template(
+            template_id=entry_id,
+            asset_name=entry['asset_name'],
+            asset_type=entry['asset_type'],
+            notes=entry['notes']
+        )
+        # Refresh view to show updated values
+        self.refresh_templates()
 
 class TemplateDialog:
-    def __init__(self, parent, db: DatabaseManager, template=None, callback=None):
+    def __init__(self, parent, db: DatabaseManager, asset_types, template=None, callback=None):
         self.db = db
+        self.asset_types = asset_types
         self.template = template
         self.callback = callback
 
@@ -677,7 +659,7 @@ class TemplateDialog:
         ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.type_var = tk.StringVar(value=template['asset_type'] if template else 'Cash')
         type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var, state='readonly')
-        type_combo['values'] = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
+        type_combo['values'] = self.asset_types
         type_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')

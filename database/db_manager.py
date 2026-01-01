@@ -308,6 +308,21 @@ class DatabaseManager:
         conn.commit()
         conn.close()
     
+    def update_account(self, account_id: int, name: str, account_type: str,):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                UPDATE accounts SET name = ?, type = ?, last_updated = ?
+                WHERE id = ?
+            ''', (name, account_type.lower(), datetime.now().isoformat(), account_id))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            conn.close()
+            raise
+        conn.close()
+    
     def get_accounts(self) -> List[Dict]:
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -544,8 +559,7 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            UPDATE budget_targets
-            SET category = ?, monthly_target = ?, notes = ?
+            UPDATE budget_targets SET category = ?, monthly_target = ?, notes = ?
             WHERE id = ?
         ''', (category, monthly_target, notes, budget_id))
         conn.commit()

@@ -37,14 +37,14 @@ class EditableTree(ttk.Treeview):
             self._spawn_entry(row_id, col_name, val, x, y, w, h)
 
     def _spawn_entry(self, row_id, col_name, value, x, y, w, h):
-        if col_name == 'Amount':
+        if col_name == 'Amount' or 'Monthly Target' or 'Value':
             value = str(value).replace('$', '').replace(',', '')
 
         vcmd = None
         # Check if the parent provided validation info
         if hasattr(self, 'get_validation'):
             # Expecting a tuple: (function, allow_neg_str, allow_dec_str)
-            validation_data = self.get_validation(col_name)
+            validation_data = self.get_validation(col_name) if self.get_validation else None
             if validation_data:
                 func, allow_neg, allow_dec = validation_data
                 # Register with substitution codes: %P (value), then your two constants

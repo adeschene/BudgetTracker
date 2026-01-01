@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from database.db_manager import DatabaseManager
+from utils.editable_tree import EditableTree
 from utils.helpers import center_window
 
 class AccountManager:
@@ -14,15 +15,23 @@ class AccountManager:
         self.window.geometry("450x500")
         self.window.transient(parent)
 
+        self.acc_types = ['Checking', 'Savings', 'Credit', 'Investment'] # Account types
+
         frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
         
-        self.tree = ttk.Treeview(frame, columns=('Name', 'Type'), show='headings')
+        self.tree = EditableTree(frame, columns=('Name', 'Type'), editable_columns=['Name', 'Type'],
+                    on_commit_callback=self.handle_db_update, get_options_callback=self.get_dd_values, show='headings')
+        
         self.tree.heading('Name', text='Name', anchor='center')
         self.tree.heading('Type', text='Type', anchor='center')
+
         self.tree.column('Name', anchor='center')
         self.tree.column('Type', anchor='center')
+
         self.tree.pack(fill='both', expand=True)
+        
+        self.tree.bind("<Delete>", lambda e: self.delete_account()) # Enable delete key to remove items
         
         button_frame = ttk.Frame(self.window)
         button_frame.pack(pady=10)
@@ -47,7 +56,7 @@ class AccountManager:
             self.tree.insert('', 'end', values=(acc['name'], acc['type'].title()), tags=(acc['id'],))
 
     def add_account(self):
-        AccountDialog(self.window, self.db, callback=self.refresh_accounts)
+        AccountDialog(self.window, self.db, acc_types=self.acc_types, callback=self.refresh_accounts)
 
     def edit_account(self):
         selection = self.tree.selection()
@@ -64,7 +73,7 @@ class AccountManager:
         account = next((acc for acc in accounts if acc['id'] == account_id), None)
 
         if account:
-            AccountDialog(self.window, self.db, account=account, callback=self.refresh_accounts)
+            AccountDialog(self.window, self.db, account=account, acc_types=self.acc_types, callback=self.refresh_accounts)
 
     def delete_account(self):
         selection = self.tree.selection()
@@ -81,9 +90,44 @@ class AccountManager:
                 self.db.delete_account(account_id)
             self.refresh_accounts()
 
+    def get_dd_values(self, column_name):
+        # Provides values for inline combobox editing
+        if column_name == 'Type':
+            return self.acc_types
+        return None # Entry field
+    
+    def handle_db_update(self, row_id, column_name, new_value):
+        # Get db ID from tags
+        entry_id = self.tree.item(row_id)['tags'][0]
+        self.update_account_field(entry_id, column_name, new_value)
+
+    def update_account_field(self, account_id, field_name, new_value):
+        accounts = self.db.get_accounts()
+        account = next((t for t in accounts if t['id'] == account_id), None)
+        if not account:
+            return
+
+        try:
+            # Update the in-memory account dict then persist
+            if field_name == 'Name':
+                account['name'] = new_value
+            elif field_name == 'Type':
+                account['type'] = new_value
+
+            self.db.update_account(
+                account_id=account_id,
+                name=account['name'],
+                account_type=account['type']
+            )
+            # Refresh view to show updated values
+            self.refresh_accounts()
+        except (ValueError):
+            messagebox.showerror("Error", "Invalid value entered")
+
+
 
 class AccountDialog:
-    def __init__(self, parent, db: DatabaseManager, account=None, callback=None):
+    def __init__(self, parent, db: DatabaseManager, account=None, acc_types=None, callback=None):
         self.db = db
         self.account = account
         self.callback = callback
@@ -101,7 +145,7 @@ class AccountDialog:
 
         ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
         self.type_var = tk.StringVar(value=account['type'] if account else 'Checking')
-        ttk.Combobox(self.dialog, textvariable=self.type_var, values=['Checking', 'Savings', 'Credit', 'Investment'], state='readonly').grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Combobox(self.dialog, textvariable=self.type_var, values=acc_types, state='readonly').grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
         self.auto_template_var = tk.BooleanVar(value=True)
         self.auto_template_check = ttk.Checkbutton(self.dialog, text="Automatically add a Net Worth\ntemplate entry for this account", variable=self.auto_template_var)
@@ -129,15 +173,11 @@ class AccountDialog:
             if self.account['name'] != new_acc_name and new_acc_name in accounts:
                 messagebox.showerror("Error", "Account name already in use")
                 return
-            conn = self.db.get_connection()
-            cursor = conn.cursor()
-            # Update record directly using SQL
-            cursor.execute('''
-                UPDATE accounts SET name = ?, type = ?, last_updated = ?
-                WHERE id = ?
-            ''', (self.name_var.get(), self.type_var.get().lower(), datetime.now().isoformat(), self.account['id']))
-            conn.commit()
-            conn.close()
+            self.db.update_account(
+                account_id=self.account['id'],
+                name=new_acc_name,
+                account_type=self.type_var.get()
+            )
         else: # New account
             # Check for duplicate account names
             if new_acc_name in accounts:

@@ -154,6 +154,8 @@ class TransactionsTab(ttk.Frame):
 
         self.tree.pack(fill='both', expand=True)
         
+        self.tree.bind("<Delete>", lambda e: self.delete_transaction()) # Enable delete key to remove items
+        
         top_button_frame = ttk.Frame(self)
         top_button_frame.pack(pady=5)
 

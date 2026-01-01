@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
+from utils.editable_tree import EditableTree
 from utils.helpers import center_window, validate_money_string
 
 class BudgetTab(ttk.Frame):
@@ -26,8 +27,9 @@ class BudgetTab(ttk.Frame):
         scrollbar.pack(side='right', fill='y')
         
         # Treeview displays budget rows: category, monthly target and notes
-        self.tree = ttk.Treeview(tree_frame, columns=('Category', 'Monthly Target', 'Notes'),
-                    show='headings', yscrollcommand=scrollbar.set)
+        self.tree = EditableTree(tree_frame, columns=('Category', 'Monthly Target', 'Notes'), editable_columns=['Category', 'Monthly Target', 'Notes'],
+                    on_commit_callback=self.handle_db_update, get_options_callback=self.get_dd_values,
+                    get_validation_callback=self.provide_validation, show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
         
         self.tree.heading('Category', text='Category')
@@ -39,6 +41,8 @@ class BudgetTab(ttk.Frame):
         self.tree.column('Notes', width=300)
         
         self.tree.pack(fill='both', expand=True)
+        
+        self.tree.bind("<Delete>", lambda e: self.delete_budget()) # Enable delete key to remove items
         
         button_frame = ttk.Frame(self)
         button_frame.pack(pady=10)
@@ -71,6 +75,21 @@ class BudgetTab(ttk.Frame):
         # Open dialog to create a new budget target; refresh after save
         BudgetDialog(self, self.db, callback=self.refresh_budgets)
     
+    def delete_budget(self):
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select budget target(s) to delete")
+            return
+
+        count = len(selection)
+        message = f"Delete {count} budget targets?" if count > 1 else "Delete this budget target?"
+
+        if messagebox.askyesno("Confirm", message):
+            for item in selection:
+                budget_id = self.tree.item(item)['tags'][0]
+                self.db.delete_budget_target(budget_id)
+            self.refresh_budgets()
+    
     def edit_budget(self):
         selection = self.tree.selection()
         if not selection:
@@ -88,21 +107,55 @@ class BudgetTab(ttk.Frame):
         if budget:
             # Open dialog pre-filled with the selected budget for editing
             BudgetDialog(self, self.db, budget=budget, callback=self.refresh_budgets)
+
+    def provide_validation(self, column_name):
+        if column_name == 'Monthly Target':
+            return (validate_money_string, 'False', 'False')
+        return None
+            
+    def get_dd_values(self, column_name):
+        # Provides values for inline combobox editing
+        if column_name == 'Category':
+            categories = [cat['name'] for cat in self.db.get_categories() if cat['type'] == 'expense']
+            # Remove category from dropdown if it already has an associated budget
+            budgetted = [b['category'] for b in self.db.get_budget_targets()]
+            filtered = [b for b in categories if b not in budgetted]
+            return filtered
+        return None # Entry field
     
-    def delete_budget(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Warning", "Please select budget target(s) to delete")
+    def handle_db_update(self, row_id, column_name, new_value):
+        # Get db ID from tags
+        budget_id = self.tree.item(row_id)['tags'][0]
+        self.update_budget_field(budget_id, column_name, new_value)
+
+    def update_budget_field(self, budget_id, field_name, new_value):
+        budgets = self.db.get_budget_targets()
+        budget = next((b for b in budgets if b['id'] == budget_id), None)
+        if not budget:
             return
 
-        count = len(selection)
-        message = f"Delete {count} budget targets?" if count > 1 else "Delete this budget target?"
+        try:
+            # Update the in-memory category dict then persist
+            if field_name == 'Category':
+                budget['category'] = new_value
+            elif field_name == 'Monthly Target':
+                if not new_value:
+                    messagebox.showerror("Error", "Monthly target cannot be empty")
+                    return
+                budget['monthly_target'] = new_value
+            elif field_name == 'Notes':
+                budget['notes'] = new_value
 
-        if messagebox.askyesno("Confirm", message):
-            for item in selection:
-                budget_id = self.tree.item(item)['tags'][0]
-                self.db.delete_budget_target(budget_id)
+            self.db.update_budget_target(
+                budget_id=budget_id,
+                category=budget['category'],
+                monthly_target=budget['monthly_target'],
+                notes=budget['notes']
+            )
+            # Refresh view to show updated values
             self.refresh_budgets()
+        except (ValueError):
+            messagebox.showerror("Error", "Invalid value entered")
 
 
 class BudgetDialog:
