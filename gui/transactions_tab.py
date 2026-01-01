@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog, messagebox
 from datetime import datetime
 from tkcalendar import DateEntry
 from decimal import Decimal, InvalidOperation
+from utils.editable_tree import EditableTree
 from database.db_manager import DatabaseManager
 from utils.csv_importer import CSVImporter, ImportDialog
 from utils.import_template_manager import ImportTemplateManager
@@ -131,8 +132,10 @@ class TransactionsTab(ttk.Frame):
         scrollbar.pack(side='right', fill='y')
         
         # Main treeview showing transactions with clickable column headers
-        self.tree = ttk.Treeview(tree_frame, columns=('Date', 'Description', 'Amount', 'Category', 'Account', 'Notes'),
-                     show='headings', yscrollcommand=scrollbar.set)
+        self.tree = EditableTree(tree_frame, columns=('Date', 'Description', 'Amount', 'Category', 'Account', 'Notes'),
+                    editable_columns=['Description', 'Amount', 'Category', 'Account', 'Notes'],
+                    on_commit_callback=self.handle_db_update, get_options_callback=self.get_dd_values,
+                    get_validation_callback=self.provide_validation, show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
 
         self.tree.heading('Date', text='Date', command=lambda: self.sort_by_column('Date'))
@@ -148,9 +151,6 @@ class TransactionsTab(ttk.Frame):
         self.tree.column('Category', width=60, anchor='center')
         self.tree.column('Account', width=60, anchor='center')
         self.tree.column('Notes', width=100)
-
-        # Double-click to edit a cell inline
-        self.tree.bind('<Double-Button-1>', self.on_double_click)
 
         self.tree.pack(fill='both', expand=True)
         
@@ -334,95 +334,29 @@ class TransactionsTab(ttk.Frame):
                 self.db.delete_transaction(transaction_id)
             self.refresh_transactions()
 
-    def on_double_click(self, event):
-        region = self.tree.identify_region(event.x, event.y)
-        if region != "cell":
-            return
-
-        column = self.tree.identify_column(event.x)
-        row_id = self.tree.identify_row(event.y)
-
-        if not row_id:
-            return
-
-        column_index = int(column.replace('#', '')) - 1
-        column_names = ['Date', 'Description', 'Amount', 'Category', 'Account', 'Notes']
-        column_name = column_names[column_index]
-
-        # Only allow inline editing on editable columns
-        if column_name not in ['Description', 'Amount', 'Category', 'Account', 'Notes']:
-            return
-
-        entry_id = self.tree.item(row_id)['tags'][0]
-        current_value = self.tree.item(row_id)['values'][column_index]
-
-        x, y, width, height = self.tree.bbox(row_id, column)
-        # Create an inline editor at the cell's bounding box
-        if column_name in ['Category', 'Account']:
-            self.edit_cell_combobox(row_id, column_name, column_index, entry_id, current_value, x, y, width, height)
-        else:
-            self.edit_cell_entry(row_id, column_name, column_index, entry_id, current_value, x, y, width, height)
-
-    def edit_cell_entry(self, row_id, column_name, column_index, entry_id, current_value, x, y, width, height):
+    def provide_validation(self, column_name):
         if column_name == 'Amount':
-            vcmd_decimal_dollar = (self.tree.register(validate_money_string), "%P", True, True) # Digit validation registration
-            current_value = str(current_value).replace('$', '').replace(',', '')
+            return (validate_money_string, 'True', 'True')
+        return None
 
-        edit_var = tk.StringVar(value=current_value)
-        if column_name == 'Amount':
-            edit_entry = ttk.Entry(self.tree, validate='key', validatecommand=vcmd_decimal_dollar, textvariable=edit_var)
-        else:
-            edit_entry = ttk.Entry(self.tree, textvariable=edit_var)
-        edit_entry.place(x=x, y=y, width=width, height=height)
-        edit_entry.focus_set()
-        edit_entry.select_range(0, tk.END)
-
-        # Commit edit: pass new value back to update_transaction_field
-        def save_edit(event=None):
-            new_value = edit_var.get()
-            edit_entry.destroy()
-            self.update_transaction_field(entry_id, column_name, new_value)
-
-        def cancel_edit(event=None):
-            edit_entry.destroy()
-
-        edit_entry.bind('<Return>', save_edit)
-        edit_entry.bind('<Escape>', cancel_edit)
-        edit_entry.bind('<FocusOut>', save_edit)
-
-    def edit_cell_combobox(self, row_id, column_name, column_index, entry_id, current_value, x, y, width, height):
-        edit_var = tk.StringVar(value=current_value)
-        edit_combo = ttk.Combobox(self.tree, textvariable=edit_var)
-
+    def get_dd_values(self, column_name):
+        # Provides values for inline combobox editing
         if column_name == 'Category':
             categories = self.db.get_categories()
-            edit_combo['values'] = [cat['name'] for cat in categories]
+            return [cat['name'] for cat in categories]
         elif column_name == 'Account':
             accounts = self.db.get_accounts()
-            edit_combo['values'] = [acc['name'] for acc in accounts]
-
-        edit_combo.place(x=x, y=y, width=width, height=height)
-        edit_combo.focus_set()
-
-        # Commit combobox selection to the database
-        def save_edit(event=None):
-            if edit_combo.winfo_exists():
-                new_value = edit_var.get()
-                edit_combo.destroy()
-                self.update_transaction_field(entry_id, column_name, new_value)
-
-        def cancel_edit(event=None):
-            if edit_combo.winfo_exists():
-                edit_combo.destroy()
-
-        edit_combo.bind('<<ComboboxSelected>>', save_edit)
-        edit_combo.bind('<Return>', save_edit)
-        edit_combo.bind('<Escape>', cancel_edit)
+            return [acc['name'] for acc in accounts]
+        return None # Entry field
+    
+    def handle_db_update(self, row_id, column_name, new_value):
+        # Get db ID from tags
+        entry_id = self.tree.item(row_id)['tags'][0]
+        self.update_transaction_field(entry_id, column_name, new_value)
 
     def update_transaction_field(self, transaction_id, field_name, new_value):
         transactions = self.db.get_transactions()
         transaction = next((t for t in transactions if t['id'] == transaction_id), None)
-
         if not transaction:
             return
 
@@ -431,7 +365,7 @@ class TransactionsTab(ttk.Frame):
             if field_name == 'Description':
                 transaction['description'] = new_value
             elif field_name == 'Amount':
-                transaction['amount'] = new_value
+                transaction['amount'] = int(Decimal(new_value)*100)  # Convert from Decimal to int
             elif field_name == 'Category':
                 transaction['category'] = new_value
             elif field_name == 'Account':
@@ -446,7 +380,7 @@ class TransactionsTab(ttk.Frame):
                 transaction_id=transaction_id,
                 date=transaction['date'],
                 description=transaction['description'],
-                amount=int(Decimal(transaction['amount'])*100),  # Convert from Decimal to int
+                amount=transaction['amount'],
                 category=transaction['category'],
                 account=transaction['account'],
                 transaction_type=transaction_type,
