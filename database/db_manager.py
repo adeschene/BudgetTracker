@@ -593,7 +593,7 @@ class DatabaseManager:
         cursor.execute('''
             SELECT id, template_name, account_name, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes
             FROM import_templates
-            ORDER BY template_name
+            ORDER BY account_name
         ''')
 
         templates = []
