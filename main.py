@@ -16,6 +16,8 @@ def main():
     style.configure("Treeview", rowheight=30)
     # Create a custom style that removes all internal padding
     style.configure("Nopadding.TButton", padding=0)
+    # Create a custom style for font in net worth template application LabelFrames
+    style.configure("NWTE.TLabelframe.Label", font=('Roboto', 11))
 
     app = MainWindow(root)
 

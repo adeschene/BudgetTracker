@@ -443,7 +443,6 @@ class ApplyTemplateDialog:
         self.dialog.geometry("500x600")
         self.dialog.transient(parent)
         self.dialog.grab_set()
-        self.dialog.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         info_label = ttk.Label(self.dialog,
                              text="Enter values for each asset to add to this month:"
@@ -453,38 +452,47 @@ class ApplyTemplateDialog:
         canvas_frame = ttk.Frame(self.dialog)
         canvas_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        canvas = tk.Canvas(canvas_frame)
-        scrollbar = ttk.Scrollbar(canvas_frame, orient='vertical', command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
+        self.canvas = tk.Canvas(canvas_frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(canvas_frame, orient='vertical', command=self.canvas.yview)
+        scrollable_frame = ttk.Frame(self.canvas)
 
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
+        scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        scrollable_frame.grid_columnconfigure(0, weight=1)
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor='nw')
-        canvas.configure(yscrollcommand=scrollbar.set)
+        container_id = self.canvas.create_window((0, 0), window=scrollable_frame, anchor='nw')
+        self.canvas.bind('<Configure>', lambda e: self.canvas.itemconfig(container_id, width=e.width))
 
-        canvas.pack(side='left', fill='both', expand=True)
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+
+        self.dialog.bind_all("<MouseWheel>", self._on_mousewheel) # Bind to entire dialog
+        # Future Linux support
+        #self.dialog.bind_all("<Button-4>", self._on_mousewheel)
+        #self.dialog.bind_all("<Button-5>", self._on_mousewheel)
+
+        self.canvas.pack(side='left', fill='both', expand=True)
         scrollbar.pack(side='right', fill='y')
 
         for i, template in enumerate(templates):
-            frame = ttk.Frame(scrollable_frame, relief='ridge', borderwidth=1)
-            frame.pack(fill='x', padx=5, pady=5, )
+            frame = ttk.LabelFrame(scrollable_frame, text=f" {template['asset_name']} ", style="NWTE.TLabelframe")
+            frame.grid(row=i, column=0, sticky='ew', padx=10, pady=8, ipadx=5, ipady=5)
 
-            ttk.Label(frame, text=template['asset_name']).grid(row=0, column=0, padx=10, pady=5, sticky='w')
-            ttk.Label(frame, text=f"({template['asset_type'] or 'No Type'})").grid(row=0, column=1, padx=5, pady=5, sticky='w')
+            frame.grid_columnconfigure(1, weight=1)
+
+            ttk.Label(frame, text="Value:", font=('Roboto', 10, 'bold')).grid(row=0, column=0, padx=10, pady=20, sticky='w')
 
             vcmd_decimal_dollar = (frame.register(validate_money_string), "%P", True, False) # Digit validation registration
 
-            ttk.Label(frame, text="Current Value:").grid(row=1, column=0, padx=10, pady=5, sticky='w')
             value_var = tk.StringVar(value='')
             self.value_vars[template['id']] = value_var
-            entry = ttk.Entry(frame, validate='key', validatecommand=vcmd_decimal_dollar, textvariable=value_var, width=20)
-            entry.grid(row=1, column=1, padx=5, pady=5, sticky='w')
+
+            entry = ttk.Entry(frame, validate='key', validatecommand=vcmd_decimal_dollar, textvariable=value_var)
+            entry.grid(row=0, column=1, padx=5, pady=20, sticky='w')
+            
+            type_text = f"Category: {template['asset_type'] or 'None'}"
+            ttk.Label(frame, text=type_text, font=('Roboto', 9, 'italic')).grid(row=0, column=2, padx=20, sticky='e')
 
             if template['notes']:
-                ttk.Label(frame, text=f"Note: {template['notes']}").grid(row=2, column=0, columnspan=2, padx=10, pady=2, sticky='w')
+                ttk.Label(frame, text=f"Note: {template['notes']}").grid(row=1, column=0, columnspan=3, padx=10, pady=5, sticky='w')
 
         button_frame = ttk.Frame(self.dialog)
         button_frame.pack(pady=10)
@@ -496,9 +504,14 @@ class ApplyTemplateDialog:
         center_window(self.dialog)
         self.dialog.deiconify()
 
-    def on_closing(self):
-        self.dialog.grab_release()
-        self.dialog.destroy()
+    def _on_mousewheel(self, event):
+        # Windows/macOS: use event.delta (Potential update: use event.num if Linux)
+        if event.num == 4:
+            self.canvas.yview_scroll(-1, "units")
+        elif event.num == 5:
+            self.canvas.yview_scroll(1, "units")
+        else:
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def apply(self):
         try:
@@ -512,10 +525,10 @@ class ApplyTemplateDialog:
             if self.callback:
                 self.callback()
 
-            messagebox.showinfo("Success", f"Templates applied to {datetime(self.year, self.month, 1).strftime('%B %Y')}!")
             self.dialog.destroy()
+            messagebox.showinfo("Success", f"Templates applied to {datetime(self.year, self.month, 1).strftime('%B %Y')}!")
         except ValueError:
-            messagebox.showerror("Error", "Please enter valid numeric values for all assets")
+            messagebox.showerror("Error", "Please enter valid values for all assets")
 
 class TemplateManagerDialog:
     def __init__(self, parent, db: DatabaseManager, asset_types):
@@ -653,6 +666,9 @@ class TemplateManagerDialog:
             if new_value.lower() != entry['asset_name'].lower() and new_value.lower() in curr_names:
                 messagebox.showerror("Error", "An entry with that name already exists")
                 return
+            if not new_value: # Reject empty name entry
+                messagebox.showerror("Error", "Entry name is required")
+                return
             entry['asset_name'] = new_value
         elif field_name == 'Type':
             entry['asset_type'] = new_value
@@ -719,6 +735,9 @@ class TemplateDialog:
             if new_name.lower() != self.entry['asset_name'].lower() and new_name.lower() in curr_names:
                 messagebox.showerror("Error", "An entry with that name already exists")
                 return
+            if not new_name: # Reject empty name entry
+                messagebox.showerror("Error", "Entry name is required")
+                return
             self.db.update_asset_template(
                 template_id=self.entry['id'],
                 asset_name=new_name,
@@ -728,6 +747,9 @@ class TemplateDialog:
         else:
             if new_name.lower() in curr_names:
                 messagebox.showerror("Error", "An entry with that name already exists")
+                return
+            if not new_name: # Reject empty name entry
+                messagebox.showerror("Error", "Entry name is required")
                 return
             self.db.add_asset_template(
                 asset_name=new_name,
