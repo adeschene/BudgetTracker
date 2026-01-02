@@ -24,20 +24,21 @@ class NetWorthTab(ttk.Frame):
         month_selector_frame = ttk.Frame(self)
         month_selector_frame.pack(fill='x', padx=10, pady=10)
 
-        ttk.Label(month_selector_frame, text="Month:", font=('Arial', 10, 'bold')).pack(side='left', padx=5)
+        centered_container = ttk.Frame(month_selector_frame)
+        centered_container.pack(expand=True, pady=(12,0))
 
-        ttk.Button(month_selector_frame, text="◀", width=3, command=self.previous_month).pack(side='left', padx=2)
+        ttk.Button(centered_container, text="◀", width=3, style='Big.Accent.TButton', command=self.previous_month).pack(side='left', padx=(0,2))
 
-        self.month_label = tk.Label(month_selector_frame, text="", font=('Roboto', 12, 'bold'), width=16, anchor='center')
-        self.month_label.pack(side='left', padx=2)
+        self.month_label = tk.Label(centered_container, text="", font=('Roboto', 14, 'bold'), width=14, anchor='center')
+        self.month_label.pack(side='left', padx=0)
 
-        ttk.Button(month_selector_frame, text="▶", width=3, command=self.next_month).pack(side='left', padx=10)
+        ttk.Button(centered_container, text="▶", width=3, style='Big.Accent.TButton', command=self.next_month).pack(side='left', padx=2)
 
-        ttk.Button(month_selector_frame, text="Current Month", command=self.go_to_current_month).pack(side='left', padx=10)
+        ttk.Button(centered_container, text="⭮", width=3, style='Big.TButton', command=self.go_to_current_month).pack(side='left', padx=(10,0))
 
         self.update_month_label()
 
-        summary_frame = ttk.Labelframe(self, text="Net Worth Summary")
+        summary_frame = ttk.Labelframe(self, text="Net Worth Summary", labelanchor='n')
         summary_frame.pack(fill='x', padx=10, pady=10)
 
         self.total_label = tk.Label(summary_frame, text="Total Net Worth: $0",
@@ -45,12 +46,12 @@ class NetWorthTab(ttk.Frame):
         self.total_label.pack(pady=10)
 
         breakdown_frame = ttk.Frame(summary_frame)
-        breakdown_frame.pack(fill='x', padx=20, pady=10)
+        breakdown_frame.pack(fill='x', padx=20, pady=(0,10))
 
-        self.breakdown_text = tk.Text(breakdown_frame, height=5, width=50, state='disabled')
+        self.breakdown_text = tk.Text(breakdown_frame, height=5, width=30, relief='ridge', padx=4, pady=4, state='disabled')
         self.breakdown_text.pack()
 
-        entries_frame = ttk.Labelframe(self, text="Net Worth Entries for Selected Month")
+        entries_frame = ttk.Labelframe(self, text="Net Worth Entries for Selected Month", labelanchor='n')
         entries_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         tree_frame = ttk.Frame(entries_frame)

@@ -31,13 +31,16 @@ class MainWindow:
     def setup_ui(self):
         self.control_frame = ttk.Frame(self.root)
         self.control_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        # Define grid columns: Col 0 (Left spacer), Col 1 (Tabs), Col 2 (Buttons)
+        self.control_frame.columnconfigure(0, weight=1) # Left spacer
+        self.control_frame.columnconfigure(1, weight=0) # Tab container (shrink to fit)
+        self.control_frame.columnconfigure(2, weight=1) # Right container for buttons
         self.control_frame.rowconfigure(0, weight=1)
-        self.control_frame.columnconfigure(0, weight=1)
-        # Ensure a second column exists for right-aligned controls (no extra weight)
-        self.control_frame.columnconfigure(0, weight=1)
 
-        self.notebook = ttk.Notebook(self.control_frame)
-        self.notebook.grid(row=0, column=0, sticky='nsew')
+        # Place notebook in the center column
+        self.notebook = ttk.Notebook(self.control_frame, style='Centered.TNotebook')
+        self.notebook.grid(row=0, column=0, columnspan=3, sticky='nsew')
 
         # Triggers the on_tab_opened function within a tab class when switching to it, if it exists
         def on_tab_change(event):
@@ -63,21 +66,25 @@ class MainWindow:
         self.notebook.add(self.visualizations_tab, text="Visualizations")
         self.notebook.add(self.reports_tab, text="Reports")
 
-        # Create settings button with cogwheel icon
-        full_settings_img = Image.open('assets\cogwheel.png')
+        # Small container frame for the buttons to keep them together on the right
+        self.button_container = ttk.Frame(self.control_frame)
+        self.button_container.grid(row=0, column=2, sticky='ne', padx=5, pady=5)
+
+        # Settings button with cogwheel icon
+        full_settings_img = Image.open(r'assets\cogwheel.png')
         resized_settings_img = full_settings_img.resize((20, 20), Image.LANCZOS)
         settings_icon = ImageTk.PhotoImage(resized_settings_img)
-        self.settings_button = ttk.Button(self.control_frame, image=settings_icon, style="Nopadding.TButton", command=self.open_settings)
-        self.settings_button.image = settings_icon  # Keep a reference to avoid garbage collection
-        self.settings_button.grid(row=0, column=0, sticky='ne', padx=38, pady=5)
+        self.settings_button = ttk.Button(self.button_container, image=settings_icon, style="Nopadding.TButton", command=self.open_settings)
+        self.settings_button.image = settings_icon # Keep a reference to avoid garbage collection
+        self.settings_button.pack(side="left", padx=2)
 
-        # Create help button with question mark icon
-        full_help_img = Image.open('assets\help.png')
+        # Help button with question mark icon
+        full_help_img = Image.open(r'assets\help.png')
         resized_help_img = full_help_img.resize((20, 20), Image.LANCZOS)
         help_icon = ImageTk.PhotoImage(resized_help_img)
-        self.help_button = ttk.Button(self.control_frame, image=help_icon, style="Nopadding.TButton", command=self.open_help)
-        self.help_button.image = help_icon  # Keep a reference to avoid garbage collection
-        self.help_button.grid(row=0, column=0, sticky='ne', padx=5, pady=5)
+        self.help_button = ttk.Button(self.button_container, image=help_icon, style="Nopadding.TButton", command=self.open_help)
+        self.help_button.image = help_icon # Keep a reference to avoid garbage collection
+        self.help_button.pack(side="left", padx=2)
 
     def open_settings(self):
         SettingsWindow(self.root, self.db)

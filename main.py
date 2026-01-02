@@ -16,8 +16,21 @@ def main():
     style.configure("Treeview", rowheight=30)
     # Create a custom style that removes all internal padding
     style.configure("Nopadding.TButton", padding=0)
+    # Increased button font, normal button
+    style.configure("Big.TButton", font=('Roboto', 16), padding=0)
+    # Extend the Accent button style and add larget font
+    style.configure("Big.Accent.TButton", font=('Roboto', 16), padding=0)
     # Create a custom style for font in net worth template application LabelFrames
     style.configure("NWTE.TLabelframe.Label", font=('Roboto', 11))
+    # Styling for main tab notebook
+    style.configure("Centered.TNotebook", tabposition='n', tabmargins=[0, 5, 0, 0]) 
+    style.layout("Centered.TNotebook.Tab", [
+        ('Notebook.tab', {'sticky': 'nswe', 'children': [
+            ('Notebook.padding', {'side': 'top', 'sticky': 'nswe', 'children': [
+                ('Notebook.label', {'side': 'top', 'sticky': ''})], # Removing sticky='w' centers text
+            })]
+        })]
+    )
 
     app = MainWindow(root)
 

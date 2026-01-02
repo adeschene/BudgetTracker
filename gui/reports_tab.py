@@ -20,18 +20,21 @@ class ReportsTab(ttk.Frame):
         control_frame = ttk.Frame(self)
         control_frame.pack(fill='x', padx=10, pady=10)
 
+        centered_container = ttk.Frame(control_frame)
+        centered_container.pack(expand=True, pady=(2,0))
+
         # Time period selection logic
-        ttk.Label(control_frame, text="Report Period:").pack(side='left', padx=5)
+        ttk.Label(centered_container, text="Report Period:").pack(side='left', padx=(0,5))
 
         self.period_var = tk.StringVar(value='This Month')
-        period_combo = ttk.Combobox(control_frame, textvariable=self.period_var, width=15)
+        period_combo = ttk.Combobox(centered_container, textvariable=self.period_var, width=15, state='readonly')
         period_combo['values'] = ['This Month', 'Last Month', 'Last Two Months', 'Last Three Months', 'This Year', 'Last Year', 'All Time', 'Custom']
         period_combo.pack(side='left', padx=5)
         period_combo.bind('<<ComboboxSelected>>', self.on_period_change)
 
         # Custom time-frame labels and date pickers (disabled unless using custom timeframe)
-        ttk.Label(control_frame, text="Start:").pack(side='left', padx=5)
-        self.start_date_picker = DateEntry(control_frame, width=12, firstweekday='sunday',
+        ttk.Label(centered_container, text="Start:").pack(side='left', padx=5)
+        self.start_date_picker = DateEntry(centered_container, width=12, firstweekday='sunday',
                                         background='#232323', foreground='whitesmoke',
                                         headersbackground='#454545', headersforeground='whitesmoke',
                                         othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
@@ -44,8 +47,8 @@ class ReportsTab(ttk.Frame):
         self.start_date_picker.pack(side='left', padx=5)
         self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.generate_report())
 
-        ttk.Label(control_frame, text="End:").pack(side='left', padx=5)
-        self.end_date_picker = DateEntry(control_frame, width=12, firstweekday='sunday',
+        ttk.Label(centered_container, text="End:").pack(side='left', padx=5)
+        self.end_date_picker = DateEntry(centered_container, width=12, firstweekday='sunday',
                                         background='#232323', foreground='whitesmoke',
                                         headersbackground='#454545', headersforeground='whitesmoke',
                                         othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
@@ -55,14 +58,14 @@ class ReportsTab(ttk.Frame):
                                         disableddaybackground='#454545', disableddayforeground='#888888',
                                         bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                         maxdate=datetime.now())
-        self.end_date_picker.pack(side='left', padx=5)
+        self.end_date_picker.pack(side='left', padx=(5,0))
         self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.generate_report())
 
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
 
         report_frame = ttk.Frame(self)
-        report_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        report_frame.pack(fill='both', expand=True, padx=10, pady=(5,10))
 
         scrollbar = ttk.Scrollbar(report_frame)
         scrollbar.pack(side='right', fill='y')
@@ -78,8 +81,8 @@ class ReportsTab(ttk.Frame):
     # Enable date pickers when using custom timeframe
     def on_period_change(self, event=None):
         if self.period_var.get() == 'Custom':
-            self.start_date_picker.config(state='normal')
-            self.end_date_picker.config(state='normal')
+            self.start_date_picker.config(state='readonly')
+            self.end_date_picker.config(state='readonly')
         else:
             self.start_date_picker.config(state='disabled')
             self.end_date_picker.config(state='disabled')

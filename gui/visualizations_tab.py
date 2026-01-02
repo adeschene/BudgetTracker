@@ -21,18 +21,21 @@ class VisualizationsTab(ttk.Frame):
         control_frame = ttk.Frame(self)
         control_frame.pack(fill='x', padx=10, pady=6)
 
-        ttk.Label(control_frame, text='Period:').pack(side='left', padx=(4, 6))
+        centered_container = ttk.Frame(control_frame)
+        centered_container.pack(expand=True, pady=(2,0))
+
+        ttk.Label(centered_container, text='Period:').pack(side='left', padx=(0, 5))
         self.period_var = tk.StringVar(value='All Time')
-        period_combo = ttk.Combobox(control_frame, textvariable=self.period_var, width=18, state='readonly')
+        period_combo = ttk.Combobox(centered_container, textvariable=self.period_var, width=18, state='readonly')
         period_combo['values'] = ['This Month', 'Last Month', 'Last Two Months', 'Last Three Months', 'This Year', 'Last Year', 'All Time', 'Custom']
-        period_combo.pack(side='left')
+        period_combo.pack(side='left', padx=(0,5))
         period_combo.bind('<<ComboboxSelected>>', lambda e: self.on_period_change())
 
-        ttk.Separator(control_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
+        ttk.Separator(centered_container, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
         # Custom date range pickers (toggled on/off based on period selection)
-        ttk.Label(control_frame, text="Start:").pack(side='left', padx=5)
-        self.start_date_picker = DateEntry(control_frame, width=10, firstweekday='sunday',
+        ttk.Label(centered_container, text="Start:").pack(side='left', padx=5)
+        self.start_date_picker = DateEntry(centered_container, width=10, firstweekday='sunday',
                                         background='#232323', foreground='whitesmoke',
                                         headersbackground='#454545', headersforeground='whitesmoke',
                                         othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
@@ -45,8 +48,8 @@ class VisualizationsTab(ttk.Frame):
         self.start_date_picker.pack(side='left', padx=5)
         self.start_date_picker.bind("<<DateEntrySelected>>", lambda e: self.on_inner_tab_change(None))
 
-        ttk.Label(control_frame, text="End:").pack(side='left', padx=5)
-        self.end_date_picker = DateEntry(control_frame, width=10, firstweekday='sunday',
+        ttk.Label(centered_container, text="End:").pack(side='left', padx=5)
+        self.end_date_picker = DateEntry(centered_container, width=10, firstweekday='sunday',
                                         background='#232323', foreground='whitesmoke',
                                         headersbackground='#454545', headersforeground='whitesmoke',
                                         othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
@@ -56,14 +59,14 @@ class VisualizationsTab(ttk.Frame):
                                         disableddaybackground='#454545', disableddayforeground='#888888',
                                         bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                         maxdate=datetime.now())
-        self.end_date_picker.pack(side='left', padx=5)
+        self.end_date_picker.pack(side='left', padx=(5,0))
         self.end_date_picker.bind("<<DateEntrySelected>>", lambda e: self.on_inner_tab_change(None))
 
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
 
         # Create notebook to hold multiple chart tabs
-        self.inner_notebook = ttk.Notebook(self)
+        self.inner_notebook = ttk.Notebook(self, style='Centered.TNotebook')
         self.inner_notebook.pack(fill='both', expand=True, padx=10, pady=4)
 
         self.chart_map = {} # Tab-to-function mapping dictionary
@@ -151,14 +154,17 @@ class VisualizationsTab(ttk.Frame):
         cat_control = ttk.Frame(cat_bd_tab)
         cat_control.pack(fill='x', padx=5, pady=5)
 
-        ttk.Label(cat_control, text='Category:').pack(side='left', padx=(4, 6))
+        centered_container = ttk.Frame(cat_control)
+        centered_container.pack(expand=True, pady=(10,0))
+
+        ttk.Label(centered_container, text='Category:').pack(side='left', padx=(0, 6))
         self.category_var = tk.StringVar()
-        self.category_combo = ttk.Combobox(cat_control, textvariable=self.category_var, width=30, state='readonly')
+        self.category_combo = ttk.Combobox(centered_container, textvariable=self.category_var, width=30, state='readonly')
         self.category_combo.pack(side='left')
         self.category_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_category_drilldown_chart())
 
         cat_frame = ttk.Frame(cat_bd_tab)
-        cat_frame.pack(fill='both', expand=True, padx=5, pady=5)
+        cat_frame.pack(fill='both', expand=True, padx=5, pady=(0,5))
         self.figure8 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor='#313131')
         self.ax8 = self.figure8.add_subplot(111, facecolor='#444445')
         self.canvas8 = FigureCanvasTkAgg(self.figure8, cat_frame)
@@ -257,8 +263,8 @@ class VisualizationsTab(ttk.Frame):
     # Enable date pickers when using custom timeframe
     def on_period_change(self, event=None):
         if self.period_var.get() == 'Custom':
-            self.start_date_picker.config(state='normal')
-            self.end_date_picker.config(state='normal')
+            self.start_date_picker.config(state='readonly')
+            self.end_date_picker.config(state='readonly')
         else:
             self.start_date_picker.config(state='disabled')
             self.end_date_picker.config(state='disabled')
