@@ -76,11 +76,15 @@ class CategoryManager:
         # Save new category to the database and refresh the list
         def save():
             cats = self.db.get_categories()
-            current_cat_names = [c['name'] for c in cats]
-            if name_var.get() in current_cat_names:
+            current_cat_names = [c['name'].lower() for c in cats]
+            new_name = name_var.get()
+            if new_name.lower() in current_cat_names:
                 messagebox.showerror("Error", "Category already exists")
                 return
-            self.db.add_category(name_var.get(), type_var.get().lower(), keywords_var.get())
+            if not new_name: # Reject if entered empty name
+                messagebox.showerror("Error", "Category name is required")
+                return
+            self.db.add_category(new_name, type_var.get().lower(), keywords_var.get())
             self.refresh_categories()
             dialog.destroy()
         
@@ -129,10 +133,13 @@ class CategoryManager:
         # Update selected category and handle unique-name constraint
         def save_edit():
             # Check for duplicate category names
-            current_cat_names = [c['name'] for c in categories]
+            current_cat_names = [c['name'].lower() for c in categories]
             new_name = name_var.get()
-            if new_name != category['name'] and new_name in current_cat_names:
+            if new_name.lower() != category['name'].lower() and new_name.lower() in current_cat_names:
                 messagebox.showerror("Error", "Category already exists")
+                return
+            if not new_name: # Reject if entered empty name
+                messagebox.showerror("Error", "Category name is required")
                 return
             try:
                 self.db.update_category(category_id, name_var.get(), type_var.get().lower(), keywords_var.get())
@@ -186,6 +193,14 @@ class CategoryManager:
         try:
             # Update the in-memory category dict then persist
             if field_name == 'Name':
+                # Make sure category name is unique
+                current_cat_names = [c['name'].lower() for c in categories]
+                if new_value.lower() != category['name'].lower() and new_value.lower() in current_cat_names:
+                    messagebox.showerror("Error", "Category already exists")
+                    return
+                if not new_value: # Reject if entered empty name
+                    messagebox.showerror("Error", "Category name is required")
+                    return
                 category['name'] = new_value
             elif field_name == 'Type':
                 category['type'] = new_value

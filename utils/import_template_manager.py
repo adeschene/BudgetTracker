@@ -41,7 +41,7 @@ class ImportTemplateManager:
         self.template_tree.column('Notes', width=180)
         
         self.template_tree.pack(fill='both', expand=True)
-        self.template_tree.bind('<<TreeviewSelect>>', self.on_template_select)
+        self.template_tree.bind('<<TreeviewSelect>>', self.on_template_select) # Update rules tree when selecting a template
         self.template_tree.bind("<Delete>", lambda e: self.delete_template()) # Enable delete key to remove items
         
         button_frame = ttk.Frame(left_frame)
@@ -170,9 +170,12 @@ class ImportTemplateManager:
             # Update the in-memory template dict then persist
             if field_name == 'Template':
                 # Check for duplicate template names
-                curr_template_names = [n['template_name'] for n in self.db.get_import_templates()]
-                if new_value != template['template_name'] and new_value in curr_template_names:
+                curr_template_names = [n['template_name'].lower() for n in self.db.get_import_templates()]
+                if new_value.lower() != template['template_name'].lower() and new_value.lower() in curr_template_names:
                     messagebox.showerror("Error", "Template name already exists")
+                    return
+                if not new_value: # Check for empty name, reject
+                    messagebox.showerror("Error", "Template name cannot be empty")
                     return
                 template['template_name'] = new_value
             elif field_name == 'Account':
@@ -345,8 +348,14 @@ class ImportTemplateManager:
                 if new_value != rule['pattern'] and new_value in curr_patterns:
                     messagebox.showerror("Error", "Pattern already used in a another rule")
                     return
+                if not new_value: # Check for empty pattern, reject
+                    messagebox.showerror("Error", "Pattern is required")
+                    return
                 rule['pattern'] = new_value
             if field_name == 'Replacement':
+                if not new_value and not rule['ignore']: # Check for empty replacement, reject if not ignoring
+                    messagebox.showerror("Error", "Replacement text is required when not ignoring")
+                    return
                 rule['replacement'] = new_value
             elif field_name == 'Category':
                 rule['category'] = new_value
@@ -491,11 +500,11 @@ class TemplateDialog:
                 messagebox.showerror("Error", "Both debit and credit columns are required")
                 return
             
-        curr_template_names = [n['template_name'] for n in self.db.get_import_templates()]
+        curr_template_names = [n['template_name'].lower() for n in self.db.get_import_templates()]
 
         # Either update an existing template or create a new one
         if self.template:
-            if new_name != self.template['template_name'] and new_name in curr_template_names:
+            if new_name.lower() != self.template['template_name'].lower() and new_name.lower() in curr_template_names:
                 messagebox.showerror("Error", "Template name already exists")
                 return
             self.db.update_import_template(
@@ -513,7 +522,7 @@ class TemplateDialog:
                 notes=self.notes_var.get()
             )
         else:
-            if new_name in curr_template_names:
+            if new_name.lower() in curr_template_names:
                 messagebox.showerror("Error", "Template name already exists")
                 return
             self.db.add_import_template(

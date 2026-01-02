@@ -110,6 +110,14 @@ class AccountManager:
         try:
             # Update the in-memory account dict then persist
             if field_name == 'Name':
+                # Make sure account name is unique
+                curr_acc_names = [a['name'].lower() for a in accounts]
+                if new_value.lower() != account['name'].lower() and new_value.lower() in curr_acc_names:
+                    messagebox.showerror("Error", "Account name already in use")
+                    return
+                if not new_value:
+                    messagebox.showerror("Error", "Account name is required")
+                    return
                 account['name'] = new_value
             elif field_name == 'Type':
                 account['type'] = new_value
@@ -166,24 +174,27 @@ class AccountDialog:
 
     def save(self):
         # Persist the account (update existing or insert new)
-        accounts = [a['name'] for a in self.db.get_accounts()]
-        new_acc_name = self.name_var.get()
+        curr_acc_names = [a['name'].lower() for a in self.db.get_accounts()]
+        new_name = self.name_var.get()
         if self.account: # Editing existing account
             # Check for duplicate account names but allow renaming to same name
-            if self.account['name'] != new_acc_name and new_acc_name in accounts:
+            if new_name.lower() != self.account['name'].lower() and new_name.lower() in curr_acc_names:
                 messagebox.showerror("Error", "Account name already in use")
+                return
+            if not new_name:
+                messagebox.showerror("Error", "Account name is required")
                 return
             self.db.update_account(
                 account_id=self.account['id'],
-                name=new_acc_name,
+                name=new_name,
                 account_type=self.type_var.get()
             )
         else: # New account
             # Check for duplicate account names
-            if new_acc_name in accounts:
-                messagebox.showerror("Error", "Account already exists")
+            if new_name.lower() in curr_acc_names:
+                messagebox.showerror("Error", "Account name already in use")
                 return
-            self.db.add_account(new_acc_name, self.type_var.get(), self.auto_template_var.get())
+            self.db.add_account(new_name, self.type_var.get(), self.auto_template_var.get())
 
         if self.callback:
             self.callback()

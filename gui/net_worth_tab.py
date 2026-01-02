@@ -278,9 +278,12 @@ class NetWorthTab(ttk.Frame):
         try:
             # Update the in-memory category dict then persist
             if field_name == 'Asset':
-                entry_names = [e['asset_name'] for e in entries]
-                if new_value != entry['asset_name'] and new_value in entry_names:
+                entry_names = [e['asset_name'].lower() for e in entries]
+                if new_value.lower() != entry['asset_name'].lower() and new_value.lower() in entry_names:
                     messagebox.showerror("Error", "An entry already exists by that name")
+                    return
+                if not new_value:
+                    messagebox.showerror("Error", "Entry name is required")
                     return
                 entry['asset_name'] = new_value
             elif field_name == 'Type':
@@ -376,14 +379,17 @@ class NetWorthDialog:
 
     def save(self):
         entries = self.db.get_net_worth_entries(self.start_date, self.end_date)
-        entry_names = [n['asset_name'] for n in entries]
+        entry_names = [n['asset_name'].lower() for n in entries]
         new_name = self.asset_var.get()
         try:
             # Persist the new or updated entry
             if self.entry:
                 # Check for duplicate name before saving
-                if self.entry['asset_name'] != new_name and new_name in entry_names:
+                if new_name.lower() != self.entry['asset_name'].lower() and new_name.lower() in entry_names:
                     messagebox.showerror("Error", "An entry with that name already exists for this month")
+                    return
+                if not new_name:
+                    messagebox.showerror("Error", "Entry name is required")
                     return
                 self.db.update_net_worth_entry(
                     entry_id=self.entry['id'],
@@ -395,8 +401,11 @@ class NetWorthDialog:
                 )
             else:
                 # Check for duplicate name before saving
-                if new_name in entry_names:
+                if new_name.lower() in entry_names:
                     messagebox.showerror("Error", "An entry with that name already exists for this month")
+                    return
+                if not new_name:
+                    messagebox.showerror("Error", "Entry name is required")
                     return
                 self.db.add_net_worth_entry(
                     date=self.date_picker.get_date(),
@@ -411,7 +420,7 @@ class NetWorthDialog:
 
             self.dialog.destroy()
         except ValueError:
-            messagebox.showerror("Error", "Invalid value")
+            messagebox.showerror("Error", "Invalid value entered")
 
 class ApplyTemplateDialog:
     def __init__(self, parent, db: DatabaseManager, templates, year, month, callback):
@@ -619,8 +628,8 @@ class TemplateManagerDialog:
         # Update the in-memory asset dict then persist
         if field_name == 'Asset':
             # Unique name checking vars
-            curr_names = [n['asset_name'] for n in self.db.get_asset_templates()]
-            if new_value != entry['asset_name'] and new_value in curr_names:
+            curr_names = [n['asset_name'].lower() for n in self.db.get_asset_templates()]
+            if new_value.lower() != entry['asset_name'].lower() and new_value.lower() in curr_names:
                 messagebox.showerror("Error", "An entry with that name already exists")
                 return
             entry['asset_name'] = new_value
@@ -680,11 +689,11 @@ class TemplateDialog:
 
     def save(self):
         # Unique name checking vars
-        curr_names = [n['asset_name'] for n in self.db.get_asset_templates()]
+        curr_names = [n['asset_name'].lower() for n in self.db.get_asset_templates()]
         new_name = self.asset_var.get()
         # Persist template changes and refresh caller view
         if self.template:
-            if new_name != self.template['asset_name'] and new_name in curr_names:
+            if new_name.lower() != self.template['asset_name'].lower() and new_name.lower() in curr_names:
                 messagebox.showerror("Error", "An entry with that name already exists")
                 return
             self.db.update_asset_template(
@@ -694,7 +703,7 @@ class TemplateDialog:
                 notes=self.notes_var.get()
             )
         else:
-            if new_name in curr_names:
+            if new_name.lower() in curr_names:
                 messagebox.showerror("Error", "An entry with that name already exists")
                 return
             self.db.add_asset_template(

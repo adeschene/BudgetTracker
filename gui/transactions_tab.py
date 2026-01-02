@@ -78,7 +78,7 @@ class TransactionsTab(ttk.Frame):
         # Filter by category
         ttk.Label(top_frame, text="Category:").pack(side='left', padx=5)
         self.category_var = tk.StringVar()
-        self.category_combo = ttk.Combobox(top_frame, textvariable=self.category_var, width=12)
+        self.category_combo = ttk.Combobox(top_frame, textvariable=self.category_var, width=12, state='readonly')
         self.category_combo.pack(side='left', padx=5)
         self.update_category_list()
         self.category_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_transactions())
@@ -248,7 +248,7 @@ class TransactionsTab(ttk.Frame):
             messagebox.showinfo("Success", f"Imported {dialog.count} transactions")
 
     def toggle_date_filter(self):
-        state = 'normal' if self.use_date_filter_var.get() else 'disabled'
+        state = 'readonly' if self.use_date_filter_var.get() else 'disabled'
         self.start_date_picker.configure(state=state)
         self.end_date_picker.configure(state=state)
         self.refresh_transactions()
@@ -365,6 +365,9 @@ class TransactionsTab(ttk.Frame):
         try:
             # Update the in-memory transaction dict then persist
             if field_name == 'Description':
+                if not new_value:
+                    messagebox.showerror("Error", "Description is required")
+                    return
                 transaction['description'] = new_value
             elif field_name == 'Amount':
                 transaction['amount'] = int(Decimal(new_value)*100)  # Convert from Decimal to int
@@ -424,7 +427,7 @@ class TransactionDialog:
                                     disableddaybackground='#454545', disableddayforeground='#888888',
                                     bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
                                     maxdate=datetime.now(), year=date_obj.year,
-                                    month=date_obj.month, day=date_obj.day)
+                                    month=date_obj.month, day=date_obj.day, state='readonly')
         self.date_picker.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
         
         ttk.Label(self.dialog, text="Description:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
@@ -438,14 +441,14 @@ class TransactionDialog:
         
         ttk.Label(self.dialog, text="Category:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
         self.category_var = tk.StringVar(value=transaction['category'] if transaction else '')
-        category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var)
+        category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, state='readonly')
         categories = self.db.get_categories()
         category_combo['values'] = [cat['name'] for cat in categories]
         category_combo.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
         
         ttk.Label(self.dialog, text="Account:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
         self.account_var = tk.StringVar(value=transaction['account'] if transaction else '')
-        account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var)
+        account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var, state='readonly')
         accounts = self.db.get_accounts()
         account_combo['values'] = [acc['name'] for acc in accounts]
         account_combo.grid(row=5, column=1, padx=10, pady=10, sticky='ew')
@@ -470,12 +473,16 @@ class TransactionDialog:
         try:
             amount = int(Decimal(self.amount_var.get()) * 100) # Convert from decimal
             transaction_type = 'income' if amount > 0 else 'expense'
-            
+            description = self.desc_var.get()
+
+            if not description: # Make sure transaction has a description
+                messagebox.showerror("Error", "Description is required")
+                return
             if self.transaction:
                 self.db.update_transaction(
                     self.transaction['id'],
                     date=self.date_picker.get_date(),
-                    description=self.desc_var.get(),
+                    description=description,
                     amount=amount,
                     category=self.category_var.get(),
                     account=self.account_var.get(),
@@ -485,7 +492,7 @@ class TransactionDialog:
             else:
                 self.db.add_transaction(
                     date=self.date_picker.get_date(),
-                    description=self.desc_var.get(),
+                    description=description,
                     amount=amount,
                     category=self.category_var.get(),
                     account=self.account_var.get(),
