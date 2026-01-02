@@ -320,6 +320,8 @@ class NetWorthDialog:
         self.dialog.title("Add Net Worth Entry" if not entry else "Edit Net Worth Entry")
         self.dialog.geometry("400x370")
         self.dialog.transient(parent)
+        self.dialog.grab_set()
+        self.dialog.protocol("WM_DELETE_WINDOW", self.on_closing)
         
         vcmd_whole_dollars = (self.dialog.register(validate_money_string), "%P", True, False) # Digit validation registration
 
@@ -376,6 +378,10 @@ class NetWorthDialog:
         self.dialog.update_idletasks()
         center_window(self.dialog)
         self.dialog.deiconify()
+
+    def on_closing(self):
+        self.dialog.grab_release()
+        self.dialog.destroy()
 
     def save(self):
         entries = self.db.get_net_worth_entries(self.start_date, self.end_date)
@@ -436,6 +442,8 @@ class ApplyTemplateDialog:
         self.dialog.title(f"Apply Templates to {datetime(year, month, 1).strftime('%B %Y')}")
         self.dialog.geometry("500x600")
         self.dialog.transient(parent)
+        self.dialog.grab_set()
+        self.dialog.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         info_label = ttk.Label(self.dialog,
                              text="Enter values for each asset to add to this month:"
@@ -488,6 +496,10 @@ class ApplyTemplateDialog:
         center_window(self.dialog)
         self.dialog.deiconify()
 
+    def on_closing(self):
+        self.dialog.grab_release()
+        self.dialog.destroy()
+
     def apply(self):
         try:
             template_values = {}
@@ -515,6 +527,7 @@ class TemplateManagerDialog:
         self.dialog.title("Manage Asset Template")
         self.dialog.geometry("700x600")
         self.dialog.transient(parent)
+        self.dialog.grab_set()
 
         info_label = tk.Label(self.dialog,
                              text="This template is used to quickly add recurring assets/liabilities to each month.\nClick 'Apply Template' in the Net Worth tab to add these to the current month.",
@@ -574,7 +587,12 @@ class TemplateManagerDialog:
             self.tree.insert('', 'end', values=display_values, tags=(template['id'],))
 
     def add_template(self):
-        TemplateDialog(self.dialog, self.db, asset_types=self.asset_types, callback=self.refresh_templates)
+        entries = self.db.get_asset_templates()
+        # Modal stack handling (reacquires set after dialog is destroyed)
+        dialog_window = TemplateDialog(self.dialog, self.db, asset_types=self.asset_types, entries=entries, callback=self.refresh_templates)
+        self.dialog.wait_window(dialog_window.dialog)
+        if self.dialog.winfo_exists():
+            self.dialog.grab_set()
 
     def edit_template(self):
         selection = self.tree.selection()
@@ -586,12 +604,15 @@ class TemplateManagerDialog:
             messagebox.showwarning("Error", "Only one entry can be edited at a time")
             return
 
-        template_id = self.tree.item(selection[0])['tags'][0]
-        templates = self.db.get_asset_templates()
-        template = next((t for t in templates if t['id'] == template_id), None)
+        entry_id = self.tree.item(selection[0])['tags'][0]
+        entries = self.db.get_asset_templates()
+        entry = next((t for t in entries if t['id'] == entry_id), None)
 
-        if template:
-            TemplateDialog(self.dialog, self.db, asset_types=self.asset_types, template=template, callback=self.refresh_templates)
+        if entry: # Modal stack handling (reacquires set after dialog is destroyed)
+            dialog_window = TemplateDialog(self.dialog, self.db, asset_types=self.asset_types, entries=entries, entry=entry, callback=self.refresh_templates)
+            self.dialog.wait_window(dialog_window.dialog)
+            if self.dialog.winfo_exists():
+                self.dialog.grab_set()
 
     def delete_template(self):
         selection = self.tree.selection()
@@ -648,31 +669,33 @@ class TemplateManagerDialog:
         self.refresh_templates()
 
 class TemplateDialog:
-    def __init__(self, parent, db: DatabaseManager, asset_types, template=None, callback=None):
+    def __init__(self, parent, db: DatabaseManager, asset_types, entries, entry=None, callback=None):
         self.db = db
         self.asset_types = asset_types
-        self.template = template
+        self.entries = entries
+        self.entry = entry
         self.callback = callback
 
         # Dialog to add or edit an asset template (used when applying recurring assets)
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
-        self.dialog.title("Add Template Entry" if not template else "Edit Template Entry")
+        self.dialog.title("Add Template Entry" if not entry else "Edit Template Entry")
         self.dialog.geometry("300x230")
         self.dialog.transient(parent)
+        self.dialog.grab_set()
 
         ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
-        self.asset_var = tk.StringVar(value=template['asset_name'] if template else '')
+        self.asset_var = tk.StringVar(value=entry['asset_name'] if entry else '')
         ttk.Entry(self.dialog, textvariable=self.asset_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        self.type_var = tk.StringVar(value=template['asset_type'] if template else 'Cash')
+        self.type_var = tk.StringVar(value=entry['asset_type'] if entry else 'Cash')
         type_combo = ttk.Combobox(self.dialog, textvariable=self.type_var, state='readonly')
         type_combo['values'] = self.asset_types
         type_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
-        self.notes_var = tk.StringVar(value=template['notes'] if template and template['notes'] else '')
+        self.notes_var = tk.StringVar(value=entry['notes'] if entry and entry['notes'] else '')
         ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
         button_frame = ttk.Frame(self.dialog)
@@ -689,15 +712,15 @@ class TemplateDialog:
 
     def save(self):
         # Unique name checking vars
-        curr_names = [n['asset_name'].lower() for n in self.db.get_asset_templates()]
+        curr_names = [n['asset_name'].lower() for n in self.entries]
         new_name = self.asset_var.get()
         # Persist template changes and refresh caller view
-        if self.template:
-            if new_name.lower() != self.template['asset_name'].lower() and new_name.lower() in curr_names:
+        if self.entry:
+            if new_name.lower() != self.entry['asset_name'].lower() and new_name.lower() in curr_names:
                 messagebox.showerror("Error", "An entry with that name already exists")
                 return
             self.db.update_asset_template(
-                template_id=self.template['id'],
+                template_id=self.entry['id'],
                 asset_name=new_name,
                 asset_type=self.type_var.get(),
                 notes=self.notes_var.get()

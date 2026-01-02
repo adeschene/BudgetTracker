@@ -1,6 +1,7 @@
 import tkinter as tk
 import sqlite3
 from tkinter import ttk, messagebox
+from database.db_manager import DatabaseManager
 from utils.editable_tree import EditableTree
 from utils.helpers import center_window
 
@@ -13,6 +14,7 @@ class CategoryManager:
         self.window.title("Manage Categories")
         self.window.geometry("700x500")
         self.window.transient(parent)
+        self.window.grab_set()
 
         frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
@@ -56,45 +58,12 @@ class CategoryManager:
             self.tree.insert('', 'end', values=(cat['name'], cat['type'].title(), cat['keywords']), tags=(cat['id'],))
     
     def add_category(self):
-        dialog = tk.Toplevel(self.window)
-        dialog.withdraw()
-        dialog.title("Add Category")
-        dialog.geometry("300x210")
-        
-        ttk.Label(dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
-        name_var = tk.StringVar()
-        ttk.Entry(dialog, textvariable=name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
-        
-        ttk.Label(dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        type_var = tk.StringVar(value='Expense')
-        ttk.Combobox(dialog, textvariable=type_var, values=['Income', 'Expense'], state='readonly').grid(row=1, column=1, padx=10, pady=10, sticky='ew')
-        
-        ttk.Label(dialog, text="Keywords:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
-        keywords_var = tk.StringVar()
-        ttk.Entry(dialog, textvariable=keywords_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
-        
-        # Save new category to the database and refresh the list
-        def save():
-            cats = self.db.get_categories()
-            current_cat_names = [c['name'].lower() for c in cats]
-            new_name = name_var.get()
-            if new_name.lower() in current_cat_names:
-                messagebox.showerror("Error", "Category already exists")
-                return
-            if not new_name: # Reject if entered empty name
-                messagebox.showerror("Error", "Category name is required")
-                return
-            self.db.add_category(new_name, type_var.get().lower(), keywords_var.get())
-            self.refresh_categories()
-            dialog.destroy()
-        
-        ttk.Button(dialog, text="Save", style='Accent.TButton', command=save).grid(row=3, column=0, columnspan=2, pady=10)
-        dialog.columnconfigure(1, weight=1)
-        
-        dialog.update_idletasks()
-        center_window(dialog)
-        dialog.deiconify()
-        dialog.grab_set()
+        categories = self.db.get_categories()
+        # Modal stack handling (reacquires set after dialog is destroyed)
+        dialog_window = CategoryDialog(self.window, self.db, categories=categories, callback=self.refresh_categories)
+        self.window.wait_window(dialog_window.dialog)
+        if self.window.winfo_exists():
+            self.window.grab_set()
 
     def edit_category(self):
         selection = self.tree.selection()
@@ -110,52 +79,12 @@ class CategoryManager:
         categories = self.db.get_categories()
         category = next((c for c in categories if c['id'] == category_id), None)
 
-        if not category:
-            return
-
-        dialog = tk.Toplevel(self.window)
-        dialog.withdraw()
-        dialog.title("Edit Category")
-        dialog.geometry("300x250")
-
-        ttk.Label(dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
-        name_var = tk.StringVar(value=category['name'])
-        ttk.Entry(dialog, textvariable=name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
-
-        ttk.Label(dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        type_var = tk.StringVar(value=category['type'].title())
-        ttk.Combobox(dialog, textvariable=type_var, values=['Income', 'Expense'], state='readonly').grid(row=1, column=1, padx=10, pady=10, sticky='ew')
-
-        ttk.Label(dialog, text="Keywords:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
-        keywords_var = tk.StringVar(value=category.get('keywords', ''))
-        ttk.Entry(dialog, textvariable=keywords_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
-
-        # Update selected category and handle unique-name constraint
-        def save_edit():
-            # Check for duplicate category names
-            current_cat_names = [c['name'].lower() for c in categories]
-            new_name = name_var.get()
-            if new_name.lower() != category['name'].lower() and new_name.lower() in current_cat_names:
-                messagebox.showerror("Error", "Category already exists")
-                return
-            if not new_name: # Reject if entered empty name
-                messagebox.showerror("Error", "Category name is required")
-                return
-            try:
-                self.db.update_category(category_id, name_var.get(), type_var.get().lower(), keywords_var.get())
-                self.refresh_categories()
-                dialog.destroy()
-            except sqlite3.IntegrityError:
-                messagebox.showerror("Error", "Category name must be unique") # Should be removed TODO
-
-        tk.Label(dialog, text="Enter keywords separated by commas.", fg='gray').grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(dialog, text="Save", style='Accent.TButton', command=save_edit).grid(row=4, column=0, columnspan=2, pady=10)
-        dialog.columnconfigure(1, weight=1)
-
-        dialog.update_idletasks()
-        center_window(dialog)
-        dialog.deiconify()
-        dialog.grab_set()
+        if category:  # Modal stack handling (reacquires set after dialog is destroyed)
+            dialog_window = CategoryDialog(self.window, self.db, categories=categories, category=category, callback=self.refresh_categories)
+            self.window.wait_window(dialog_window.dialog)
+            if self.window.winfo_exists():
+                self.window.grab_set()
+        
 
     def delete_category(self):
         selection = self.tree.selection()
@@ -217,3 +146,80 @@ class CategoryManager:
             self.refresh_categories()
         except (ValueError):
             messagebox.showerror("Error", "Invalid value entered")
+
+class CategoryDialog:
+    def __init__(self, parent, db: DatabaseManager, categories, category=None, callback=None):
+        self.db = db
+        self.categories = categories
+        self.category = category
+        self.callback = callback
+
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.withdraw()
+        self.dialog.title("Edit Category")
+        self.dialog.geometry("300x250")
+        
+        self.dialog.transient(parent)
+        self.dialog.grab_set() # Make window modal
+
+        ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
+        self.name_var = tk.StringVar(value=category['name'] if category else '')
+        ttk.Entry(self.dialog, textvariable=self.name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+
+        ttk.Label(self.dialog, text="Type:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        self.type_var = tk.StringVar(value=category['type'].title() if category else 'Expense')
+        ttk.Combobox(self.dialog, textvariable=self.type_var, values=['Income', 'Expense'], state='readonly').grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+
+        ttk.Label(self.dialog, text="Keywords:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
+        self.keywords_var = tk.StringVar(value=category.get('keywords', '') if category else '')
+        ttk.Entry(self.dialog, textvariable=self.keywords_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+
+        tk.Label(self.dialog, text="Enter keywords separated by commas.", fg='gray').grid(row=3, column=0, columnspan=2, pady=5)
+
+        button_frame = ttk.Frame(self.dialog)
+        button_frame.grid(row=4, column=0, columnspan=2, pady=10)
+
+        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
+
+        self.dialog.columnconfigure(1, weight=1)
+
+        self.dialog.update_idletasks()
+        center_window(self.dialog)
+        self.dialog.deiconify()
+
+    # Update or create category and handle unique-name constraints
+    def save(self):
+        current_cat_names = [c['name'].lower() for c in self.categories]
+        new_name = self.name_var.get()
+        if self.category: # Updated and existing category
+            # Check for duplicate category names
+            if new_name.lower() != self.category['name'].lower() and new_name.lower() in current_cat_names:
+                messagebox.showerror("Error", "Category already exists")
+                return
+            if not new_name: # Reject if entered empty name
+                messagebox.showerror("Error", "Category name is required")
+                return
+            self.db.update_category(
+                category_id=self.category['id'],
+                name=new_name,
+                cat_type=self.type_var.get().lower(),
+                keywords=self.keywords_var.get()
+            )
+        else: # Adding new category
+            if new_name.lower() in current_cat_names:
+                messagebox.showerror("Error", "Category already exists")
+                return
+            if not new_name: # Reject if entered empty name
+                messagebox.showerror("Error", "Category name is required")
+                return
+            self.db.add_category(
+                name=new_name,
+                cat_type=self.type_var.get().lower(),
+                keywords=self.keywords_var.get()
+            )
+            
+        if self.callback:
+            self.callback()
+            
+        self.dialog.destroy()

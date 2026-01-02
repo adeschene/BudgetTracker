@@ -8,12 +8,14 @@ from utils.helpers import center_window
 class SettingsWindow:
     def __init__(self, parent, db):
         self.db = db
+        self.parent = parent
         
         self.window = tk.Toplevel(parent)
         self.window.withdraw()
         self.window.title("Settings")
         self.window.geometry("300x175")
         self.window.transient(parent)
+        self.window.grab_set()
 
         frame = ttk.Frame(self.window)
         frame.pack(fill='both', expand=True, padx=10, pady=10)
@@ -26,11 +28,14 @@ class SettingsWindow:
         center_window(self.window)
         self.window.deiconify()
     
-    def manage_categories(self):
-        CategoryManager(self.window, self.db)
-    
     def manage_accounts(self):
-        AccountManager(self.window, self.db)
+        self.window.destroy()
+        AccountManager(self.parent, self.db)
+    
+    def manage_categories(self):
+        self.window.destroy()
+        CategoryManager(self.parent, self.db)
     
     def manage_import_templates(self):
-        ImportTemplateManager(self.window, self.db)
+        self.window.destroy()
+        ImportTemplateManager(self.parent, self.db)

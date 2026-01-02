@@ -13,6 +13,7 @@ class ImportTemplateManager:
         self.dialog.title("Import Template Manager")
         self.dialog.geometry("1200x520")
         self.dialog.transient(parent)
+        self.dialog.grab_set() # Make window modal
         
         main_frame = ttk.Frame(self.dialog)
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
@@ -115,7 +116,12 @@ class ImportTemplateManager:
         self.refresh_rules()
     
     def add_template(self):
-        TemplateDialog(self.dialog, self.db, callback=self.refresh_templates)
+        templates = self.db.get_import_templates()
+        # Modal stack handling (reacquires set after dialog is destroyed)
+        dialog_window = TemplateDialog(self.dialog, self.db, templates=templates, callback=self.refresh_templates)
+        self.dialog.wait_window(dialog_window.dialog)
+        if self.dialog.winfo_exists():
+            self.dialog.grab_set()
     
     def edit_template(self):
         selection = self.template_tree.selection()
@@ -128,10 +134,14 @@ class ImportTemplateManager:
             return
         
         template_id = self.template_tree.item(selection[0])['tags'][0]
+        templates = self.db.get_import_templates()
         template = self.db.get_import_template(template_id)
         
-        if template:
-            TemplateDialog(self.dialog, self.db, template=template, callback=self.refresh_templates)
+        if template: # Modal stack handling (reacquires set after dialog is destroyed)
+            dialog_window = TemplateDialog(self.dialog, self.db, templates=templates, template=template, callback=self.refresh_templates)
+            self.dialog.wait_window(dialog_window.dialog)
+            if self.dialog.winfo_exists():
+                self.dialog.grab_set()
     
     def delete_template(self):
         selection = self.template_tree.selection()
@@ -232,7 +242,12 @@ class ImportTemplateManager:
             return
         
         template_id = self.template_tree.item(selection[0])['tags'][0]
-        RuleDialog(self.dialog, self.db, template_id, callback=self.refresh_rules)
+        rules = self.db.get_description_rules(template_id)
+        # Modal stack handling (reacquires set after dialog is destroyed)
+        dialog_window = RuleDialog(self.dialog, self.db, template_id, rules=rules, callback=self.refresh_rules)
+        self.dialog.wait_window(dialog_window.dialog)
+        if self.dialog.winfo_exists():
+            self.dialog.grab_set()
     
     def edit_rule(self):
         selection = self.rules_tree.selection()
@@ -251,8 +266,11 @@ class ImportTemplateManager:
         rules = self.db.get_description_rules(template_id)
         rule = next((r for r in rules if r['id'] == rule_id), None)
         
-        if rule:
-            RuleDialog(self.dialog, self.db, template_id, rule=rule, callback=self.refresh_rules)
+        if rule: # Modal stack handling (reacquires set after dialog is destroyed)
+            dialog_window = RuleDialog(self.dialog, self.db, template_id, rules=rules, rule=rule, callback=self.refresh_rules)
+            self.dialog.wait_window(dialog_window.dialog)
+            if self.dialog.winfo_exists():
+                self.dialog.grab_set()
     
     def delete_rule(self):
         selection = self.rules_tree.selection()
@@ -374,8 +392,9 @@ class ImportTemplateManager:
             messagebox.showerror("Error", "Invalid value entered")
 
 class TemplateDialog:
-    def __init__(self, parent, db: DatabaseManager, template=None, callback=None):
+    def __init__(self, parent, db: DatabaseManager, templates, template=None, callback=None):
         self.db = db
+        self.templates = templates
         self.template = template
         self.callback = callback
 
@@ -386,6 +405,7 @@ class TemplateDialog:
         self.dialog.title("Edit Template" if template else "Add Template")
         self.dialog.geometry("500x700")
         self.dialog.transient(parent)
+        self.dialog.grab_set() # Make window modal
 
         ttk.Label(self.dialog, text="Template Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.name_var = tk.StringVar(value=template['template_name'] if template else '')
@@ -500,7 +520,7 @@ class TemplateDialog:
                 messagebox.showerror("Error", "Both debit and credit columns are required")
                 return
             
-        curr_template_names = [n['template_name'].lower() for n in self.db.get_import_templates()]
+        curr_template_names = [n['template_name'].lower() for n in self.templates]
 
         # Either update an existing template or create a new one
         if self.template:
@@ -547,9 +567,10 @@ class TemplateDialog:
 # Dialog to add or edit a description rule. Rules are evaluated in order for a template and can 
 # transform descriptions, assign categories, or mark transactions to be ignored.
 class RuleDialog:
-    def __init__(self, parent, db: DatabaseManager, template_id: int, rule=None, callback=None):
+    def __init__(self, parent, db: DatabaseManager, template_id: int, rules, rule=None, callback=None):
         self.db = db
         self.template_id = template_id
+        self.rules = rules
         self.rule = rule
         self.callback = callback
 
@@ -558,6 +579,7 @@ class RuleDialog:
         self.dialog.title("Edit Rule" if rule else "Add Rule")
         self.dialog.geometry("500x280")
         self.dialog.transient(parent)
+        self.dialog.grab_set() # Make window modal
 
         ttk.Label(self.dialog, text="Pattern (Regex):").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.pattern_var = tk.StringVar(value=rule['pattern'] if rule else '')
@@ -613,8 +635,7 @@ class RuleDialog:
             return
 
         # Unique rule pattern check vars (don't want two rules for the same situation, mainly as a courtesy to the user)
-        rules = self.db.get_description_rules(self.template_id)
-        curr_patterns = [p['pattern'] for p in rules]
+        curr_patterns = [p['pattern'] for p in self.rules]
         new_pattern = self.pattern_var.get()
 
         # Apply the change: update existing rule or append as a new ordered rule
@@ -634,7 +655,7 @@ class RuleDialog:
             if new_pattern in curr_patterns:
                 messagebox.showerror("Error", "Pattern already has a rule applied")
                 return
-            next_order = len(rules) # Incremenet order for new rule
+            next_order = len(self.rules) # Incremenet order for new rule
             self.db.add_description_rule(
                 template_id=self.template_id,
                 rule_order=next_order,

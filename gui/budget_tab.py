@@ -170,6 +170,7 @@ class BudgetDialog:
         self.dialog.title("Edit Budget" if budget else "Add Budget")
         self.dialog.geometry("400x230")
         self.dialog.transient(parent)
+        self.dialog.grab_set() # Make window modal
         
         vcmd_positive_whole_dollars = (self.dialog.register(validate_money_string),"%P",False,False) # Digit validation registration
         
@@ -211,6 +212,10 @@ class BudgetDialog:
         self.dialog.update_idletasks()
         center_window(self.dialog)
         self.dialog.deiconify()
+
+    def on_closing(self):
+        self.dialog.grab_release()
+        self.dialog.destroy()
 
     def save(self):
         try:

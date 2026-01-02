@@ -14,6 +14,7 @@ class AccountManager:
         self.window.title("Manage Accounts")
         self.window.geometry("450x500")
         self.window.transient(parent)
+        self.window.grab_set()
 
         self.acc_types = ['Checking', 'Savings', 'Credit', 'Investment'] # Account types
 
@@ -55,8 +56,13 @@ class AccountManager:
         for acc in accounts:
             self.tree.insert('', 'end', values=(acc['name'], acc['type'].title()), tags=(acc['id'],))
 
-    def add_account(self):
-        AccountDialog(self.window, self.db, acc_types=self.acc_types, callback=self.refresh_accounts)
+    def add_account(self): # Opens account dialog window w/modal window logic
+        accounts = self.db.get_accounts()
+        # Modal stack handling (reacquires set after dialog is destroyed)
+        dialog_window = AccountDialog(self.window, self.db, accounts=accounts, acc_types=self.acc_types, callback=self.refresh_accounts)
+        self.window.wait_window(dialog_window.dialog)
+        if self.window.winfo_exists():
+            self.window.grab_set()
 
     def edit_account(self):
         selection = self.tree.selection()
@@ -72,8 +78,11 @@ class AccountManager:
         accounts = self.db.get_accounts()
         account = next((acc for acc in accounts if acc['id'] == account_id), None)
 
-        if account:
-            AccountDialog(self.window, self.db, account=account, acc_types=self.acc_types, callback=self.refresh_accounts)
+        if account: # Modal stack handling (reacquires set after dialog is destroyed)
+            dialog_window = AccountDialog(self.window, self.db, accounts=accounts, account=account, acc_types=self.acc_types, callback=self.refresh_accounts)
+            self.window.wait_window(dialog_window.dialog)
+            if self.window.winfo_exists():
+                self.window.grab_set()
 
     def delete_account(self):
         selection = self.tree.selection()
@@ -132,12 +141,11 @@ class AccountManager:
         except (ValueError):
             messagebox.showerror("Error", "Invalid value entered")
 
-
-
 class AccountDialog:
-    def __init__(self, parent, db: DatabaseManager, account=None, acc_types=None, callback=None):
+    def __init__(self, parent, db: DatabaseManager, accounts, account=None, acc_types=None, callback=None):
         self.db = db
         self.account = account
+        self.accounts = accounts
         self.callback = callback
 
         # Dialog for creating or editing an account record
@@ -145,7 +153,9 @@ class AccountDialog:
         self.dialog.withdraw()
         self.dialog.title("Add Account" if not account else "Edit Account")
         self.dialog.geometry("300x300")
+
         self.dialog.transient(parent)
+        self.dialog.grab_set() # Make window modal
 
         ttk.Label(self.dialog, text="Name:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.name_var = tk.StringVar(value=account['name'] if account else '')
@@ -170,11 +180,10 @@ class AccountDialog:
         self.dialog.update_idletasks()
         center_window(self.dialog)
         self.dialog.deiconify()
-        self.dialog.grab_set()
 
     def save(self):
         # Persist the account (update existing or insert new)
-        curr_acc_names = [a['name'].lower() for a in self.db.get_accounts()]
+        curr_acc_names = [a['name'].lower() for a in self.accounts]
         new_name = self.name_var.get()
         if self.account: # Editing existing account
             # Check for duplicate account names but allow renaming to same name
