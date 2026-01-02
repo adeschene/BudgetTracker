@@ -597,7 +597,7 @@ class VisualizationsTab(ttk.Frame):
         else:
             months = sorted(monthly.keys())
 
-        values = [monthly.get(m, 0.0) for m in months]
+        values = [Decimal(monthly.get(m, 0.0)) for m in months]
         
         # Formatting/Creating bars
         bars = self.ax3.bar(range(len(months)), values, color='green', alpha=0.7, edgecolor='whitesmoke')
@@ -651,7 +651,7 @@ class VisualizationsTab(ttk.Frame):
         else:
             months = sorted(monthly.keys())
 
-        values = [monthly.get(m, 0.0) for m in months]
+        values = [Decimal(monthly.get(m, 0.0)) for m in months]
 
         bars = self.ax4.bar(range(len(months)), values, color='red', alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
@@ -707,7 +707,7 @@ class VisualizationsTab(ttk.Frame):
         else:
             months = sorted(set(list(income_monthly.keys()) + list(expense_monthly.keys())))
 
-        values = [(income_monthly.get(m, 0.0) - expense_monthly.get(m, 0.0)) for m in months]
+        values = [(Decimal(income_monthly.get(m, 0.0)) - Decimal(expense_monthly.get(m, 0.0))) for m in months]
         bars = self.ax5.bar(range(len(months)), values, color=['green' if v>=0 else 'red' for v in values], alpha=0.7, edgecolor='whitesmoke')
         avg = sum(values) / len(values) if values else 0.0
 
@@ -884,7 +884,7 @@ class VisualizationsTab(ttk.Frame):
             months = sorted(monthly.keys())
 
         # Use absolute value for display (expenses may be negative in DB)
-        values = [abs(monthly.get(m, 0.0)) for m in months]
+        values = [abs(Decimal(monthly.get(m, 0.0))) for m in months]
 
         # Use a neutral color for category drilldown bars
         bars = self.ax8.bar(range(len(months)), values, color='gray', alpha=0.7, edgecolor='whitesmoke')
@@ -969,7 +969,7 @@ class VisualizationsTab(ttk.Frame):
         else:
             months = sorted(monthly.keys())
 
-        values = [monthly.get(m, 0.0) for m in months]
+        values = [Decimal(monthly.get(m, 0.0)) for m in months]
         # Positive amounts shown green (income), negative red (expense)
         colors = ['green' if v >= 0 else 'red' for v in values]
 
