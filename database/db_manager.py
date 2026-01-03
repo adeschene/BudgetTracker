@@ -437,7 +437,7 @@ class DatabaseManager:
             query += ' AND date <= ?'
             params.append(end_date)
 
-        query += ' ORDER BY date DESC'
+        query += ' ORDER BY date ASC'
 
         cursor.execute(query, params)
         columns = [description[0] for description in cursor.description]
