@@ -4,10 +4,28 @@ from datetime import datetime, timedelta
 from tkcalendar import DateEntry
 import matplotlib.pyplot as plt
 from decimal import Decimal
+from matplotlib.backends import _backend_tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from database.db_manager import DatabaseManager
 from utils.helpers import fuzzy_match, exact_match
+
+# Fix for the scroll crash in Tkinter/tkinterweb (2026 fix)
+def safe_scroll_event(self, event):
+    try:
+        # Check if widget is just a string name (e.g. ".!frame.!htmlframe")
+        if isinstance(event.widget, str):
+            # Attempt to convert name back to a Python widget object
+            event.widget = self.canvas.get_tk_widget().nametowidget(event.widget)
+        
+        # Now call the original Matplotlib internal function
+        return _backend_tk.FigureCanvasTk.scroll_event_windows(self, event)
+    except (AttributeError, KeyError, Exception):
+        # If it's not a Matplotlib widget or conversion fails, just ignore the event
+        pass
+
+# Apply the patch to the Matplotlib backend class
+_backend_tk.FigureCanvasTk.scroll_event_windows = safe_scroll_event
 
 class VisualizationsTab(ttk.Frame):
     def __init__(self, parent, db: DatabaseManager, **kwargs):
@@ -296,7 +314,7 @@ class VisualizationsTab(ttk.Frame):
                     case 2: start_month = 12
                     case 1: start_month = 11
                     case _: start_month = this_month - 2
-                start_year = this_year - 1 if start_month == (12 or 11) else this_year
+                start_year = this_year - 1 if start_month == 12 or 11 else this_year
                 start = today.replace(year=start_year, month=start_month, day=1)
                 end = today
             case 'This Year':

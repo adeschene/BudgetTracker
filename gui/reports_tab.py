@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinterweb import HtmlFrame
 from datetime import datetime, timedelta
 from decimal import Decimal
 from tkcalendar import DateEntry
@@ -64,16 +65,8 @@ class ReportsTab(ttk.Frame):
         self.start_date_picker.config(state='disabled')
         self.end_date_picker.config(state='disabled')
 
-        report_frame = ttk.Frame(self)
-        report_frame.pack(fill='both', expand=True, padx=10, pady=(5,10))
-
-        scrollbar = ttk.Scrollbar(report_frame)
-        scrollbar.pack(side='right', fill='y')
-
-        self.report_text = tk.Text(report_frame, wrap='word', yscrollcommand=scrollbar.set,
-                                   font=('Roboto', 10))
-        scrollbar.config(command=self.report_text.yview)
-        self.report_text.pack(fill='both', expand=True)
+        self.report_frame = HtmlFrame(self, messages_enabled = False)
+        self.report_frame.pack(fill='both', expand=True, padx=10, pady=(5,10))
 
     def on_tab_opened(self): # Trigger refresh when switching to tab from another
         self.generate_report()
@@ -114,7 +107,7 @@ class ReportsTab(ttk.Frame):
                     case 2: start_month = 12
                     case 1: start_month = 11
                     case _: start_month = this_month - 2
-                start_year = this_year - 1 if start_month == (12 or 11) else this_year
+                start_year = this_year - 1 if start_month == 12 or 11 else this_year
                 start = today.replace(year=start_year, month=start_month, day=1)
                 end = today
             case 'This Year':
@@ -135,19 +128,9 @@ class ReportsTab(ttk.Frame):
     # Generates a simple text-based financial report for the user
     def generate_report(self):
         # Clear previous report text, if any
-        self.report_text.delete('1.0', 'end')
-        
+        self.report_frame.load_html("")
+
         start_date, end_date = self.get_date_range()
-        
-        self.report_text.insert('end', "=" * self.top_btm_separator_mult + "\n")
-        # Header
-        self.report_text.insert('end', "FINANCIAL REPORT\n")
-        self.report_text.insert('end', "=" * self.top_btm_separator_mult + "\n\n")
-        
-        if start_date and end_date:
-            self.report_text.insert('end', f"Period: {start_date} to {end_date}\n\n")
-        else:
-            self.report_text.insert('end', "Period: All Time\n\n")
         
         # Fetch transactions within the requested date range
         transactions = self.db.get_transactions(start_date, end_date)
@@ -156,89 +139,93 @@ class ReportsTab(ttk.Frame):
         total_income = sum(Decimal(t['amount'])/100 for t in transactions if t['amount'] > 0)
         total_expenses = sum(abs(Decimal(t['amount'])/100) for t in transactions if t['amount'] < 0)
         net_income = total_income - total_expenses
+
+        html_output = f"""
+        <html>
+        <head>
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 15px; color: #333; }}
+            .header {{ font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }}
+            .section-title {{ font-size: 18px; font-weight: bold; margin-top: 25px; margin-bottom: 10px; color: #34495e; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+            th, td {{ padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd; }}
+            th:first-child, td:first-child {{ text-align: left; }}
+            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            .income {{ color: #2ecc71; font-weight: bold; }}
+            .expense {{ color: #e74c3c; font-weight: bold; }}
+            .net {{ color: #2980b9; font-weight: bold; font-size: 16px; }}
+            .status-over {{ color: #e74c3c; }}
+            .status-under {{ color: #2ecc71; }}
+        </style>
+        </head>
+        <body>
+        <div class="header">FINANCIAL REPORT</div>
+        <p><strong>Period:</strong> {start_date} to {end_date if start_date else 'All Time'}</p>
+
+        <div class="section-title">INCOME & EXPENSES SUMMARY</div>
+        <table>
+            <tr><td>Total Income:</td><td class="income">${total_income:,.2f}</td></tr>
+            <tr><td>Total Expenses:</td><td class="expense">${total_expenses:,.2f}</td></tr>
+            <tr style="border-top: 2px solid #333;"><td><strong>Net Income:</strong></td><td class="net"><strong>${net_income:,.2f}</strong></td></tr>
+        </table>
+        """
         
-        self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-        self.report_text.insert('end', "INCOME & EXPENSES SUMMARY\n")
-        self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-        self.report_text.insert('end', f"Total Income:        ${total_income:>15,.2f}\n")
-        self.report_text.insert('end', f"Total Expenses:      ${total_expenses:>15,.2f}\n")
-        self.report_text.insert('end', f"Net Income:          ${net_income:>15,.2f}\n\n")
-        
-        # Breakdown expenses by category for reporting and charts
+        # --- Spending by Category (Example of extending HTML) ---
         spending_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='expense')
 
         if spending_by_category:
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            self.report_text.insert('end', "SPENDING BY CATEGORY\n")
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-
+            html_output += "<div class='section-title'>SPENDING BY CATEGORY</div>"
+            html_output += "<table><tr><th>Category</th><th>Amount</th><th>Percent</th></tr>"
             sorted_categories = sorted(spending_by_category.items(), key=lambda x: x[1], reverse=True)
+            total_exp_cents = sum(spending_by_category.values())
+            
+            for category, amount_cents in sorted_categories:
+                amount = Decimal(amount_cents) / 100
+                percentage = (Decimal(amount_cents) / total_exp_cents) if total_exp_cents > 0 else 0
+                html_output += f"<tr><td>{category}</td><td>${amount:,.2f}</td><td>{percentage:.1f}%</td></tr>"
+            html_output += "</table>"
 
-            for category, amount in sorted_categories:
-                percentage = (Decimal(amount) / total_expenses) if total_expenses > 0 else 0
-                self.report_text.insert('end', f"{category:<30} ${Decimal(amount)/100:>12,.2f}  ({percentage:>5.1f}%)\n")
-
-            self.report_text.insert('end', "\n")
-
-        # Compare configured budget targets against actual spending
+        # --- Budget vs Actual (Example with color coding) ---
         budget_targets = self.db.get_budget_targets()
         if budget_targets:
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            self.report_text.insert('end', "BUDGET VS ACTUAL\n")
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            self.report_text.insert('end', f"{'Category':<30} {'Budget':>12}  {'Actual':>12}  {'Difference':>12}  {'Status':>8}\n")
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-
-            total_budget = 0
-            total_actual = 0
-
+            html_output += "<div class='section-title'>BUDGET VS ACTUAL</div>"
+            html_output += "<table>"
+            html_output += "<tr><th>Category</th><th>Budget</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
             for budget in budget_targets:
                 category = budget['category']
                 budget_amount = budget['monthly_target']
                 actual_amount = Decimal(spending_by_category.get(category, 0))/100
                 difference = budget_amount - actual_amount
-
-                total_budget += budget_amount
-                total_actual += actual_amount
-
-                if difference >= 0:
-                    status = "✓ Under"
-                    status_color = ""
-                else:
-                    status = "✗ Over"
-                    status_color = ""
-
-                self.report_text.insert('end', f"{category:<30} ${budget_amount:>11,.2f}  ${actual_amount:>11,.2f}  ${difference:>11,.2f}  {status:>8}\n")
-
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            total_diff = total_budget - total_actual
-            self.report_text.insert('end', f"{'TOTAL':<30} ${total_budget:>11,.2f}  ${total_actual:>11,.2f}  ${total_diff:>11,.2f}\n")
-            self.report_text.insert('end', "\n")
+                
+                status_class = "status-under" if difference >= 0 else "status-over"
+                status_text = "✓ Under" if difference >= 0 else "✗ Over"
+                
+                html_output += f"""
+                <tr>
+                    <td>{category}</td>
+                    <td>${budget_amount:,.2f}</td>
+                    <td>${actual_amount:,.2f}</td>
+                    <td>${difference:,.2f}</td>
+                    <td class="{status_class}">{status_text}</td>
+                </tr>
+                """
+            html_output += "</table>"
         
         # Breakdown income by category for reporting and charts
         income_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='income')
 
         if income_by_category:
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            self.report_text.insert('end', "INCOME BY CATEGORY\n")
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             
             sorted_income = sorted(income_by_category.items(), key=lambda x: x[1], reverse=True)
             
             for category, amount in sorted_income:
                 percentage = (Decimal(amount) / total_income) if total_income > 0 else 0
-                self.report_text.insert('end', f"{category:<30} ${Decimal(amount)/100:>12,.2f}  ({percentage:>5.1f}%)\n")
-
-            self.report_text.insert('end', "\n")
         
         # Include net worth (asset/liability) snapshot information
         net_worth_entries = self.db.get_net_worth_entries(start_date, end_date)
         allowed_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Credit Card']
 
         if net_worth_entries:
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            self.report_text.insert('end', "ACCOUNT BALANCES\n")
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
             
             total_balance = 0
             totals_by_type = {}
@@ -252,13 +239,6 @@ class ReportsTab(ttk.Frame):
                     continue
 
                 total_balance += value
-                self.report_text.insert('end', f"{account.get('asset_name','Unknown'):<30} ({atype:<15}) ${value:>12,.0f}\n")
-
-            self.report_text.insert('end', f"\n{'Total:':<30} {'':<15} ${total_balance:>12,.0f}\n\n")
-
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
-            self.report_text.insert('end', "NET WORTH SUMMARY\n")
-            self.report_text.insert('end', "-" * self.inner_separator_mult + "\n")
 
             total_assets = 0
             total_liabilities = 0
@@ -273,22 +253,11 @@ class ReportsTab(ttk.Frame):
                     total_liabilities += abs(value)
                     liabilities_by_type[asset_type] = value
 
-            if assets_by_type:
-                self.report_text.insert('end', "-- ASSETS --\n\n")
-                for asset_type, value in sorted(assets_by_type.items(), key=lambda x: x[1], reverse=True):
-                    self.report_text.insert('end', f"{asset_type:<30} ${value:>15,.2f}\n")
-                self.report_text.insert('end', f"\n{'-> Total Assets:':<30} ${total_assets:>15,.2f}\n\n")
-
-            if liabilities_by_type:
-                self.report_text.insert('end', "-- LIABILITIES --\n\n")
-                for liability_type, value in sorted(liabilities_by_type.items(), key=lambda x: abs(x[1]), reverse=True):
-                    self.report_text.insert('end', f"{liability_type:<30} ${value:>15,.2f}\n")
-                self.report_text.insert('end', f"\n{'-> Total Liabilities:':<30} ${-total_liabilities:>15,.2f}\n\n")
-
             # Final net worth calculation and display
             total_net_worth = total_assets - total_liabilities
-            self.report_text.insert('end', f"{'TOTAL NET WORTH:':<30} ${total_net_worth:>15,.2f}\n\n")
+
+        # Close HTML body and tags
+        html_output += "</body></html>"
         
-        self.report_text.insert('end', "=" * self.top_btm_separator_mult + "\n")
-        self.report_text.insert('end', "END OF REPORT\n")
-        self.report_text.insert('end', "=" * self.top_btm_separator_mult + "\n")
+        # Load the entire string into the HtmlFrame widget
+        self.report_frame.load_html(html_output)
