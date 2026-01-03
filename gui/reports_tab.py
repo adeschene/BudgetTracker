@@ -1,10 +1,34 @@
 import tkinter as tk
+import matplotlib.pyplot as plt
+import io
+import base64
+from matplotlib.figure import Figure
+from matplotlib.backends import _backend_tk
 from tkinter import ttk
 from tkinterweb import HtmlFrame
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from collections import defaultdict
 from decimal import Decimal
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
+
+# Fix for the scroll crash in Tkinter/tkinterweb (2026 fix)
+def safe_scroll_event(self, event):
+    try:
+        # Check if widget is just a string name (e.g. ".!frame.!htmlframe")
+        if isinstance(event.widget, str):
+            # Attempt to convert name back to a Python widget object
+            event.widget = self.canvas.get_tk_widget().nametowidget(event.widget)
+        
+        # Now call the original Matplotlib internal function
+        return _backend_tk.FigureCanvasTk.scroll_event_windows(self, event)
+    except (AttributeError, KeyError, Exception):
+        # If it's not a Matplotlib widget or conversion fails, just ignore the event
+        pass
+
+# Apply the patch to the Matplotlib backend class
+_backend_tk.FigureCanvasTk.scroll_event_windows = safe_scroll_event
 
 class ReportsTab(ttk.Frame):
     def __init__(self, parent, db: DatabaseManager, **kwargs):
@@ -136,34 +160,45 @@ class ReportsTab(ttk.Frame):
         total_expenses = sum(abs(Decimal(t['amount'])/100) for t in transactions if t['amount'] < 0)
         net_income = total_income - total_expenses
 
+        # Color definitions
+        self.normal_text_color = '#f5f5f5'
+        self.normal_bg_color = '#313131'
+        self.highlight_color = '#9D9D9D'
+        self.indented_color = "#9D9D9D"
+        self.emphasis_color = '#595959'
+        self.income_color = "#36B56F"
+        self.expense_color = '#EB5353'
+        self.line_color = '#1674b4'
+        self.chart_color = '#444445'
+
         html_output = f"""
         <html>
         <head>
         <style>
-            body {{ font-family: 'Roboto Mono', Tahoma, Geneva, Verdana, sans-serif; margin: 15px; color: #f5f5f5; background-color: #313131; }}
-            .header {{ font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #f5f5f5; border-bottom: 2px solid #f5f5f5; padding-bottom: 10px; }}
-            .section-title {{ font-size: 18px; font-weight: bold; margin-top: 40px; margin-bottom: 10px; color: #f5f5f5; }}
-            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; color: #f5f5f5; }}
-            th, td {{ padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd; }}
+            body {{ font-family: 'Roboto Mono', Tahoma, Geneva, Verdana, sans-serif; margin: 15px; color: {self.normal_text_color}; background-color: {self.normal_bg_color}; }}
+            .header {{ font-size: 24px; font-weight: bold; margin-bottom: 20px; color: {self.normal_text_color}; border-bottom: 2px solid {self.normal_text_color}; padding-bottom: 10px; }}
+            .section-title {{ font-size: 18px; font-weight: bold; margin-top: 40px; margin-bottom: 10px; color: {self.normal_text_color}; border-bottom: 2px solid {self.highlight_color}; padding-bottom: 5px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; color: {self.normal_text_color}; margin: 0px 6px; }}
+            th, td {{ padding: 12px 15px; text-align: right; border-bottom: 1px solid {self.normal_text_color}; }}
             th:first-child, td:first-child {{ text-align: left; }}
-            tr:nth-child(even) {{ background-color: #f9f9f9; }}
-            .income {{ color: #2ecc71; font-weight: bold; }}
-            .expense {{ color: #e74c3c; font-weight: bold; }}
-            .net {{ color: #2980b9; font-weight: bold; font-size: 16px; }}
-            .status-over {{ color: #e74c3c; }}
-            .status-under {{ color: #2ecc71; }}
+            tr:nth-child(even) {{ background-color: #ddd; }}
+            .income {{ color: {self.income_color}; font-weight: bold; }}
+            .expense {{ color: {self.expense_color}; font-weight: bold; }}
+            .net {{ color: {self.normal_text_color}; font-weight: bold; font-size: 16px; }}
+            .status-over {{ color: {self.expense_color}; }}
+            .status-under {{ color: {self.income_color}; }}
             .nw-card {{ 
-                background-color: #595959;
-                color: f5f5f5;
+                background-color: {self.emphasis_color};
+                color: {self.normal_text_color};
                 padding: 20px;
                 border-radius: 10px;
                 text-align: center;
-                margin: 50px 100px;
+                margin: 30px 0px 20px 0px;
             }}
             .nw-amount {{ font-size: 32px; font-weight: bold; }}
-            .asset-text {{ color: #2ecc71; font-weight: bold; }}
-            .liability-text {{ color: #e74c3c; font-weight: bold; }}
-            .indent {{ padding-left: 20px; color: #666; font-size: 0.9em; }}
+            .asset-text {{ color: {self.income_color}; font-weight: bold; }}
+            .liability-text {{ color: {self.expense_color}; font-weight: bold; }}
+            .indent {{ padding-left: 20px; color: {self.indented_color}; font-size: 0.9em; margin: 0px 8px; }}
         </style>
         </head>
         <body>
@@ -174,7 +209,7 @@ class ReportsTab(ttk.Frame):
         <table>
             <tr><td>Total Income:</td><td class="income">${total_income:,.2f}</td></tr>
             <tr><td>Total Expenses:</td><td class="expense">${total_expenses:,.2f}</td></tr>
-            <tr style="border-top: 2px solid #333;"><td><strong>Net Income:</strong></td><td class="net"><strong>${net_income:,.2f}</strong></td></tr>
+            <tr style="background: {self.emphasis_color}"><td><strong>Net Income:</strong></td><td class="net"><strong>${net_income:,.2f}</strong></td></tr>
         </table>
         """
         
@@ -228,48 +263,162 @@ class ReportsTab(ttk.Frame):
             
             for category, amount in sorted_income:
                 percentage = (Decimal(amount) / total_income) if total_income > 0 else 0
-
+        
         # --- NET WORTH SECTION ---
         net_worth_entries = self.db.get_net_worth_entries(start_date, end_date)
-        if net_worth_entries:
-            # Process data (Keep your logic for calculating totals)
-            totals_by_type = {}
-            allowed_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Credit Card']
+
+        if not net_worth_entries:
+            return
+        
+        html_output += '<div class="section-title">NET WORTH</div>'
+
+        if not start_date and not end_date: # 'All Time' handler
+            all_dates = [datetime.strptime(e['date'], '%Y-%m-%d') for e in net_worth_entries]
             
-            for account in net_worth_entries:
-                atype = account.get('asset_type') or 'Other'
-                value = account.get('value', 0)
-                totals_by_type[atype] = totals_by_type.get(atype, 0) + value
+            start_date = datetime.strftime(min(all_dates), '%Y-%m-%d')
+            end_date = datetime.strftime(max(all_dates), '%Y-%m-%d')
+        
+        # Calculate difference in months for conditional logic
+        diff = relativedelta(datetime.strptime(end_date, '%Y-%m-%d'), datetime.strptime(start_date, '%Y-%m-%d'))
+        total_months = diff.years * 12 + diff.months
 
-            total_assets = sum(v for v in totals_by_type.values() if v >= 0)
-            total_liabilities = sum(abs(v) for v in totals_by_type.values() if v < 0)
-            total_net_worth = total_assets - total_liabilities
+        chart_base64_url = None
 
-            # HTML: Net Worth Summary Card
-            html_output += f"""
-            <div class="nw-card">
-                <div>TOTAL NET WORTH</div>
-                <div class="nw-amount">${total_net_worth:,.0f}</div>
-            </div>
-            """
+        # Group entries into months
+        monthly_data = self.group_by_month(net_worth_entries)
+        sorted_months = sorted(monthly_data.keys())
 
-            # HTML: Asset Table
-            html_output += "<div class='section-title'>ASSETS</div><table>"
-            for asset_type, value in sorted(totals_by_type.items(), key=lambda x: x[1], reverse=True):
-                if value >= 0:
-                    html_output += f"<tr><td>{asset_type}</td><td class='asset-text'>${value:,.0f}</td></tr>"
-            html_output += f"<tr style='background:#595959'><td><strong>Total Assets</strong></td><td class='asset-text'>${total_assets:,.0f}</td></tr></table>"
+        if total_months >= 6: # Create trend chart if looking at span of at least 6 months
+            chart_base64_url = self.generate_net_worth_chart(monthly_data, sorted_months)
+            
+        # Grab the First and Latest month snapshots
+        first_month_key = sorted_months[0]
+        latest_month_key = sorted_months[-1]
 
-            # HTML: Liabilities Table
-            if total_liabilities > 0:
-                html_output += "<div class='section-title'>LIABILITIES</div><table>"
-                for l_type, value in sorted(totals_by_type.items(), key=lambda x: x[1]):
-                    if value < 0:
-                        html_output += f"<tr><td>{l_type}</td><td class='liability-text'>-${abs(value):,.0f}</td></tr>"
-                html_output += f"<tr style='background:#595959'><td><strong>Total Liabilities</strong></td><td class='liability-text'>-${total_liabilities:,.0f}</td></tr></table>"
+        # Calculate totals for the First Month (Opening)
+        opening_nw = sum(e['value'] for e in monthly_data[first_month_key])
+        
+        # Calculate totals for the Latest Month (Closing)
+        latest_entries = monthly_data[latest_month_key]
+        grouped_accounts = defaultdict(list)
+        total_assets = 0
+        total_liabilities = 0
 
+        for account in latest_entries:
+            atype = account.get('asset_type') or 'Other'
+            value = account.get('value', 0)
+            account_name = account.get('asset_name', 'Unknown Account')
+            
+            grouped_accounts[atype].append({'name': account_name, 'value': value})
+
+            if value >= 0:
+                total_assets += value
+            else:
+                total_liabilities += abs(value)
+            
+        total_net_worth = total_assets - total_liabilities
+
+        # This represents the growth from the start of the period to the end.
+        change_val = total_net_worth - opening_nw
+
+        html_output += self.generate_net_worth_html(
+            grouped_accounts, total_assets, total_liabilities, total_net_worth, change_val, chart_base64_url
+        )
+        
         # Close HTML body and tags
         html_output += "</body></html>"
         
         # Load the entire string into the HtmlFrame widget
         self.report_frame.load_html(html_output)
+
+    def group_by_month(self, entries):
+        months = defaultdict(list)
+        for entry in entries:
+            # Assuming entry['date'] is a string 'YYYY-MM-DD' or datetime object
+            date_obj = datetime.strptime(entry['date'], '%Y-%m-%d')
+            month_key = date_obj.strftime('%Y-%m') # Format: '2026-01'
+            months[month_key].append(entry)
+        return months
+    
+    def generate_net_worth_chart(self, monthly_data, sorted_months):
+        dates = [datetime.strptime(m, '%Y-%m') for m in sorted_months]
+        values = []
+        for month_key in sorted_months:
+            # Calculate total NW for each month snapshot
+            nw_sum = sum(e['value'] for e in monthly_data[month_key])
+            values.append(nw_sum)
+        
+        fig = Figure(figsize=(8, 4), dpi=100, tight_layout=True, facecolor=self.normal_bg_color)
+        ax = fig.add_subplot(111, facecolor=self.chart_color)
+        ax.plot(dates, values, color=self.line_color, linestyle='-', marker='o', linewidth=2)
+        ax.grid(True, linestyle='--', alpha=0.6) # Add a subtle grid for readability
+        fig.autofmt_xdate() # Auto format dates on X-axis
+
+        # Coloring
+        ax.spines['top'].set_color(self.normal_text_color)
+        ax.spines['left'].set_color(self.normal_text_color)
+        ax.tick_params(axis='x', colors=self.normal_text_color)
+        ax.tick_params(axis='y', colors=self.normal_text_color)
+
+        # Save the figure to a base64 string to embed directly in HTML
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight')
+        plt.close(fig) # Prevents memory leaks and the scroll bug
+        buf.seek(0)
+        
+        img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+        return f"data:image/png;base64,{img_base64}"
+
+    def generate_net_worth_html(self, grouped_accounts, total_assets, total_liabilities, total_net_worth, change_val=None, chart_url=None):
+        # Add a growth indicator if we have comparative data
+        growth_html = ""
+        if change_val is not None:
+            color = self.income_color if change_val >= 0 else self.expense_color
+            prefix = "+" if change_val >= 0 else ""
+            growth_html = f"<div style='color:{color}; font-size:14px;'>{prefix}${change_val:,.0f} this period</div>"
+        
+        html = ""
+
+        # Inject the chart here if the URL is provided
+        if chart_url:
+            html += f"<div style='font-size: 20px; font-weight: bold; color: {self.normal_text_color}; text-align: center; padding-top: 10px'>Net Worth Trend</div>"
+            html += f"<img src='{chart_url}' style='width: 100%; height: auto; margin-bottom: 20px;' />"
+
+        html += f"""
+        <div class="nw-card">
+            <div style="font-size: 20px; color: {self.normal_text_color}; margin-bottom: 5px;">CLOSING NET WORTH</div>
+            <div class="nw-amount">${total_net_worth:,.0f}</div>
+            {growth_html}
+        </div>
+        """
+
+        # --- Assets Section ---
+        html += "<div class='section-title'>Assets (Closing)</div><table>"
+        # Sort types A-Z
+        for atype in sorted(grouped_accounts.keys()):
+            # Only process asset types (positive total)
+            if sum(a['value'] for a in grouped_accounts[atype]) >= 0:
+                html += f"<tr class='asset-text'><td>{atype}</td><td class='asset-text'>${sum(a['value'] for a in grouped_accounts[atype]):,.0f}</td></tr>"
+                
+                # Display individual accounts underneath
+                for account in grouped_accounts[atype]:
+                    html += f"<tr class='indent'><td>▶ {account['name']}</td><td>${account['value']:,.0f}</td></tr>"
+
+        html += f"<tr style='background-color: {self.emphasis_color}; color: {self.normal_text_color}'><td><strong>Total Assets:</strong></td><td class='asset-text'>${total_assets:,.0f}</td></tr></table>"
+
+        # --- Liabilities Section ---
+        if total_liabilities > 0:
+            html += "<div class='section-title'>Liabilities (Closing)</div><table>"
+            # Sort types A-Z
+            for atype in sorted(grouped_accounts.keys()):
+                # Only process liability types (negative total)
+                if sum(a['value'] for a in grouped_accounts[atype]) < 0:
+                    html += f"<tr class='liability-text'><td>{atype}</td><td class='liability-text'>-${abs(sum(a['value'] for a in grouped_accounts[atype])):,.0f}</td></tr>"
+
+                    # Display individual liabilities underneath
+                    for account in grouped_accounts[atype]:
+                        html += f"<tr class='indent'><td>▶ {account['name']}</td><td>-${abs(account['value']):,.0f}</td></tr>"
+
+            html += f"<tr style='background-color: {self.emphasis_color}; color: {self.normal_text_color}'><td><strong>Total Liabilities:</strong></td><td class='liability-text'>-${total_liabilities:,.0f}</td></tr></table>"
+        
+        return html
