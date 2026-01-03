@@ -62,7 +62,7 @@ class ReportsTab(ttk.Frame):
         self.end_date_picker.config(state='disabled')
 
         self.report_frame = HtmlFrame(self, messages_enabled = False)
-        self.report_frame.pack(fill='both', expand=True, padx=10, pady=(5,10))
+        self.report_frame.pack(fill='both', expand=True, padx=20, pady=(15,20))
 
     def on_tab_opened(self): # Trigger refresh when switching to tab from another
         self.generate_report()
@@ -116,17 +116,17 @@ class ReportsTab(ttk.Frame):
                 start = self.start_date_picker.get_date()
                 end = self.end_date_picker.get_date()
             case _: # All Time chosen, handled case-by-case in refresh methods
-                return None, None
+                return None, None, None, None
 
         # Return start and end dates as ISO strings for DB queries
-        return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
+        return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), start.strftime('%m-%d-%Y'), end.strftime('%m-%d-%Y')
     
     # Generates a simple text-based financial report for the user
     def generate_report(self):
         # Clear previous report text, if any
         self.report_frame.load_html("")
 
-        start_date, end_date = self.get_date_range()
+        start_date, end_date, display_start, display_end = self.get_date_range()
         
         # Fetch transactions within the requested date range
         transactions = self.db.get_transactions(start_date, end_date)
@@ -140,10 +140,10 @@ class ReportsTab(ttk.Frame):
         <html>
         <head>
         <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 15px; color: #333; }}
-            .header {{ font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }}
-            .section-title {{ font-size: 18px; font-weight: bold; margin-top: 25px; margin-bottom: 10px; color: #34495e; }}
-            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+            body {{ font-family: 'Roboto Mono', Tahoma, Geneva, Verdana, sans-serif; margin: 15px; color: #f5f5f5; background-color: #313131; }}
+            .header {{ font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #f5f5f5; border-bottom: 2px solid #f5f5f5; padding-bottom: 10px; }}
+            .section-title {{ font-size: 18px; font-weight: bold; margin-top: 40px; margin-bottom: 10px; color: #f5f5f5; }}
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; color: #f5f5f5; }}
             th, td {{ padding: 12px 15px; text-align: right; border-bottom: 1px solid #ddd; }}
             th:first-child, td:first-child {{ text-align: left; }}
             tr:nth-child(even) {{ background-color: #f9f9f9; }}
@@ -152,13 +152,25 @@ class ReportsTab(ttk.Frame):
             .net {{ color: #2980b9; font-weight: bold; font-size: 16px; }}
             .status-over {{ color: #e74c3c; }}
             .status-under {{ color: #2ecc71; }}
+            .nw-card {{ 
+                background-color: #595959;
+                color: f5f5f5;
+                padding: 20px;
+                border-radius: 10px;
+                text-align: center;
+                margin: 50px 100px;
+            }}
+            .nw-amount {{ font-size: 32px; font-weight: bold; }}
+            .asset-text {{ color: #2ecc71; font-weight: bold; }}
+            .liability-text {{ color: #e74c3c; font-weight: bold; }}
+            .indent {{ padding-left: 20px; color: #666; font-size: 0.9em; }}
         </style>
         </head>
         <body>
         <div class="header">FINANCIAL REPORT</div>
-        <p><strong>Period:</strong> {start_date} to {end_date if start_date else 'All Time'}</p>
+        <p><strong>Period:</strong> {display_start + ' to ' + display_end if display_start else 'All Time'}</p>
 
-        <div class="section-title">INCOME & EXPENSES SUMMARY</div>
+        <div class="section-title">INCOME & EXPENSES</div>
         <table>
             <tr><td>Total Income:</td><td class="income">${total_income:,.2f}</td></tr>
             <tr><td>Total Expenses:</td><td class="expense">${total_expenses:,.2f}</td></tr>
@@ -166,7 +178,7 @@ class ReportsTab(ttk.Frame):
         </table>
         """
         
-        # --- Spending by Category (Example of extending HTML) ---
+        # --- Spending by Category ---
         spending_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='expense')
 
         if spending_by_category:
@@ -177,11 +189,11 @@ class ReportsTab(ttk.Frame):
             
             for category, amount_cents in sorted_categories:
                 amount = Decimal(amount_cents) / 100
-                percentage = (Decimal(amount_cents) / total_exp_cents) if total_exp_cents > 0 else 0
+                percentage = (Decimal(amount_cents) / total_exp_cents) * 100 if total_exp_cents > 0 else 0
                 html_output += f"<tr><td>{category}</td><td>${amount:,.2f}</td><td>{percentage:.1f}%</td></tr>"
             html_output += "</table>"
 
-        # --- Budget vs Actual (Example with color coding) ---
+        # --- Budget vs Actual ---
         budget_targets = self.db.get_budget_targets()
         if budget_targets:
             html_output += "<div class='section-title'>BUDGET VS ACTUAL</div>"
@@ -216,41 +228,45 @@ class ReportsTab(ttk.Frame):
             
             for category, amount in sorted_income:
                 percentage = (Decimal(amount) / total_income) if total_income > 0 else 0
-        
-        # Include net worth (asset/liability) snapshot information
+
+        # --- NET WORTH SECTION ---
         net_worth_entries = self.db.get_net_worth_entries(start_date, end_date)
-        allowed_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Credit Card']
-
         if net_worth_entries:
-            
-            total_balance = 0
+            # Process data (Keep your logic for calculating totals)
             totals_by_type = {}
-
+            allowed_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Credit Card']
+            
             for account in net_worth_entries:
                 atype = account.get('asset_type') or 'Other'
                 value = account.get('value', 0)
                 totals_by_type[atype] = totals_by_type.get(atype, 0) + value
 
-                if atype not in allowed_types:
-                    continue
-
-                total_balance += value
-
-            total_assets = 0
-            total_liabilities = 0
-            assets_by_type = {}
-            liabilities_by_type = {}
-
-            for asset_type, value in totals_by_type.items():
-                if value >= 0:
-                    total_assets += value
-                    assets_by_type[asset_type] = value
-                else:
-                    total_liabilities += abs(value)
-                    liabilities_by_type[asset_type] = value
-
-            # Final net worth calculation and display
+            total_assets = sum(v for v in totals_by_type.values() if v >= 0)
+            total_liabilities = sum(abs(v) for v in totals_by_type.values() if v < 0)
             total_net_worth = total_assets - total_liabilities
+
+            # HTML: Net Worth Summary Card
+            html_output += f"""
+            <div class="nw-card">
+                <div>TOTAL NET WORTH</div>
+                <div class="nw-amount">${total_net_worth:,.0f}</div>
+            </div>
+            """
+
+            # HTML: Asset Table
+            html_output += "<div class='section-title'>ASSETS</div><table>"
+            for asset_type, value in sorted(totals_by_type.items(), key=lambda x: x[1], reverse=True):
+                if value >= 0:
+                    html_output += f"<tr><td>{asset_type}</td><td class='asset-text'>${value:,.0f}</td></tr>"
+            html_output += f"<tr style='background:#595959'><td><strong>Total Assets</strong></td><td class='asset-text'>${total_assets:,.0f}</td></tr></table>"
+
+            # HTML: Liabilities Table
+            if total_liabilities > 0:
+                html_output += "<div class='section-title'>LIABILITIES</div><table>"
+                for l_type, value in sorted(totals_by_type.items(), key=lambda x: x[1]):
+                    if value < 0:
+                        html_output += f"<tr><td>{l_type}</td><td class='liability-text'>-${abs(value):,.0f}</td></tr>"
+                html_output += f"<tr style='background:#595959'><td><strong>Total Liabilities</strong></td><td class='liability-text'>-${total_liabilities:,.0f}</td></tr></table>"
 
         # Close HTML body and tags
         html_output += "</body></html>"
