@@ -7,12 +7,8 @@ from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
 
 class ReportsTab(ttk.Frame):
-    # Class variables
-    top_btm_separator_mult = 80 # The number of hyphens used to separate sections in reports
-    inner_separator_mult = 160 # The number of '=' used to signal top and bottom of reports
-
     def __init__(self, parent, db: DatabaseManager, **kwargs):
-        super().__init__(parent, **kwargs) # Initialize tab frame
+        super().__init__(parent, **kwargs)
         self.db = db
 
         self.setup_ui()
