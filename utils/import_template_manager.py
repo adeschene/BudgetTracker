@@ -7,6 +7,10 @@ from utils.helpers import center_window
 class ImportTemplateManager:
     def __init__(self, parent, db: DatabaseManager):
         self.db = db
+
+        # Sorting state
+        self.sort_column = None
+        self.sort_reverse = False
         
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
@@ -33,9 +37,9 @@ class ImportTemplateManager:
             on_commit_callback=self.handle_template_db_update, get_options_callback=self.get_template_dd_values, show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.template_tree.yview)
         
-        self.template_tree.heading('Template', text='Template Name')
-        self.template_tree.heading('Account', text='Account')
-        self.template_tree.heading('Notes', text='Notes')
+        self.template_tree.heading('Template', text='Template Name', command=lambda: self.sort_by_column('Template'))
+        self.template_tree.heading('Account', text='Account', command=lambda: self.sort_by_column('Account'))
+        self.template_tree.heading('Notes', text='Notes', command=lambda: self.sort_by_column('Notes'))
         
         self.template_tree.column('Template', width=150, anchor='center')
         self.template_tree.column('Account', width=150, anchor='center')
@@ -87,8 +91,8 @@ class ImportTemplateManager:
         ttk.Button(rules_button_frame, text="Add Rule", style='Accent.TButton', command=self.add_rule).pack(side='left', padx=5)
         ttk.Button(rules_button_frame, text="Edit Rule", command=self.edit_rule).pack(side='left', padx=5)
         ttk.Button(rules_button_frame, text="Delete Rule", command=self.delete_rule).pack(side='left', padx=5)
-        ttk.Button(rules_button_frame, text="Move Up", command=self.move_rule_up).pack(side='left', padx=5)
-        ttk.Button(rules_button_frame, text="Move Down", command=self.move_rule_down).pack(side='left', padx=5)
+        ttk.Button(rules_button_frame, text="▲", width=3, style='Med.TButton', command=self.move_rule_up).pack(side='left', padx=5)
+        ttk.Button(rules_button_frame, text="▼", width=3, style='Med.TButton', command=self.move_rule_down).pack(side='left', padx=2)
         
         # Load existing templates and rules into the UI
         self.refresh_templates()
@@ -111,6 +115,22 @@ class ImportTemplateManager:
                 template['account_name'],
                 template['notes']
             ), tags=(template['id'],))
+
+    def sort_by_column(self, column):
+        if self.sort_column == column:
+            self.sort_reverse = not self.sort_reverse
+        else:
+            self.sort_column = column
+            self.sort_reverse = False
+
+        # Build a list of (value, item_id) tuples for sorting
+        items = [(self.template_tree.set(item, column), item) for item in self.template_tree.get_children('')]
+        # Case-insensitive string sort
+        items.sort(key=lambda x: x[0].lower(), reverse=self.sort_reverse)
+
+        # Reorder the tree items according to sorted order
+        for index, (val, item) in enumerate(items):
+            self.template_tree.move(item, '', index)
     
     def on_template_select(self, event):
         self.refresh_rules()

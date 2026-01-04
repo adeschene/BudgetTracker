@@ -10,6 +10,10 @@ class BudgetTab(ttk.Frame):
         # Store the database manager and create a containing frame
         self.db = db
 
+        # Sorting state
+        self.sort_column = None
+        self.sort_reverse = False
+
         # Build UI widgets for the Budget tab
         self.setup_ui()
     
@@ -32,9 +36,9 @@ class BudgetTab(ttk.Frame):
                     get_validation_callback=self.provide_validation, show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
         
-        self.tree.heading('Category', text='Category')
-        self.tree.heading('Monthly Target', text='Monthly Target')
-        self.tree.heading('Notes', text='Notes')
+        self.tree.heading('Category', text='Category', command=lambda: self.sort_by_column('Category'))
+        self.tree.heading('Monthly Target', text='Monthly Target', command=lambda: self.sort_by_column('Monthly Target'))
+        self.tree.heading('Notes', text='Notes', command=lambda: self.sort_by_column('Notes'))
         
         self.tree.column('Category', width=100, anchor='center')
         self.tree.column('Monthly Target', width=150, anchor='center')
@@ -53,6 +57,28 @@ class BudgetTab(ttk.Frame):
 
     def on_tab_opened(self): # Trigger refresh when switching to tab from another
         self.refresh_budgets()
+
+    def sort_by_column(self, column):
+        if self.sort_column == column:
+            self.sort_reverse = not self.sort_reverse
+        else:
+            self.sort_column = column
+            self.sort_reverse = False
+
+        # Build a list of (value, item_id) tuples for sorting
+        items = [(self.tree.set(item, column), item) for item in self.tree.get_children('')]
+
+        # Choose sorting strategy depending on column type
+        if column == 'Monthly Target':
+            # Parse formatted currency strings back to ints for numeric sort
+            items.sort(key=lambda x: int(x[0].replace('$', '').replace(',', '').replace('-', '-')), reverse=self.sort_reverse)
+        else:
+            # Case-insensitive string sort for other columns
+            items.sort(key=lambda x: x[0].lower(), reverse=self.sort_reverse)
+
+        # Reorder the tree items according to sorted order
+        for index, (val, item) in enumerate(items):
+            self.tree.move(item, '', index)
     
     def refresh_budgets(self):
         # Clear existing rows

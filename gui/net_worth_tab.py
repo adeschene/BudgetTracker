@@ -18,6 +18,10 @@ class NetWorthTab(ttk.Frame):
 
         self.asset_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
 
+        # Sorting state
+        self.sort_column = None
+        self.sort_reverse = False
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -65,11 +69,11 @@ class NetWorthTab(ttk.Frame):
                     show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
 
-        self.tree.heading('Date', text='Date')
-        self.tree.heading('Asset', text='Asset/Liability Name')
-        self.tree.heading('Type', text='Type')
-        self.tree.heading('Value', text='Value')
-        self.tree.heading('Notes', text='Notes')
+        self.tree.heading('Date', text='Date', command=lambda: self.sort_by_column('Date'))
+        self.tree.heading('Asset', text='Asset/Liability Name', command=lambda: self.sort_by_column('Asset'))
+        self.tree.heading('Type', text='Type', command=lambda: self.sort_by_column('Type'))
+        self.tree.heading('Value', text='Value', command=lambda: self.sort_by_column('Value'))
+        self.tree.heading('Notes', text='Notes', command=lambda: self.sort_by_column('Notes'))
 
         self.tree.column('Date', width=100, anchor='center')
         self.tree.column('Asset', width=200, anchor='center')
@@ -182,6 +186,30 @@ class NetWorthTab(ttk.Frame):
             self.breakdown_text.insert('end', "No entries yet")
 
         self.breakdown_text.config(state='disabled')
+
+    def sort_by_column(self, column):
+        if self.sort_column == column:
+            self.sort_reverse = not self.sort_reverse
+        else:
+            self.sort_column = column
+            self.sort_reverse = False
+
+        # Build a list of (value, item_id) tuples for sorting
+        items = [(self.tree.set(item, column), item) for item in self.tree.get_children('')]
+
+        # Choose sorting strategy depending on column type
+        if column == 'Value':
+            # Parse formatted currency strings back to ints for numeric sort
+            items.sort(key=lambda x: int(x[0].replace('$', '').replace(',', '').replace('-', '-')), reverse=self.sort_reverse)
+        elif column == 'Date':
+            items.sort(key=lambda x: x[0], reverse=self.sort_reverse)
+        else:
+            # Case-insensitive string sort for other columns
+            items.sort(key=lambda x: x[0].lower(), reverse=self.sort_reverse)
+
+        # Reorder the tree items according to sorted order
+        for index, (val, item) in enumerate(items):
+            self.tree.move(item, '', index)
 
     def add_entry(self):
         start_date, end_date = self.get_month_date_range()
@@ -535,6 +563,10 @@ class TemplateManagerDialog:
         self.db = db
         self.asset_types = asset_types
 
+        # Sorting state
+        self.sort_column = None
+        self.sort_reverse = False
+
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Manage Asset Template")
@@ -558,9 +590,9 @@ class TemplateManagerDialog:
                     show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
 
-        self.tree.heading('Asset', text='Name')
-        self.tree.heading('Type', text='Type')
-        self.tree.heading('Notes', text='Notes')
+        self.tree.heading('Asset', text='Name', command=lambda: self.sort_by_column('Asset'))
+        self.tree.heading('Type', text='Type', command=lambda: self.sort_by_column('Type'))
+        self.tree.heading('Notes', text='Notes', command=lambda: self.sort_by_column('Notes'))
 
         self.tree.column('Asset', width=250)
         self.tree.column('Type', width=200)
@@ -583,6 +615,22 @@ class TemplateManagerDialog:
         self.dialog.update_idletasks()
         center_window(self.dialog)
         self.dialog.deiconify()
+
+    def sort_by_column(self, column):
+        if self.sort_column == column:
+            self.sort_reverse = not self.sort_reverse
+        else:
+            self.sort_column = column
+            self.sort_reverse = False
+
+        # Build a list of (value, item_id) tuples for sorting
+        items = [(self.tree.set(item, column), item) for item in self.tree.get_children('')]
+        # Case-insensitive string sort
+        items.sort(key=lambda x: x[0].lower(), reverse=self.sort_reverse)
+
+        # Reorder the tree items according to sorted order
+        for index, (val, item) in enumerate(items):
+            self.tree.move(item, '', index)
 
     def refresh_templates(self):
         # Refresh the displayed list of asset templates from the DB

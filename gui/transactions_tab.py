@@ -143,7 +143,7 @@ class TransactionsTab(ttk.Frame):
         self.tree.heading('Amount', text='Amount', command=lambda: self.sort_by_column('Amount'))
         self.tree.heading('Category', text='Category', command=lambda: self.sort_by_column('Category'))
         self.tree.heading('Account', text='Account', command=lambda: self.sort_by_column('Account'))
-        self.tree.heading('Notes', text='Notes')
+        self.tree.heading('Notes', text='Notes', command=lambda: self.sort_by_column('Notes'))
 
         self.tree.column('Date', width=60, anchor='center')
         self.tree.column('Description', width=150)

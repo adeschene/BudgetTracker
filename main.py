@@ -17,6 +17,7 @@ def main():
     # Create a custom style that removes all internal padding
     style.configure("Nopadding.TButton", padding=0)
     # Increased button font, normal button
+    style.configure("Med.TButton", font=('Roboto', 12), padding=0)
     style.configure("Big.TButton", font=('Roboto', 16), padding=0)
     # Extend the Accent button style and add larget font
     style.configure("Big.Accent.TButton", font=('Roboto', 16), padding=0)
