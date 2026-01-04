@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from datetime import datetime
+from datetime import datetime, timedelta
 from tkcalendar import DateEntry
 from decimal import Decimal, InvalidOperation
 from utils.editable_tree import EditableTree
@@ -33,12 +33,12 @@ class TransactionsTab(ttk.Frame):
 
         ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
-        # Filter by date range (toggles date pickers enabled/disabled)
-        self.use_date_filter_var = tk.BooleanVar(value=False)
-        date_filter_check = ttk.Checkbutton(top_frame, text="By Date",
-                                          variable=self.use_date_filter_var,
-                                          command=self.toggle_date_filter)
-        date_filter_check.pack(side='left', padx=5)
+        #ttk.Label(top_frame, text='Period:').pack(side='left', padx=5)
+        self.period_var = tk.StringVar(value='All Time')
+        period_combo = ttk.Combobox(top_frame, textvariable=self.period_var, width=11, state='readonly')
+        period_combo['values'] = ['This Month', 'Last Month', 'Last Two Months', 'Last Three Months', 'This Year', 'Last Year', 'All Time', 'Custom']
+        period_combo.pack(side='left', padx=5)
+        period_combo.bind('<<ComboboxSelected>>', lambda e: self.on_period_change())
 
         ttk.Separator(top_frame, orient='vertical').pack(side='left', fill='y', padx=5, pady=2)
 
@@ -107,7 +107,7 @@ class TransactionsTab(ttk.Frame):
         self.fuzzy_threshold_var = tk.DoubleVar(value=0.9)
         self.fuzzy_threshold_scale = ttk.Scale(top_frame, from_=0.1, to=1.0, orient='horizontal', variable=self.fuzzy_threshold_var)
         self.fuzzy_threshold_scale.pack(side='left', padx=(3, 5))
-        self.fuzzy_threshold_scale.configure(length=65, state='disabled')
+        self.fuzzy_threshold_scale.configure(length=55, state='disabled')
         self.fuzzy_threshold_label = ttk.Label(top_frame, text=f'Threshold: {self.fuzzy_threshold_var.get():.2f}')
         self.fuzzy_threshold_label.pack(side='left', padx=(4, 0))
 
@@ -172,6 +172,16 @@ class TransactionsTab(ttk.Frame):
     def on_tab_opened(self): # Trigger refresh when switching to tab from another
         self.refresh_transactions()
 
+    # Enable date pickers when using custom timeframe
+    def on_period_change(self, event=None):
+        if self.period_var.get() == 'Custom':
+            self.start_date_picker.config(state='readonly')
+            self.end_date_picker.config(state='readonly')
+        else:
+            self.start_date_picker.config(state='disabled')
+            self.end_date_picker.config(state='disabled')
+        self.refresh_transactions()
+
     def manage_import_templates(self):
         ImportTemplateManager(self, self.db)
     
@@ -179,17 +189,57 @@ class TransactionsTab(ttk.Frame):
         categories = self.db.get_categories()
         category_names = [''] + [cat['name'] for cat in categories]
         self.category_combo['values'] = category_names
+
+    # Report timeframe picker logic
+    def get_date_range(self):
+        period = self.period_var.get()
+        today = datetime.now()
+
+        match period:
+            case 'This Month':
+                start = today.replace(day=1)
+                end = today
+            case 'Last Month':
+                first_this_month = today.replace(day=1)
+                end = first_this_month - timedelta(days=1)
+                start = end.replace(day=1)
+            case 'Last Two Months':
+                first_of_this_month = today.replace(day=1)
+                last_month_end = first_of_this_month - timedelta(days=1)
+                start = last_month_end.replace(day=1)
+                end = today
+            case 'Last Three Months':
+                this_month = today.month
+                this_year = today.year
+                match this_month:
+                    case 2: start_month = 12
+                    case 1: start_month = 11
+                    case _: start_month = this_month - 2
+                start_year = this_year - 1 if start_month == 12 or 11 else this_year
+                start = today.replace(year=start_year, month=start_month, day=1)
+                end = today
+            case 'This Year':
+                start = today.replace(month=1, day=1)
+                end = today
+            case 'Last Year':
+                start = today.replace(year=today.year-1, month=1, day=1)
+                end = today.replace(year=today.year-1, month=12, day=31)
+            case 'Custom':
+                start = self.start_date_picker.get_date()
+                end = self.end_date_picker.get_date()
+            case _: # All Time chosen, show everything
+                return None, None
+
+        # Return start and end dates as ISO strings for DB queries
+        return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
     
     def refresh_transactions(self):
         # Clear existing rows
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        # Prepare filter arguments (date filter is optional)
-        if self.use_date_filter_var.get():
-            start, end = self.start_date_picker.get_date(), self.end_date_picker.get_date()
-            start_date, end_date = start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
-        else: start_date, end_date = None, None
+        # Prepare filter arguments
+        start_date, end_date = self.get_date_range()
         category = self.category_var.get() or None
 
         # Fetch transactions from DB and insert into the treeview
@@ -198,7 +248,7 @@ class TransactionsTab(ttk.Frame):
         keyword = self.keyword_var.get().strip()
 
         if keyword != '':
-            # filter by exact or fuzzy match on description based on checkbox
+            # Filter by exact or fuzzy match on description based on checkbox
             search_exact = self.use_exact_keyword_filter_var.get()
             if search_exact:
                 filtered = [t for t in transactions if exact_match(keyword, t.get('description', ''))]
@@ -247,12 +297,6 @@ class TransactionsTab(ttk.Frame):
             self.refresh_transactions()
             messagebox.showinfo("Success", f"Imported {dialog.count} transactions")
 
-    def toggle_date_filter(self):
-        state = 'readonly' if self.use_date_filter_var.get() else 'disabled'
-        self.start_date_picker.configure(state=state)
-        self.end_date_picker.configure(state=state)
-        self.refresh_transactions()
-
     def toggle_search_method(self):
         state = 'disabled' if self.use_exact_keyword_filter_var.get() else 'normal'
         self.fuzzy_threshold_scale.configure(state=state)
@@ -260,7 +304,7 @@ class TransactionsTab(ttk.Frame):
         self.refresh_transactions()
 
     def clear_filters(self):
-        self.use_date_filter_var.set(False)
+        self.period_var.set('All Time')
         self.start_date_picker.set_date(datetime.now())
         self.end_date_picker.set_date(datetime.now())
         self.start_date_picker.configure(state='disabled')
