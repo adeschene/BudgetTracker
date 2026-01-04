@@ -327,10 +327,10 @@ class VisualizationsTab(ttk.Frame):
                 start = self.start_date_picker.get_date()
                 end = self.end_date_picker.get_date()
             case _: # All Time chosen, handled case-by-case in refresh methods
-                return None, None
+                return None, None, None, None
 
         # Return ISO date strings useful for DB queries
-        return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
+        return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d'), start.strftime('%m/%d/%Y'), end.strftime('%m/%d/%Y')
 
     def _month_range(self, start_date: str, end_date: str):
         # return list of YYYY-MM strings from start to end inclusive
@@ -409,8 +409,8 @@ class VisualizationsTab(ttk.Frame):
             # Grouped bar chart showing assets, liabilities and net worth over time
             self.ax1.clear()
 
-            # Respect selected period (start/end) if provided; otherwise use all history
-            start_date, end_date = self.get_date_range()
+            # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+            start_date, end_date, display_start, display_end = self.get_date_range()
 
             history = self.db.get_net_worth_history() # Get all net worth entries in DB
 
@@ -490,10 +490,7 @@ class VisualizationsTab(ttk.Frame):
             # Origin line
             self.ax1.axhline(y=0, color=VIS_CLRS['normal_text'], linestyle='-', linewidth=1)
 
-            if start_date and end_date:
-                formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-                formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            self.ax1.set_title('Net Worth Breakdown\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+            self.ax1.set_title('Net Worth Breakdown\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
 
             self.ax1.set_xticks(range(len(months)))
             self.ax1.set_xticklabels(month_labels, rotation=90) # Use vertical month labels
@@ -537,8 +534,9 @@ class VisualizationsTab(ttk.Frame):
         # Grouped bar chart showing assets, liabilities and net worth over time
         self.ax2.clear()
 
-        # Respect selected period (start/end) if provided; otherwise use all history
-        start_date, end_date = self.get_date_range()
+        # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+        start_date, end_date, display_start, display_end = self.get_date_range()
+
         tx = self._get_transactions_in_range(start_date, end_date)
 
         if not tx:
@@ -568,10 +566,7 @@ class VisualizationsTab(ttk.Frame):
         # Origin line
         self.ax2.axhline(y=0, color=VIS_CLRS['normal_text'], linestyle='-', linewidth=1)
 
-        if start_date and end_date:
-            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-        self.ax2.set_title('Total Income, Expenses & Savings\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+        self.ax2.set_title('Total Income, Expenses & Savings\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
         
         # Label setup
         labels = ['Income','Expenses','Savings']
@@ -581,7 +576,6 @@ class VisualizationsTab(ttk.Frame):
         # Formatting
         self.ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x:,.0f}'))
         self.ax2.grid(True, axis='y', alpha=0.3, linestyle=':')
-        #self.ax2.legend(facecolor='#313131', edgecolor='whitesmoke', labelcolor='whitesmoke')
 
         # Coloring
         self.ax2.spines['top'].set_color(VIS_CLRS['normal_text'])
@@ -606,8 +600,12 @@ class VisualizationsTab(ttk.Frame):
     def refresh_income_chart(self):
         # Line/bar chart showing income totals per month
         self.ax3.clear()
-        start_date, end_date = self.get_date_range()
+        
+        # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+        start_date, end_date, display_start, display_end = self.get_date_range()
+
         tx = self._get_transactions_in_range(start_date, end_date)
+
         monthly = self._aggregate_monthly(tx, kind='income')
 
         if not monthly:
@@ -628,12 +626,10 @@ class VisualizationsTab(ttk.Frame):
         avg = sum(values) / len(values) if values else 0.0
 
         # Average line
-        self.ax3.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1)
+        self.ax3.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average')
+        self.ax3.legend(facecolor=VIS_CLRS['normal_bg'], edgecolor=VIS_CLRS['normal_text'], labelcolor=VIS_CLRS['normal_text'])
 
-        if start_date and end_date:
-            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-        self.ax3.set_title('Income Over Time\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+        self.ax3.set_title('Income Over Time\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
 
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax3.set_xticks(range(len(months)))
@@ -660,8 +656,12 @@ class VisualizationsTab(ttk.Frame):
     def refresh_expenses_chart(self):
         # Bar chart showing expense totals per month
         self.ax4.clear()
-        start_date, end_date = self.get_date_range()
+
+        # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+        start_date, end_date, display_start, display_end = self.get_date_range()
+
         tx = self._get_transactions_in_range(start_date, end_date)
+
         monthly = self._aggregate_monthly(tx, kind='expense')
 
         if not monthly:
@@ -679,12 +679,18 @@ class VisualizationsTab(ttk.Frame):
 
         bars = self.ax4.bar(range(len(months)), values, color=VIS_CLRS['expense'], alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
         avg = sum(values) / len(values) if values else 0.0
-        self.ax4.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1)
+        self.ax4.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average')
+
+        try: # Add budget line (sum of all budgets) if budgets exists for this category
+            budgets = self.db.get_budget_targets()
+            budget_sum = sum([b['monthly_target'] for b in budgets])
+            if budget_sum > 0:
+                self.ax4.axhline(y=budget_sum, color=VIS_CLRS['expense'], linestyle='-', linewidth=2, label=f'Budget: ${budget_sum:,.0f}')
+                self.ax4.legend(facecolor=VIS_CLRS['normal_bg'], edgecolor=VIS_CLRS['normal_text'], labelcolor=VIS_CLRS['normal_text'])
+        except Exception:
+            pass
         
-        if start_date and end_date:
-            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-        self.ax4.set_title('Expenses Over Time\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+        self.ax4.set_title('Expenses Over Time\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
         
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax4.set_xticks(range(len(months)))
@@ -711,7 +717,10 @@ class VisualizationsTab(ttk.Frame):
     def refresh_savings_chart(self):
         # Savings = income - expenses per month
         self.ax5.clear()
-        start_date, end_date = self.get_date_range()
+
+        # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+        start_date, end_date, display_start, display_end = self.get_date_range()
+
         tx = self._get_transactions_in_range(start_date, end_date)
 
         # aggregate incomes and expenses per month
@@ -738,12 +747,10 @@ class VisualizationsTab(ttk.Frame):
         # Origin line
         self.ax5.axhline(y=0, color=VIS_CLRS['normal_text'], linestyle='-', linewidth=1)
         # Average line
-        self.ax5.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1)
+        self.ax5.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average')
+        self.ax5.legend(facecolor=VIS_CLRS['normal_bg'], edgecolor=VIS_CLRS['normal_text'], labelcolor=VIS_CLRS['normal_text'])
 
-        if start_date and end_date:
-            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-        self.ax5.set_title('Savings Over Time\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+        self.ax5.set_title('Savings Over Time\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
         
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax5.set_xticks(range(len(months)))
@@ -773,8 +780,12 @@ class VisualizationsTab(ttk.Frame):
     
     def refresh_expense_breakdown_chart(self):
         self.ax6.clear()
-        start_date, end_date = self.get_date_range()
+
+        # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+        start_date, end_date, display_start, display_end = self.get_date_range()
+
         expenses = self.db.get_category_totals_by_type(start_date, end_date, type='expense')
+
         cat_dict = self.db.get_categories(cat_type='expense') 
 
         if not expenses or not cat_dict:
@@ -793,12 +804,10 @@ class VisualizationsTab(ttk.Frame):
         avg = sum(list(filter(None, values))) / len(list(filter(None, values))) if values else 0.0
 
         # Average line
-        self.ax6.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1)
+        self.ax6.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average')
+        self.ax6.legend(facecolor=VIS_CLRS['normal_bg'], edgecolor=VIS_CLRS['normal_text'], labelcolor=VIS_CLRS['normal_text'])
 
-        if start_date and end_date:
-            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-        self.ax6.set_title('Expenses Breakdown\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+        self.ax6.set_title('Expenses Breakdown\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
         
         self.ax6.set_xticks(range(len(sorted_cats)))
         self.ax6.set_xticklabels(sorted_cats, rotation=45, ha='right') # Use tilted category labels
@@ -824,8 +833,11 @@ class VisualizationsTab(ttk.Frame):
     def refresh_income_breakdown_chart(self):
         self.ax7.clear()
 
-        start_date, end_date = self.get_date_range()
+        # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+        start_date, end_date, display_start, display_end = self.get_date_range()
+
         income = self.db.get_category_totals_by_type(start_date, end_date, type='income')
+
         cat_dict = self.db.get_categories(cat_type='income') 
 
         if not income or not cat_dict:
@@ -844,12 +856,10 @@ class VisualizationsTab(ttk.Frame):
         avg = sum(list(filter(None, values))) / len(list(filter(None, values))) if values else 0.0
 
         # Average line
-        self.ax7.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1)
+        self.ax7.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average')
+        self.ax7.legend(facecolor=VIS_CLRS['normal_bg'], edgecolor=VIS_CLRS['normal_text'], labelcolor=VIS_CLRS['normal_text'])
 
-        if start_date and end_date:
-            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-        self.ax7.set_title('Income Breakdown\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+        self.ax7.set_title('Income Breakdown\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
         
         self.ax7.set_xticks(range(len(sorted_cats)))
         self.ax7.set_xticklabels(sorted_cats, rotation=45, ha='right') # Use tilted category labels
@@ -888,7 +898,9 @@ class VisualizationsTab(ttk.Frame):
             self.canvas8.draw()
             return
 
-        start_date, end_date = self.get_date_range()
+        # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+        start_date, end_date, display_start, display_end = self.get_date_range()
+
         tx = self._get_transactions_in_range(start_date, end_date)
 
         # filter by category (exact match)
@@ -914,9 +926,6 @@ class VisualizationsTab(ttk.Frame):
         bars = self.ax8.bar(range(len(months)), values, color=VIS_CLRS['neutral'], alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
         avg = sum(values) / len(values) if values else 0.0
 
-        # Average line
-        self.ax8.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1)
-
         # Add budget line if budget exists for this category
         try:
             budgets = self.db.get_budget_targets()
@@ -925,17 +934,17 @@ class VisualizationsTab(ttk.Frame):
                 # budget is monthly target; draw as horizontal line
                 monthly_budget = budget['monthly_target']
                 self.ax8.axhline(y=monthly_budget, color=VIS_CLRS['income'], linestyle='-', linewidth=2, label=f'Budget: ${monthly_budget:,.2f}')
-                self.ax8.legend(facecolor=VIS_CLRS['normal_bg'], edgecolor=VIS_CLRS['normal_text'], labelcolor=VIS_CLRS['normal_text'])
         except Exception:
             pass
+
+        # Average line
+        self.ax8.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average')
+        self.ax8.legend(facecolor=VIS_CLRS['normal_bg'], edgecolor=VIS_CLRS['normal_text'], labelcolor=VIS_CLRS['normal_text'])
 
         # Origin line
         self.ax8.axhline(y=0, color=VIS_CLRS['normal_text'], linestyle='-', linewidth=1)
 
-        if start_date and end_date:
-            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-        self.ax8.set_title(f'Category: {category}\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+        self.ax8.set_title(f'Category: {category}\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
         
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax8.set_xticks(range(len(months)))
@@ -962,6 +971,7 @@ class VisualizationsTab(ttk.Frame):
     def refresh_keyword_drilldown_chart(self):
         # Draw monthly totals for transactions that match the provided keyword
         self.ax9.clear()
+
         keyword = self.keyword_var.get().strip()
         if not keyword:
             self.ax9.text(0.5, 0.5, 'Enter a keyword to search transactions', ha='center', va='center', transform=self.ax9.transAxes, fontsize=14, color=VIS_CLRS['normal_text'])
@@ -969,7 +979,9 @@ class VisualizationsTab(ttk.Frame):
             self.canvas9.draw()
             return
 
-        start_date, end_date = self.get_date_range()
+        # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
+        start_date, end_date, display_start, display_end = self.get_date_range()
+        
         tx = self._get_transactions_in_range(start_date, end_date)
 
         # filter by exact or fuzzy match on description based on checkbox
@@ -1001,15 +1013,13 @@ class VisualizationsTab(ttk.Frame):
         avg = sum(values) / len(values) if values else 0.0
 
         # Average line
-        self.ax9.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1)
+        self.ax9.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average')
+        self.ax9.legend(facecolor=VIS_CLRS['normal_bg'], edgecolor=VIS_CLRS['normal_text'], labelcolor=VIS_CLRS['normal_text'])
 
         # Origin line
         self.ax9.axhline(y=0, color=VIS_CLRS['normal_text'], linestyle='-', linewidth=1)
 
-        if start_date and end_date:
-            formatted_start_date = datetime.strptime(start_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-            formatted_end_date = datetime.strptime(end_date, "%Y-%m-%d").strftime("%m/%d/%Y")
-        self.ax9.set_title(f'Keyword: {keyword}\n' + (f'({formatted_start_date} - {formatted_end_date})' if start_date else '(All Time)'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
+        self.ax9.set_title(f'Keyword: {keyword}\n' + ('(All Time)' if self.period_var.get() == 'All Time' else f'({display_start} - {display_end})'), fontsize=14, fontweight='bold', pad=12, color=VIS_CLRS['normal_text'])
         
         labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%b %Y') for m in months]
         self.ax9.set_xticks(range(len(months)))
