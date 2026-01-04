@@ -91,7 +91,7 @@ class VisualizationsTab(ttk.Frame):
 
         # --- Net Worth Tab ---
         net_tab = ttk.Frame(self.inner_notebook)
-        self.inner_notebook.add(net_tab, text='Net Worth Over Time')
+        self.inner_notebook.add(net_tab, text='   Net Worth   ')
         net_worth_frame = ttk.Frame(net_tab)
         net_worth_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure1 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
@@ -102,7 +102,7 @@ class VisualizationsTab(ttk.Frame):
 
         # --- Income, Expenses, & Savings Tab ---
         mixed_tab = ttk.Frame(self.inner_notebook)
-        self.inner_notebook.add(mixed_tab, text='Money In/Out')
+        self.inner_notebook.add(mixed_tab, text='  Money In/Out  ')
         mixed_frame = ttk.Frame(mixed_tab)
         mixed_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure2 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
@@ -113,7 +113,7 @@ class VisualizationsTab(ttk.Frame):
 
         # --- Income Over Time Tab ---
         income_tab = ttk.Frame(self.inner_notebook)
-        self.inner_notebook.add(income_tab, text='Income')
+        self.inner_notebook.add(income_tab, text='     Income     ')
         income_frame = ttk.Frame(income_tab)
         income_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure3 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
@@ -124,7 +124,7 @@ class VisualizationsTab(ttk.Frame):
 
         # --- Expenses Over Time Tab ---
         expenses_tab = ttk.Frame(self.inner_notebook)
-        self.inner_notebook.add(expenses_tab, text='Expenses')
+        self.inner_notebook.add(expenses_tab, text='    Expenses    ')
         expenses_time_frame = ttk.Frame(expenses_tab)
         expenses_time_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure4 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
@@ -135,7 +135,7 @@ class VisualizationsTab(ttk.Frame):
 
         # --- Savings Over Time Tab ---
         savings_tab = ttk.Frame(self.inner_notebook)
-        self.inner_notebook.add(savings_tab, text='Savings')
+        self.inner_notebook.add(savings_tab, text='    Savings    ')
         savings_frame = ttk.Frame(savings_tab)
         savings_frame.pack(fill='both', expand=True, padx=5, pady=5)
         self.figure5 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
@@ -981,7 +981,7 @@ class VisualizationsTab(ttk.Frame):
 
         # Respect selected period (start/end) if provided (+ displayable dates); otherwise use all history
         start_date, end_date, display_start, display_end = self.get_date_range()
-        
+
         tx = self._get_transactions_in_range(start_date, end_date)
 
         # filter by exact or fuzzy match on description based on checkbox

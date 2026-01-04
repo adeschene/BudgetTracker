@@ -504,7 +504,7 @@ namespace eval ttk::theme::forest-dark {
             [list $I(tab-basic) \
                 selected $I(tab-accent) \
                 active $I(tab-hover) \
-            ] -border {5 4} -padding {14 6 14 13}
+            ] -border {5 4} -padding {14 6 14 12}
 
         # Treeview
         ttk::style element create Treeview.field image $I(card) \

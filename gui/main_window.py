@@ -39,7 +39,7 @@ class MainWindow:
         self.control_frame.rowconfigure(0, weight=1)
 
         # Place notebook in the center column
-        self.notebook = ttk.Notebook(self.control_frame, style='Centered.TNotebook')
+        self.notebook = ttk.Notebook(self.control_frame, style='Main.Centered.TNotebook')
         self.notebook.grid(row=0, column=0, columnspan=3, sticky='nsew')
 
         # Triggers the on_tab_opened function within a tab class when switching to it, if it exists
@@ -61,10 +61,10 @@ class MainWindow:
 
         # Attach tabs to the notebook
         self.notebook.add(self.transactions_tab, text="Transactions")
-        self.notebook.add(self.net_worth_tab, text="Net Worth")
-        self.notebook.add(self.budget_tab, text="Budget")
-        self.notebook.add(self.visualizations_tab, text="Visualizations")
-        self.notebook.add(self.reports_tab, text="Reports")
+        self.notebook.add(self.net_worth_tab, text="  Net Worth  ")
+        self.notebook.add(self.budget_tab, text="   Budget   ")
+        self.notebook.add(self.visualizations_tab, text="Visualization")
+        self.notebook.add(self.reports_tab, text="   Report   ")
 
         # Small container frame for the buttons to keep them together on the right
         self.button_container = ttk.Frame(self.control_frame)

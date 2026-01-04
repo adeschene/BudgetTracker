@@ -23,7 +23,7 @@ def main():
     # Create a custom style for font in net worth template application LabelFrames
     style.configure("NWTE.TLabelframe.Label", font=('Roboto', 11))
     # Styling for main tab notebook
-    style.configure("Centered.TNotebook", tabposition='n', tabmargins=[0, 5, 0, 0]) 
+    style.configure("Centered.TNotebook", tabposition='n', tabmargins=[0, 5, 0, 0])
     style.layout("Centered.TNotebook.Tab", [
         ('Notebook.tab', {'sticky': 'nswe', 'children': [
             ('Notebook.padding', {'side': 'top', 'sticky': 'nswe', 'children': [
@@ -31,6 +31,9 @@ def main():
             })]
         })]
     )
+    # Extend centered style for main window tabs specifically, larger font, more padding
+    style.configure("Main.Centered.TNotebook.Tab", font=('Roboto', 11), padding=[8, 0, 8, 0])
+    
 
     app = MainWindow(root)
 
