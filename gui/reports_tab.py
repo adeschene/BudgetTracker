@@ -154,8 +154,20 @@ class ReportsTab(ttk.Frame):
 
         start_date, end_date, display_start, display_end = self.get_date_range()
         
-        # Fetch transactions within the requested date range
+        # Fetch transactions within the requested date range (ordered by date > descending)
         transactions = self.db.get_transactions(start_date, end_date)
+
+        # All time handling for income/expenses/budget sections
+        if self.period_var.get() == 'All Time':
+            start_date = transactions[-1]['date']
+            end_date = transactions[0]['date']
+        
+        # Calculate difference in months for conditional logic (Spending)
+        diff = relativedelta(datetime.strptime(end_date, '%Y-%m-%d'), datetime.strptime(start_date, '%Y-%m-%d'))
+        months_diff = diff.years * 12 + diff.months
+        total_months = months_diff + 1
+
+        period_label = "" if total_months == 1 else f" ({total_months} Months)"
         
         # Aggregate simple totals for the report
         total_income = sum(Decimal(t['amount'])/100 for t in transactions if t['amount'] > 0)
@@ -195,8 +207,8 @@ class ReportsTab(ttk.Frame):
         <body>
         <div class="header">FINANCIAL REPORT</div>
         <p><strong>Period:</strong> {display_start + ' to ' + display_end if display_start else 'All Time'}</p>
-
-        <div class="section-title">INCOME & EXPENSES</div>
+        
+        <div class="section-title">INCOME & EXPENSES{period_label}</div>
         <table>
             <tr><td>Total Income:</td><td class="income">${total_income:,.2f}</td></tr>
             <tr><td>Total Expenses:</td><td class="expense">${total_expenses:,.2f}</td></tr>
@@ -208,7 +220,7 @@ class ReportsTab(ttk.Frame):
         spending_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='expense')
 
         if spending_by_category:
-            html_output += "<div class='section-title'>SPENDING BY CATEGORY</div>"
+            html_output += f"<div class='section-title'>SPENDING BY CATEGORY{period_label}</div>"
             html_output += "<table><tr><th>Category</th><th>Amount</th><th>Percent</th></tr>"
             sorted_categories = sorted(spending_by_category.items(), key=lambda x: x[1], reverse=True)
             total_exp_cents = sum(spending_by_category.values())
@@ -221,13 +233,14 @@ class ReportsTab(ttk.Frame):
 
         # --- Budget vs Actual ---
         budget_targets = self.db.get_budget_targets()
+
         if budget_targets:
-            html_output += "<div class='section-title'>BUDGET VS ACTUAL</div>"
+            html_output += f"<div class='section-title'>BUDGET VS ACTUAL{period_label}</div>"
             html_output += "<table>"
-            html_output += "<tr><th>Category</th><th>Budget</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
+            html_output += f"<tr><th>Category</th><th>Budget{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
             for budget in budget_targets:
                 category = budget['category']
-                budget_amount = budget['monthly_target']
+                budget_amount = budget['monthly_target'] if total_months == 1 else budget['monthly_target'] * total_months
                 actual_amount = Decimal(spending_by_category.get(category, 0))/100
                 difference = budget_amount - actual_amount
                 
@@ -256,22 +269,27 @@ class ReportsTab(ttk.Frame):
                 percentage = (Decimal(amount) / total_income) if total_income > 0 else 0
         
         # --- NET WORTH SECTION ---
-        net_worth_entries = self.db.get_net_worth_entries(start_date, end_date)
+
+        # Change start/end dates based on net worth entries
+        if self.period_var.get() == 'All Time':
+            net_worth_entries = self.db.get_net_worth_entries() # Ordered by date > ascending
+            start_date = net_worth_entries[0]['date']
+            end_date = net_worth_entries[-1]['date']
+            print(start_date, end_date)
+            
+        net_worth_entries = self.db.get_net_worth_entries(start_date, end_date) # Ordered by date > ascending
 
         if not net_worth_entries:
             return
-        
-        html_output += '<div class="section-title">NET WORTH</div>'
 
-        if not start_date and not end_date: # 'All Time' handler
-            all_dates = [datetime.strptime(e['date'], '%Y-%m-%d') for e in net_worth_entries]
-            
-            start_date = datetime.strftime(min(all_dates), '%Y-%m-%d')
-            end_date = datetime.strftime(max(all_dates), '%Y-%m-%d')
-        
-        # Calculate difference in months for conditional logic
+        # Calculate difference in months for conditional logic (Net worth section)
         diff = relativedelta(datetime.strptime(end_date, '%Y-%m-%d'), datetime.strptime(start_date, '%Y-%m-%d'))
-        total_months = diff.years * 12 + diff.months
+        months_diff = diff.years * 12 + diff.months
+        total_months = months_diff + 1
+
+        period_label = "" if total_months == 1 else f" ({total_months} Months)"
+        
+        html_output += f'<div class="section-title">NET WORTH{period_label}</div>'
 
         chart_base64_url = None
 
@@ -279,7 +297,7 @@ class ReportsTab(ttk.Frame):
         monthly_data = self.group_by_month(net_worth_entries)
         sorted_months = sorted(monthly_data.keys())
 
-        if total_months >= 6: # Create trend chart if looking at span of at least 6 months
+        if months_diff >= 6: # Create trend chart if looking at span of at least 6 months
             chart_base64_url = self.generate_net_worth_chart(monthly_data, sorted_months)
             
         # Grab the First and Latest month snapshots
