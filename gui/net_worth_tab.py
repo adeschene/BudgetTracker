@@ -5,7 +5,7 @@ from calendar import monthrange
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
 from utils.editable_tree import EditableTree
-from utils.helpers import center_window, validate_money_string
+from utils.helpers import center_window, validate_money_string, DP_COLORS
 
 class NetWorthTab(ttk.Frame):
     def __init__(self, parent, db: DatabaseManager, **kwargs):
@@ -337,14 +337,14 @@ class NetWorthDialog:
 
         ttk.Label(self.dialog, text="Date:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
         self.date_picker = DateEntry(self.dialog, width=18, firstweekday='sunday',
-                                    background='#232323', foreground='whitesmoke',
-                                    headersbackground='#454545', headersforeground='whitesmoke',
-                                    othermonthwebackground='#565656', othermonthweforeground='whitesmoke',
-                                    weekendbackground='#666666', weekendforeground='whitesmoke',
-                                    othermonthbackground='#777777', othermonthforeground='#232323',
-                                    normalbackground='#888888', normalforeground='black',
-                                    disableddaybackground='#454545', disableddayforeground='#888888',
-                                    bordercolor='#343434', borderwidth=2, date_pattern='mm-dd-yyyy',
+                                    background=DP_COLORS['main_bg'], foreground=DP_COLORS['main_fg'],
+                                    headersbackground=DP_COLORS['header_bg'], headersforeground=DP_COLORS['header_fg'],
+                                    othermonthwebackground=DP_COLORS['otherwe_bg'], othermonthweforeground=DP_COLORS['otherwe_fg'],
+                                    weekendbackground=DP_COLORS['weekend_bg'], weekendforeground=DP_COLORS['weekend_fg'],
+                                    othermonthbackground=DP_COLORS['other_bg'], othermonthforeground=DP_COLORS['other_fg'],
+                                    normalbackground=DP_COLORS['nm_bg'], normalforeground=DP_COLORS['nm_fg'],
+                                    disableddaybackground=DP_COLORS['disabled_bg'], disableddayforeground=DP_COLORS['disabled_fg'],
+                                    bordercolor=DP_COLORS['border'], borderwidth=2, date_pattern='mm-dd-yyyy',
                                     maxdate=datetime.now(), year=date_obj.year,
                                     month=date_obj.month, day=date_obj.day)
         self.date_picker.grid(row=0, column=1, padx=10, pady=10, sticky='ew')

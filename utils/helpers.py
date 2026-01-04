@@ -108,3 +108,51 @@ def validate_money_string(new_value: str, allow_negative: str, allow_decimal: st
         except InvalidOperation:
             return False
     return True
+
+#----COLOR PALETTE DEFINITIONS----
+
+# Datepicker colors
+DP_COLORS = {
+    'main_bg'    : '#232323', 
+    'main_fg'    : '#f5f5f5',
+    'header_bg'  : '#454545', 
+    'header_fg'  : '#f5f5f5',
+    'otherwe_bg' : '#565656', 
+    'otherwe_fg' : '#f5f5f5',
+    'weekend_bg' : '#666666', 
+    'weekend_fg' : '#f5f5f5',
+    'other_bg'   : '#777777', 
+    'other_fg'   : '#232323',
+    'nm_bg'      : '#888888', 
+    'nm_fg'      : 'black',
+    'disabled_bg': '#454545', 
+    'disabled_fg': '#888888',
+    'border'     : '#343434'
+}
+
+# Chart color definitions
+VIS_CLRS = {
+    'normal_text': '#f5f5f5',
+    'normal_bg'  : '#313131',
+    'chart_bg'   : '#444445',
+    'highlighted': '#9D9D9D',
+    'indented'   : '#9D9D9D',
+    'emphasis'   : '#595959',
+    'income'     : '#36B56F',
+    'expense'    : '#EB5353',
+    'net'        : '#1674b4',
+    'neutral'    : '#737373',
+}
+
+# Report color definitions
+REPORT_CLRS = {
+    'normal_text': '#f5f5f5',
+    'normal_bg'  : '#313131',
+    'chart_bg'   : '#444445',
+    'highlighted': '#9D9D9D',
+    'indented'   : '#9D9D9D',
+    'emphasis'   : '#595959',
+    'income'     : '#36B56F',
+    'expense'    : '#EB5353',
+    'line'       : '#1674b4',
+}
