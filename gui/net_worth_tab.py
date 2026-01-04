@@ -345,8 +345,7 @@ class NetWorthDialog:
                                     normalbackground=DP_COLORS['nm_bg'], normalforeground=DP_COLORS['nm_fg'],
                                     disableddaybackground=DP_COLORS['disabled_bg'], disableddayforeground=DP_COLORS['disabled_fg'],
                                     bordercolor=DP_COLORS['border'], borderwidth=2, date_pattern='mm-dd-yyyy',
-                                    maxdate=datetime.now(), year=date_obj.year,
-                                    month=date_obj.month, day=date_obj.day)
+                                    maxdate=datetime.now(), year=date_obj.year, month=date_obj.month, day=date_obj.day, state='readonly')
         self.date_picker.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Asset Name:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
