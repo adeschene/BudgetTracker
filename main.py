@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 
-from matplotlib import style
 from gui.main_window import MainWindow
 
 def main():

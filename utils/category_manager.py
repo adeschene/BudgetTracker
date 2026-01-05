@@ -1,5 +1,4 @@
 import tkinter as tk
-import sqlite3
 from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
 from utils.editable_tree import EditableTree
