@@ -156,18 +156,36 @@ class TransactionsTab(ttk.Frame):
         
         self.tree.bind("<Delete>", lambda e: self.delete_transaction()) # Enable delete key to remove items
         
-        top_button_frame = ttk.Frame(self)
-        top_button_frame.pack(pady=5)
+        button_frame = ttk.Frame(self)
+        button_frame.pack(fill='x', pady=5)
+        
+        # Define grid columns: Col 0 (Left spacer), Col 1 (Tabs), Col 2 (Buttons)
+        button_frame.columnconfigure(0, weight=1, uniform='group1') # Left spacer
+        button_frame.columnconfigure(1, weight=0) # Centered button container (shrink to fit)
+        button_frame.columnconfigure(2, weight=1, uniform='group1') # Right container for count
+
+        center_btn_container = ttk.Frame(button_frame)
+        center_btn_container.grid(row=0, column=1)
 
         # Action buttons
-        ttk.Button(top_button_frame, text="Import CSV", style='Accent.TButton', command=self.import_csv).pack(side='left', padx=5)
-        ttk.Button(top_button_frame, text="Manage Templates", command=self.manage_import_templates).pack(side='left', padx=5)
+        ttk.Button(center_btn_container, text="Import CSV", style='Accent.TButton', command=self.import_csv).pack(side='left', padx=(0,5))
+        ttk.Button(center_btn_container, text="Manage Templates", command=self.manage_import_templates).pack(side='left', padx=5)
 
-        ttk.Separator(top_button_frame, orient='vertical').pack(side='left', fill='y', padx=10, pady=2)
+        ttk.Separator(center_btn_container, orient='vertical').pack(side='left', fill='y', padx=10, pady=2)
 
-        ttk.Button(top_button_frame, text="Add Transaction", style='Accent.TButton', command=self.add_transaction).pack(side='left', padx=5)
-        ttk.Button(top_button_frame, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
-        ttk.Button(top_button_frame, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=5)
+        ttk.Button(center_btn_container, text="Add Transaction", style='Accent.TButton', command=self.add_transaction).pack(side='left', padx=5)
+        ttk.Button(center_btn_container, text="Edit Transaction", command=self.edit_transaction).pack(side='left', padx=5)
+        ttk.Button(center_btn_container, text="Delete Transaction", command=self.delete_transaction).pack(side='left', padx=(5,0))
+
+        # Small container frame for the buttons to keep them together on the right
+        count_container = ttk.Frame(button_frame)
+        count_container.grid(row=0, column=2, sticky='e', padx=16)
+
+        # Display current transaction count to user
+        self.count_var = tk.StringVar()
+        self.count_label = ttk.Label(count_container, textvariable=self.count_var, style='Count.TLabel', width=14, anchor='e')
+        self.count_label.pack(side='left')
+        ttk.Label(count_container, text=' Transactions', style='Count.TLabel').pack(side='left')
 
     def on_tab_opened(self): # Trigger refresh when switching to tab from another
         self.refresh_transactions()
@@ -257,6 +275,9 @@ class TransactionsTab(ttk.Frame):
                 filtered = [t for t in transactions if fuzzy_match(keyword, t.get('description', ''), threshold=thresh)]
         else:
             filtered = transactions
+
+        # Update transaction count label
+        self.count_var.set(f'{len(filtered):,}')
 
         for trans in filtered:
             # Format amount for display, show negative amounts with a leading '-'

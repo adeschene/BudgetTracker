@@ -15,6 +15,7 @@ def main():
     # Treeview style config
     style.configure("Treeview", rowheight=30)
     # Create a custom style that removes all internal padding
+    style.configure("Count.TLabel", font=('Roboto', 10), foreground="#00AD4E")
     style.configure("Nopadding.TButton", padding=0)
     # Increased button font, normal button
     style.configure("Med.TButton", font=('Roboto', 12), padding=0)
