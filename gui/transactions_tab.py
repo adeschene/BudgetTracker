@@ -258,7 +258,7 @@ class TransactionsTab(ttk.Frame):
 
         # Prepare filter arguments
         start_date, end_date = self.get_date_range()
-        category = self.category_var.get() or None
+        category = self.db.get_category_id_by_name(self.category_var.get()) or None
 
         # Fetch transactions from DB and insert into the treeview
         transactions = self.db.get_transactions(start_date, end_date, category)
@@ -294,8 +294,8 @@ class TransactionsTab(ttk.Frame):
                 converted_date,
                 trans['description'],
                 amount_str,
-                trans['category'] or '',
-                trans['account'] or '',
+                self.db.get_category_name_by_id(trans['category_id']) or '',
+                self.db.get_account_name_by_id(trans['account_id']) or '',
                 trans['notes'] or ''
             ), tags=(trans['id'],))
     
@@ -437,9 +437,9 @@ class TransactionsTab(ttk.Frame):
             elif field_name == 'Amount':
                 transaction['amount'] = int(Decimal(new_value)*100)  # Convert from Decimal to int
             elif field_name == 'Category':
-                transaction['category'] = new_value
+                transaction['category_id'] = self.db.get_category_id_by_name(new_value)
             elif field_name == 'Account':
-                transaction['account'] = new_value
+                transaction['account_id'] = self.db.get_account_id_by_name(new_value)
             elif field_name == 'Notes':
                 transaction['notes'] = new_value
 
@@ -451,8 +451,8 @@ class TransactionsTab(ttk.Frame):
                 date=transaction['date'],
                 description=transaction['description'],
                 amount=transaction['amount'],
-                category=transaction['category'],
-                account=transaction['account'],
+                category_id=transaction['category_id'],
+                account_id=transaction['account_id'],
                 transaction_type=transaction_type,
                 notes=transaction.get('notes', '')
             )
@@ -549,8 +549,8 @@ class TransactionDialog:
                     date=self.date_picker.get_date(),
                     description=description,
                     amount=amount,
-                    category=self.category_var.get(),
-                    account=self.account_var.get(),
+                    category_id=self.db.get_category_id_by_name(self.category_var.get()),
+                    account_id=self.db.get_account_id_by_name(self.account_var.get()),
                     transaction_type=transaction_type,
                     notes=self.notes_var.get()
                 )
@@ -559,8 +559,8 @@ class TransactionDialog:
                     date=self.date_picker.get_date(),
                     description=description,
                     amount=amount,
-                    category=self.category_var.get(),
-                    account=self.account_var.get(),
+                    category_id=self.db.get_category_id_by_name(self.category_var.get()),
+                    account_id=self.db.get_account_id_by_name(self.account_var.get()),
                     transaction_type=transaction_type,
                     notes=self.notes_var.get()
                 )

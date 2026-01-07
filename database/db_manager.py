@@ -8,7 +8,9 @@ class DatabaseManager:
         self.init_database()
     
     def get_connection(self):
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON;")
+        return conn
     
     def init_database(self):
         conn = self.get_connection()
@@ -20,11 +22,13 @@ class DatabaseManager:
                 date TEXT NOT NULL,
                 description TEXT,
                 amount INTEGER NOT NULL,
-                category TEXT,
-                account TEXT,
+                category_id INTEGER,
+                account_id INTEGER,
                 transaction_type TEXT,
                 notes TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL ON UPDATE CASCADE,
+                FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
             )
         ''')
 
@@ -60,6 +64,7 @@ class DatabaseManager:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS asset_templates (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER,
                 asset_name TEXT UNIQUE NOT NULL,
                 asset_type TEXT,
                 notes TEXT
@@ -69,9 +74,10 @@ class DatabaseManager:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS budget_targets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                category TEXT UNIQUE NOT NULL,
+                category_id INTEGER UNIQUE NOT NULL,
                 monthly_target INTEGER NOT NULL,
-                notes TEXT
+                notes TEXT,
+                FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
             )
         ''')
 
@@ -79,7 +85,7 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS import_templates (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 template_name TEXT UNIQUE NOT NULL,
-                account_name TEXT NOT NULL,
+                account_id INTEGER NOT NULL,
                 date_column TEXT NOT NULL,
                 description_column TEXT NOT NULL,
                 description2_column TEXT,
@@ -88,7 +94,8 @@ class DatabaseManager:
                 debit_column TEXT,
                 credit_column TEXT,
                 skip_rows INTEGER DEFAULT 0,
-                notes TEXT
+                notes TEXT,
+                FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
             )
         ''')
 
@@ -99,9 +106,10 @@ class DatabaseManager:
                 rule_order INTEGER NOT NULL,
                 pattern TEXT NOT NULL,
                 replacement TEXT NOT NULL,
-                category TEXT,
+                category_id INTEGER,
                 ignore INTEGER DEFAULT 0,
-                FOREIGN KEY (template_id) REFERENCES import_templates(id) ON DELETE CASCADE
+                FOREIGN KEY (template_id) REFERENCES import_templates(id) ON DELETE CASCADE,
+                FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
             )
         ''')
 
@@ -135,15 +143,15 @@ class DatabaseManager:
             ''', (name, cat_type, keywords))
     
     def add_transaction(self, date: str, description: str, amount: int, 
-                       category: str = None, account: str = None, 
+                       category_id: int = None, account_id: int = None, 
                        transaction_type: str = None, notes: str = None):
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO transactions (date, description, amount, category, account, transaction_type, notes)
+            INSERT INTO transactions (date, description, amount, category_id, account_id, transaction_type, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (date, description, amount, category, account, transaction_type, notes))
+        ''', (date, description, amount, category_id, account_id, transaction_type, notes))
         
         # Return the new transaction id for caller convenience
         conn.commit()
@@ -152,27 +160,33 @@ class DatabaseManager:
         return transaction_id
     
     def get_transactions(self, start_date: str = None, end_date: str = None, 
-                        category: str = None, account: str = None) -> List[Dict]:
+                        category_id: int = None, account_id: int = None) -> List[Dict]:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        query = 'SELECT * FROM transactions WHERE 1=1'
+        query = '''
+            SELECT t.*, c.name AS category_name, a.name AS account_name 
+            FROM transactions t
+            LEFT JOIN categories c ON t.category_id = c.id
+            LEFT JOIN accounts a ON t.account_id = a.id
+            WHERE 1=1
+        '''
         params = []
         
         if start_date:
-            query += ' AND date >= ?'
+            query += ' AND t.date >= ?'
             params.append(start_date)
         if end_date:
-            query += ' AND date <= ?'
+            query += ' AND t.date <= ?'
             params.append(end_date)
-        if category:
-            query += ' AND category = ?'
-            params.append(category)
-        if account:
-            query += ' AND account = ?'
-            params.append(account)
+        if category_id:
+            query += ' AND t.category_id = ?'
+            params.append(category_id)
+        if account_id:
+            query += ' AND t.account_id = ?'
+            params.append(account_id)
         
-        query += ' ORDER BY date DESC'
+        query += ' ORDER BY t.date DESC'
         
         # Execute parameterized query and return list of dicts (column name -> value)
         cursor.execute(query, params)
@@ -183,15 +197,15 @@ class DatabaseManager:
         return transactions
     
     def update_transaction(self, transaction_id: int, date: str, description: str, 
-                      amount: int, category: str, account: str, transaction_type: str, notes: str):
+                      amount: int, category_id: int, account_id: int, transaction_type: str, notes: str):
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute('''
             UPDATE transactions 
-            SET date = ?, description = ?, amount = ?, category = ?, account = ?, transaction_type = ?, notes = ?
+            SET date = ?, description = ?, amount = ?, category_id = ?, account_id = ?, transaction_type = ?, notes = ?
             WHERE id = ?
-        ''', (date, description, amount, category, account, transaction_type, notes, transaction_id))
+        ''', (date, description, amount, category_id, account_id, transaction_type, notes, transaction_id))
     
         conn.commit()
         conn.close()
@@ -249,26 +263,31 @@ class DatabaseManager:
     def get_category_totals_by_type(self, start_date: str = None, end_date: str = None, type: str = 'expense') -> Dict[str, float]:
         conn = self.get_connection()
         cursor = conn.cursor()
-
+        # 1. Use LEFT JOIN so transactions without a category are included
+        # 2. Use COALESCE to provide a display name for NULL category_ids
         query = '''
-            SELECT category, SUM(amount) as total
-            FROM transactions
-            INNER JOIN categories ON transactions.category = categories.name
-            WHERE (categories.type = ?)
+            SELECT 
+                COALESCE(c.name, 'Uncategorized') as cat_name, 
+                SUM(t.amount) as total
+            FROM transactions t
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE (c.type = ? OR t.category_id IS NULL)
         '''
         params = [type]
 
         if start_date:
-            query += ' AND date >= ?'
+            query += ' AND t.date >= ?'
             params.append(start_date)
         if end_date:
-            query += ' AND date <= ?'
+            query += ' AND t.date <= ?'
             params.append(end_date)
 
-        query += ' GROUP BY category'
+        query += ' GROUP BY cat_name'
 
         cursor.execute(query, params)
-        totals = {row[0] or 'Uncategorized': abs(row[1]) for row in cursor.fetchall()}
+        
+        # Store results in a dictionary { 'Groceries': 450.0, 'Dining': 120.0 }
+        totals = {row[0]: abs(row[1]) for row in cursor.fetchall()}
 
         conn.close()
         return totals
@@ -277,29 +296,23 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Create a new account in the database
-        cursor.execute('''
-            INSERT OR IGNORE INTO accounts (name, type, last_updated)
-            VALUES (?, ?, ?)
-        ''', (name, account_type, datetime.now().isoformat()))
-
-        # Automatically add an asset template if the account is successfully created
-        if create_template and cursor.rowcount > 0:
-            asset_type_map = {
-                'checking': 'Checking',
-                'savings': 'Savings',
-                'credit': 'Credit Card',
-                'investment': 'Investment'
-            }
-            asset_type = asset_type_map.get(account_type, 'Other Asset')
+        try:
+            # 1. Create the account
+            cursor.execute('INSERT INTO accounts (name, type) VALUES (?, ?)', (name, account_type))
+            account_id = cursor.lastrowid
             
-            cursor.execute('''
-                INSERT OR IGNORE INTO asset_templates (asset_name, asset_type, notes)
-                VALUES (?, ?, ?)
-            ''', (name, asset_type, f'Auto-created from account'))
-
-        conn.commit()
-        conn.close()
+            # 2. Create the linked asset template using the ID
+            if create_template:
+                cursor.execute('''
+                    INSERT INTO asset_templates (account_id, asset_name, asset_type, notes) 
+                    VALUES (?, ?, ?, 'Added automatically during account creation')
+                ''', (account_id, name, account_type))
+            
+            conn.commit()
+        except sqlite3.IntegrityError:
+            print(f"Account {name} already exists.")
+        finally:
+            conn.close()
 
     def delete_account(self, account_id: int):
         conn = self.get_connection()
@@ -490,7 +503,7 @@ class DatabaseManager:
         cursor = conn.cursor()
 
         cursor.execute('''
-            SELECT DISTINCT strftime('%Y-%m', date) as month
+            SELECT DISTINCT strftime('%Y-%m', date) AS month
             FROM net_worth_entries
             ORDER BY month
         ''')
@@ -528,40 +541,47 @@ class DatabaseManager:
         conn.close()
         return history
 
-    def add_budget_target(self, category: str, monthly_target: int, notes: str = None):
+    def add_budget_target(self, category_id: int, monthly_target: int, notes: str = None):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO budget_targets (category, monthly_target, notes)
+            INSERT INTO budget_targets (category_id, monthly_target, notes)
             VALUES (?, ?, ?)
-        ''', (category, monthly_target, notes))
+        ''', (category_id, monthly_target, notes))
         conn.commit()
         conn.close()
 
     def get_budget_targets(self) -> List[Dict]:
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT id, category, monthly_target, notes FROM budget_targets ORDER BY category')
+        # Join with the categories table to get the name for the UI
+        cursor.execute('''
+            SELECT b.id, b.category_id, c.name, b.monthly_target, b.notes 
+            FROM budget_targets b
+            JOIN categories c ON b.category_id = c.id
+            ORDER BY c.name
+        ''')
 
         budgets = []
         for row in cursor.fetchall():
             budgets.append({
                 'id': row[0],
-                'category': row[1],
-                'monthly_target': row[2],
-                'notes': row[3]
+                'category_id': row[1],
+                'category_name': row[2],
+                'monthly_target': row[3],
+                'notes': row[4]
             })
-
+        
         conn.close()
         return budgets
 
-    def update_budget_target(self, budget_id: int, category: str, monthly_target: int, notes: str = None):
+    def update_budget_target(self, budget_id: int, category_id: int, monthly_target: int, notes: str = None):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            UPDATE budget_targets SET category = ?, monthly_target = ?, notes = ?
+            UPDATE budget_targets SET category_id = ?, monthly_target = ?, notes = ?
             WHERE id = ?
-        ''', (category, monthly_target, notes, budget_id))
+        ''', (category_id, monthly_target, notes, budget_id))
         conn.commit()
         conn.close()
 
@@ -572,16 +592,16 @@ class DatabaseManager:
         conn.commit()
         conn.close()
 
-    def add_import_template(self, template_name: str, account_name: str, date_column: str,
+    def add_import_template(self, template_name: str, account_id: int, date_column: str,
                            description_column: str, amount_column: str = None, skip_rows: int = 0, notes: str = None,
                            debit_column: str = None, credit_column: str = None,
                            description2_column: str = None, description_delimiter: str = ' - '):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO import_templates (template_name, account_name, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes)
+            INSERT INTO import_templates (template_name, account_id, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (template_name, account_name, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes))
+        ''', (template_name, account_id, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes))
         template_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -591,27 +611,16 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT id, template_name, account_name, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes
-            FROM import_templates
-            ORDER BY account_name
+            SELECT 
+                it.*, 
+                a.name AS account_name
+            FROM import_templates it
+            JOIN accounts a ON it.account_id = a.id
+            ORDER BY a.name
         ''')
 
-        templates = []
-        for row in cursor.fetchall():
-            templates.append({
-                'id': row[0],
-                'template_name': row[1],
-                'account_name': row[2],
-                'date_column': row[3],
-                'description_column': row[4],
-                'description2_column': row[5],
-                'description_delimiter': row[6],
-                'amount_column': row[7],
-                'debit_column': row[8],
-                'credit_column': row[9],
-                'skip_rows': row[10],
-                'notes': row[11]
-            })
+        columns = [description[0] for description in cursor.description]
+        templates = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         conn.close()
         return templates
@@ -619,43 +628,44 @@ class DatabaseManager:
     def get_import_template(self, template_id: int) -> Optional[Dict]:
         conn = self.get_connection()
         cursor = conn.cursor()
+        # We join with the accounts table so the UI knows which 
+        # human-readable account this template belongs to.
         cursor.execute('''
-            SELECT id, template_name, account_name, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes
-            FROM import_templates
-            WHERE id = ?
+            SELECT 
+                it.*, 
+                a.name AS account_name
+            FROM import_templates it
+            JOIN accounts a ON it.account_id = a.id
+            WHERE it.id = ?
         ''', (template_id,))
 
         row = cursor.fetchone()
         conn.close()
 
         if row:
-            return {
-                'id': row[0],
-                'template_name': row[1],
-                'account_name': row[2],
-                'date_column': row[3],
-                'description_column': row[4],
-                'description2_column': row[5],
-                'description_delimiter': row[6],
-                'amount_column': row[7],
-                'debit_column': row[8],
-                'credit_column': row[9],
-                'skip_rows': row[10],
-                'notes': row[11]
-            }
+            # We use the column description to map results to a dictionary
+            # This makes the method resilient to future column additions.
+            columns = [desc[0] for desc in cursor.description]
+            return dict(zip(columns, row))
+            
         return None
 
-    def update_import_template(self, template_id: int, template_name: str, account_name: str,
-                              date_column: str, description_column: str, amount_column: str = None, skip_rows: int = 0, notes: str = None,
-                              debit_column: str = None, credit_column: str = None,
-                              description2_column: str = None, description_delimiter: str = ' - '):
+    def update_import_template(self, template_id: int, template_name: str, account_id: int,
+                              date_column: str, description_column: str, amount_column: str = None,
+                              skip_rows: int = 0, notes: str = None, debit_column: str = None, 
+                              credit_column: str = None, description2_column: str = None, 
+                              description_delimiter: str = ' - '):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE import_templates
-            SET template_name = ?, account_name = ?, date_column = ?, description_column = ?, description2_column = ?, description_delimiter = ?, amount_column = ?, debit_column = ?, credit_column = ?, skip_rows = ?, notes = ?
+            SET template_name = ?, account_id = ?, date_column = ?, description_column = ?, 
+                description2_column = ?, description_delimiter = ?, amount_column = ?, 
+                debit_column = ?, credit_column = ?, skip_rows = ?, notes = ?
             WHERE id = ?
-        ''', (template_name, account_name, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes, template_id))
+        ''', (template_name, account_id, date_column, description_column, 
+            description2_column, description_delimiter, amount_column, 
+            debit_column, credit_column, skip_rows, notes, template_id))
         conn.commit()
         conn.close()
 
@@ -667,7 +677,7 @@ class DatabaseManager:
         conn.close()
 
     def add_description_rule(self, template_id: int, rule_order: int, pattern: str,
-                            replacement: str, category: str = None, ignore: int = 0):
+                            replacement: str, category_id: int = None, ignore: int = 0):
         conn = self.get_connection()
         cursor = conn.cursor()
         # Automatically find the next order index
@@ -675,9 +685,9 @@ class DatabaseManager:
         next_order = cursor.fetchone()[0]
         
         cursor.execute('''
-            INSERT INTO description_rules (template_id, rule_order, pattern, replacement, category, ignore)
+            INSERT INTO description_rules (template_id, rule_order, pattern, replacement, category_id, ignore)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (template_id, next_order, pattern, replacement, category, ignore))
+        ''', (template_id, next_order, pattern, replacement, category_id, ignore))
         
         rule_id = cursor.lastrowid
         conn.commit()
@@ -687,37 +697,31 @@ class DatabaseManager:
     def get_description_rules(self, template_id: int) -> List[Dict]:
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT id, template_id, rule_order, pattern, replacement, category, ignore
-            FROM description_rules
-            WHERE template_id = ?
-            ORDER BY rule_order
-        ''', (template_id,))
-
-        rules = []
-        for row in cursor.fetchall():
-            rules.append({
-                'id': row[0],
-                'template_id': row[1],
-                'rule_order': row[2],
-                'pattern': row[3],
-                'replacement': row[4],
-                'category': row[5],
-                'ignore': row[6]
-            })
-
+        # Join with categories to get the human-readable name for the UI
+        query = '''
+            SELECT r.*, c.name as category_name 
+            FROM description_rules r
+            LEFT JOIN categories c ON r.category_id = c.id
+            WHERE r.template_id = ? 
+            ORDER BY r.rule_order ASC
+        '''
+        
+        cursor.execute(query, (template_id,))
+        columns = [desc[0] for desc in cursor.description]
+        rules = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
         conn.close()
         return rules
 
     def update_description_rule(self, rule_id: int, rule_order: int, pattern: str,
-                               replacement: str, category: str = None, ignore: int = 0):
+                               replacement: str, category_id: int, ignore: int = 0):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE description_rules
-            SET rule_order = ?, pattern = ?, replacement = ?, category = ?, ignore = ?
+            SET rule_order = ?, pattern = ?, replacement = ?, category_id = ?, ignore = ?
             WHERE id = ?
-        ''', (rule_order, pattern, replacement, category, ignore, rule_id))
+        ''', (rule_order, pattern, replacement, category_id, ignore, rule_id))
         conn.commit()
         conn.close()
 
@@ -750,3 +754,78 @@ class DatabaseManager:
             cursor.execute('UPDATE description_rules SET rule_order = ? WHERE id = ?', (order, rule_id))
         conn.commit()
         conn.close()
+
+    # ID helper functions
+    def get_category_id_by_name(self, name: str, cat_type: str = 'expense', create_if_missing: bool = True) -> Optional[int]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT id FROM categories WHERE name = ?', (name,))
+        row = cursor.fetchone()
+        
+        if row:
+            category_id = row[0]
+        else:
+            category_id = None
+        
+        '''
+        elif create_if_missing:
+            # Create it on the fly if it doesn't exist
+            cursor.execute('INSERT INTO categories (name, type) VALUES (?, ?)', (name, cat_type))
+            conn.commit()
+            category_id = cursor.lastrowid
+        '''
+            
+        conn.close()
+        return category_id
+    
+    def get_category_name_by_id(self, id: int) -> Optional[str]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT name FROM categories WHERE id = ?', (id,))
+        row = cursor.fetchone()
+        
+        if row:
+            category_name = row[0]
+        else:
+            category_name = None
+            
+        conn.close()
+        return category_name
+
+    def get_account_id_by_name(self, name: str, account_type: str = 'checking', create_if_missing: bool = True) -> Optional[int]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT id FROM accounts WHERE name = ?', (name,))
+        row = cursor.fetchone()
+        
+        if row:
+            account_id = row[0]
+        else:
+            account_id = None
+        '''
+        elif create_if_missing:
+            cursor.execute('INSERT INTO accounts (name, type) VALUES (?, ?)', (name, account_type))
+            conn.commit()
+            account_id = cursor.lastrowid
+        '''
+            
+        conn.close()
+        return account_id
+    
+    def get_account_name_by_id(self, id: int) -> Optional[str]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT name FROM accounts WHERE id = ?', (id,))
+        row = cursor.fetchone()
+        
+        if row:
+            account_name = row[0]
+        else:
+            account_name = None
+            
+        conn.close()
+        return account_name

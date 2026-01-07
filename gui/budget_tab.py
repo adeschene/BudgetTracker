@@ -31,9 +31,8 @@ class BudgetTab(ttk.Frame):
         scrollbar.pack(side='right', fill='y')
         
         # Treeview displays budget rows: category, monthly target and notes
-        self.tree = EditableTree(tree_frame, columns=('Category', 'Monthly Target', 'Notes'), editable_columns=['Category', 'Monthly Target', 'Notes'],
-                    on_commit_callback=self.handle_db_update, get_options_callback=self.get_dd_values,
-                    get_validation_callback=self.provide_validation, show='headings', yscrollcommand=scrollbar.set)
+        self.tree = EditableTree(tree_frame, columns=('Category', 'Monthly Target', 'Notes'), editable_columns=['Monthly Target', 'Notes'],
+                    on_commit_callback=self.handle_db_update, get_validation_callback=self.provide_validation, show='headings', yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.tree.yview)
         
         self.tree.heading('Category', text='Category', command=lambda: self.sort_by_column('Category'))
@@ -90,7 +89,7 @@ class BudgetTab(ttk.Frame):
 
         for budget in budgets:
             display_values = [
-                budget['category'],
+                self.db.get_category_name_by_id(budget['category_id']),
                 f"${budget['monthly_target']:,}",
                 budget['notes'] or ''
             ]
@@ -138,16 +137,6 @@ class BudgetTab(ttk.Frame):
         if column_name == 'Monthly Target':
             return (validate_money_string, 'False', 'False')
         return None
-            
-    def get_dd_values(self, column_name):
-        # Provides values for inline combobox editing
-        if column_name == 'Category':
-            categories = [cat['name'] for cat in self.db.get_categories() if cat['type'] == 'expense']
-            # Remove category from dropdown if it already has an associated budget
-            budgetted = [b['category'] for b in self.db.get_budget_targets()]
-            filtered = [b for b in categories if b not in budgetted]
-            return filtered
-        return None # Entry field
     
     def handle_db_update(self, row_id, column_name, new_value):
         # Get db ID from tags
@@ -161,10 +150,8 @@ class BudgetTab(ttk.Frame):
             return
 
         try:
-            # Update the in-memory category dict then persist
-            if field_name == 'Category':
-                budget['category'] = new_value
-            elif field_name == 'Monthly Target':
+            # Update the in-memory dict then persist
+            if field_name == 'Monthly Target':
                 if not new_value:
                     messagebox.showerror("Error", "Monthly target cannot be empty")
                     return
@@ -174,7 +161,7 @@ class BudgetTab(ttk.Frame):
 
             self.db.update_budget_target(
                 budget_id=budget_id,
-                category=budget['category'],
+                category_id=budget['category_id'],
                 monthly_target=budget['monthly_target'],
                 notes=budget['notes']
             )
@@ -201,14 +188,14 @@ class BudgetDialog:
         vcmd_positive_whole_dollars = (self.dialog.register(validate_money_string),"%P",False,False) # Digit validation registration
         
         ttk.Label(self.dialog, text="Category:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
-        self.category_var = tk.StringVar(value=budget['category'] if budget else '')
+        self.category_var = tk.StringVar(value=self.db.get_category_name_by_id(budget['category_id']) if budget else '')
         
         if budget:
-            ttk.Label(self.dialog, text=budget['category']).grid(row=0, column=1, padx=10, pady=10, sticky='w')
+            ttk.Label(self.dialog, text=self.db.get_category_name_by_id(budget['category_id'])).grid(row=0, column=1, padx=10, pady=10, sticky='w')
         else:
             categories = [cat['name'] for cat in self.db.get_categories() if cat['type'] == 'expense']
             # Remove category from dropdown if it already has an associated budget
-            budgetted = [b['category'] for b in self.db.get_budget_targets()]
+            budgetted = [b['category_name'] for b in self.db.get_budget_targets()]
             filtered = [b for b in categories if b not in budgetted]
             category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=filtered, state="readonly")
             category_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
@@ -250,7 +237,7 @@ class BudgetDialog:
             if self.budget:
                 self.db.update_budget_target(
                     budget_id=self.budget['id'],
-                    category=self.category_var.get(),
+                    category_id=self.db.get_category_id_by_name(self.category_var.get()),
                     monthly_target=target,
                     notes=self.notes_var.get()
                 )
@@ -262,7 +249,7 @@ class BudgetDialog:
 
                 # Insert new budget target into the database
                 self.db.add_budget_target(
-                    category=self.category_var.get(),
+                    category_id=self.db.get_category_id_by_name(self.category_var.get()),
                     monthly_target=target,
                     notes=self.notes_var.get()
                 )

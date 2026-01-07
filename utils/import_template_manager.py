@@ -209,14 +209,14 @@ class ImportTemplateManager:
                     return
                 template['template_name'] = new_value
             elif field_name == 'Account':
-                template['account_name'] = new_value
+                template['account_id'] = self.db.get_account_id_by_name(new_value)
             elif field_name == 'Notes':
                 template['notes'] = new_value
 
             self.db.update_import_template(
                 template_id=template_id,
                 template_name=template['template_name'],
-                account_name=template['account_name'],
+                account_id=template['account_id'],
                 date_column=template['date_column'],
                 description_column=template['description_column'],
                 description2_column=template['description2_column'],
@@ -252,7 +252,7 @@ class ImportTemplateManager:
                 rule['rule_order'] + 1,
                 rule['pattern'],
                 rule['replacement'],
-                rule['category'] or ''
+                self.db.get_category_name_by_id(rule['category_id']) or ''
             ), tags=(rule['id'],))
     
     def add_rule(self):
@@ -362,7 +362,7 @@ class ImportTemplateManager:
     def get_rule_dd_values(self, column_name):
         # Provides values for inline combobox editing
         if column_name == 'Category':
-            return [c['name'] for c in self.db.get_categories()]
+            return [''] + [c['name'] for c in self.db.get_categories()]
         return None # Entry field
     
     def handle_rule_db_update(self, row_id, column_name, new_value):
@@ -396,14 +396,14 @@ class ImportTemplateManager:
                     return
                 rule['replacement'] = new_value
             elif field_name == 'Category':
-                rule['category'] = new_value
+                rule['category_id'] = self.db.get_category_id_by_name(new_value)
 
             self.db.update_description_rule(
                 rule_id=rule_id,
                 rule_order=rule['rule_order'],
                 pattern=rule['pattern'],
                 replacement=rule['replacement'],
-                category=rule['category'],
+                category_id=rule['category_id'],
                 ignore=rule['ignore']
             )
             # Refresh view to show updated values
@@ -550,7 +550,7 @@ class TemplateDialog:
             self.db.update_import_template(
                 template_id=self.template['id'],
                 template_name=new_name,
-                account_name=self.account_var.get(),
+                account_id=self.db.get_account_id_by_name(self.account_var.get()),
                 date_column=self.date_col_var.get(),
                 description_column=self.desc_col_var.get(),
                 description2_column=self.desc2_col_var.get() or None,
@@ -567,7 +567,7 @@ class TemplateDialog:
                 return
             self.db.add_import_template(
                 template_name=new_name,
-                account_name=self.account_var.get(),
+                account_id=self.db.get_account_id_by_name(self.account_var.get()),
                 date_column=self.date_col_var.get(),
                 description_column=self.desc_col_var.get(),
                 description2_column=self.desc2_col_var.get() or None,
@@ -611,7 +611,7 @@ class RuleDialog:
         replacement_entry.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Category (optional):").grid(row=2, column=0, padx=10, pady=10, sticky='w')
-        self.category_var = tk.StringVar(value=rule['category'] if rule and rule['category'] else '')
+        self.category_var = tk.StringVar(value=rule['category_id'] if rule and rule['category_id'] else None)
         categories = [cat['name'] for cat in self.db.get_categories()]
         category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=[''] + categories, state='readonly')
         category_combo.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
@@ -668,7 +668,7 @@ class RuleDialog:
                 rule_order=self.rule['rule_order'],
                 pattern=new_pattern,
                 replacement=self.replacement_var.get(),
-                category=self.category_var.get() or None,
+                category_id=self.db.get_category_id_by_name(self.category_var.get()),
                 ignore=self.ignore_var.get()
             )
         else: # Checking for duplicate patterns
@@ -681,7 +681,7 @@ class RuleDialog:
                 rule_order=next_order,
                 pattern=new_pattern,
                 replacement=self.replacement_var.get(),
-                category=self.category_var.get() or None,
+                category_id=self.db.get_category_id_by_name(self.category_var.get()),
                 ignore=self.ignore_var.get()
             )
 

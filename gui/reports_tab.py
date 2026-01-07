@@ -239,7 +239,7 @@ class ReportsTab(ttk.Frame):
             html_output += "<table>"
             html_output += f"<tr><th>Category</th><th>Budget{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
             for budget in budget_targets:
-                category = budget['category']
+                category = self.db.get_category_name_by_id(budget['category_id'])
                 budget_amount = budget['monthly_target'] if total_months == 1 else budget['monthly_target'] * total_months
                 actual_amount = Decimal(spending_by_category.get(category, 0))/100
                 difference = budget_amount - actual_amount

@@ -188,8 +188,8 @@ class CSVImporter:
                 date=trans['date'],
                 description=description,
                 amount=int(Decimal(trans['amount'])*100),
-                category=category,
-                account=account_name,
+                category_id=self.db.get_category_id_by_name(category),
+                account_id=self.db.get_account_id_by_name(account_name),
                 transaction_type=transaction_type
             )
             count += 1
@@ -210,8 +210,8 @@ class CSVImporter:
                     replacement = rule['replacement']
                     description = replacement
 
-                    if rule['category']:
-                        category = rule['category']
+                    if rule['category_id']:
+                        category = self.db.get_category_name_by_id(rule['category_id'])
 
                     break
             except re.error as e:

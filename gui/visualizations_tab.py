@@ -904,7 +904,7 @@ class VisualizationsTab(ttk.Frame):
         tx = self._get_transactions_in_range(start_date, end_date)
 
         # filter by category (exact match)
-        filtered = [t for t in tx if (t.get('category') or '') == category]
+        filtered = [t for t in tx if (t.get('category_id') or '') == self.db.get_category_id_by_name(category)]
 
         monthly = self._aggregate_monthly(filtered, kind='all')
 
@@ -929,7 +929,7 @@ class VisualizationsTab(ttk.Frame):
         # Add budget line if budget exists for this category
         try:
             budgets = self.db.get_budget_targets()
-            budget = next((b for b in budgets if b['category'] == category), None)
+            budget = next((b for b in budgets if b['category_id'] == self.db.get_category_id_by_name(category)), None)
             if budget:
                 # budget is monthly target; draw as horizontal line
                 monthly_budget = budget['monthly_target']
