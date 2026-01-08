@@ -37,7 +37,7 @@ class EditableTree(ttk.Treeview):
             self._spawn_entry(row_id, col_name, val, x, y, w, h)
 
     def _spawn_entry(self, row_id, col_name, value, x, y, w, h):
-        if col_name == 'Amount' or 'Monthly Target' or 'Value':
+        if col_name in ['Amount', 'Monthly Target', 'Value']:
             value = str(value).replace('$', '').replace(',', '')
 
         vcmd = None
