@@ -67,7 +67,7 @@ class ImportTemplateManager:
         rules_scrollbar = ttk.Scrollbar(rules_tree_frame)
         rules_scrollbar.pack(side='right', fill='y')
         
-        self.rules_tree = EditableTree(rules_tree_frame, columns=('Order', 'Pattern', 'Replacement', 'Category'), editable_columns=['Pattern', 'Replacement', 'Category'],
+        self.rules_tree = EditableTree(rules_tree_frame, columns=('Order', 'Pattern', 'Replacement', 'Category', 'Ignored'), editable_columns=['Pattern', 'Replacement', 'Category'],
                 on_commit_callback=self.handle_rule_db_update, get_options_callback=self.get_rule_dd_values, show='headings', yscrollcommand=rules_scrollbar.set)
         rules_scrollbar.config(command=self.rules_tree.yview)
         
@@ -75,11 +75,13 @@ class ImportTemplateManager:
         self.rules_tree.heading('Pattern', text='Pattern (Regex)')
         self.rules_tree.heading('Replacement', text='Replacement')
         self.rules_tree.heading('Category', text='Category')
+        self.rules_tree.heading('Ignored', text='Ignored')
         
         self.rules_tree.column('Order', width=20, anchor='center')
         self.rules_tree.column('Pattern', width=240, anchor='center')
         self.rules_tree.column('Replacement', width=150, anchor='center')
         self.rules_tree.column('Category', width=120, anchor='center')
+        self.rules_tree.column('Ignored', width=50, anchor='center')
         
         self.rules_tree.pack(fill='both', expand=True)
         
@@ -252,7 +254,8 @@ class ImportTemplateManager:
                 rule['rule_order'] + 1,
                 rule['pattern'],
                 rule['replacement'],
-                self.db.get_category_name_by_id(rule['category_id']) or ''
+                self.db.get_category_name_by_id(rule['category_id']) or '',
+                ('⛌' if rule['ignore'] else '')
             ), tags=(rule['id'],))
     
     def add_rule(self):
@@ -391,11 +394,15 @@ class ImportTemplateManager:
                     return
                 rule['pattern'] = new_value
             if field_name == 'Replacement':
+                if rule['ignore']:
+                    return # No replacement allowed if ignored
                 if not new_value and not rule['ignore']: # Check for empty replacement, reject if not ignoring
                     messagebox.showerror("Error", "Replacement text is required when not ignoring")
                     return
                 rule['replacement'] = new_value
             elif field_name == 'Category':
+                if rule['ignore']:
+                    return # No category allowed if ignored
                 rule['category_id'] = self.db.get_category_id_by_name(new_value)
 
             self.db.update_description_rule(
@@ -663,6 +670,9 @@ class RuleDialog:
             if self.rule['pattern'] != new_pattern and new_pattern in curr_patterns:
                 messagebox.showerror("Error", "Pattern already used in a another rule")
                 return
+            if self.ignore_var.get():
+                self.replacement_var.set('')
+                self.category_var.set(None)
             self.db.update_description_rule(
                 rule_id=self.rule['id'],
                 rule_order=self.rule['rule_order'],
@@ -675,6 +685,9 @@ class RuleDialog:
             if new_pattern in curr_patterns:
                 messagebox.showerror("Error", "Pattern already has a rule applied")
                 return
+            if self.ignore_var.get():
+                self.replacement_var.set('')
+                self.category_var.set(None)
             next_order = len(self.rules) # Incremenet order for new rule
             self.db.add_description_rule(
                 template_id=self.template_id,
