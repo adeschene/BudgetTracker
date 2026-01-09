@@ -64,7 +64,6 @@ class DatabaseManager:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS asset_templates (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER,
                 asset_name TEXT UNIQUE NOT NULL,
                 asset_type TEXT,
                 notes TEXT
