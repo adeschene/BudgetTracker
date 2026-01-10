@@ -298,14 +298,13 @@ class DatabaseManager:
         try:
             # 1. Create the account
             cursor.execute('INSERT INTO accounts (name, type) VALUES (?, ?)', (name, account_type))
-            account_id = cursor.lastrowid
             
             # 2. Create the linked asset template using the ID
             if create_template:
                 cursor.execute('''
-                    INSERT INTO asset_templates (account_id, asset_name, asset_type, notes) 
-                    VALUES (?, ?, ?, 'Added automatically during account creation')
-                ''', (account_id, name, account_type))
+                    INSERT INTO asset_templates (asset_name, asset_type, notes) 
+                    VALUES (?, ?, 'Added automatically during account creation')
+                ''', (name, account_type))
             
             conn.commit()
         except sqlite3.IntegrityError:
