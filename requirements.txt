@@ -3,3 +3,4 @@ tkcalendar
 matplotlib
 pillow
 tkinterweb
+python-dateutil
