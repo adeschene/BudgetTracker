@@ -6,258 +6,205 @@ from utils.helpers import center_window, validate_money_string
 
 class BudgetTab(ttk.Frame):
     def __init__(self, parent, db: DatabaseManager, **kwargs):
-        super().__init__(parent, **kwargs) # Initialize tab frame
-        # Store the database manager and create a containing frame
+        super().__init__(parent, **kwargs)
         self.db = db
 
-        # Sorting state
-        self.sort_column = None
-        self.sort_reverse = False
+        self.sort_state = {} # Track sorting state for both trees independently
+        self.total_labels = {} # Maps a tree to its specific total label
 
-        # Build UI widgets for the Budget tab
         self.setup_ui()
     
     def setup_ui(self):
-        # Top info label explaining the purpose of this tab
+        # Header with Instructions
         info_frame = ttk.Frame(self)
-        info_frame.pack(fill='x', padx=10, pady=10)
+        info_frame.pack(fill='x', padx=10, pady=(10, 5))
+        
+        ttk.Label(info_frame, 
+                  text="Set monthly targets for Income and Expense categories.",
+                  font=('Roboto', 10, 'bold')).pack(side='left', anchor='w')
+        
+        # Double-click edit instruction
+        ttk.Label(info_frame, 
+                  text="Tips: Double-click any 'Monthly Target' or 'Notes' cell to edit its value. Click on headers to sort data.",
+                  foreground="gray").pack(side='left', anchor='w', padx=(30,0))
+        
+        # Horizontal container for the two trees
+        main_container = ttk.Frame(self)
+        main_container.pack(fill='both', expand=True, padx=10)
 
-        ttk.Label(info_frame, text="Set monthly budget targets for each expense category").pack()
-        
-        tree_frame = ttk.Frame(self)
-        tree_frame.pack(fill='both', expand=True, padx=10, pady=10)
-        
-        scrollbar = ttk.Scrollbar(tree_frame)
-        scrollbar.pack(side='right', fill='y')
-        
-        # Treeview displays budget rows: category, monthly target and notes
-        self.tree = EditableTree(tree_frame, columns=('Category', 'Monthly Target', 'Notes'), editable_columns=['Monthly Target', 'Notes'],
-                    on_commit_callback=self.handle_db_update, get_validation_callback=self.provide_validation, show='headings', yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.tree.yview)
-        
-        self.tree.heading('Category', text='Category', command=lambda: self.sort_by_column('Category'))
-        self.tree.heading('Monthly Target', text='Monthly Target', command=lambda: self.sort_by_column('Monthly Target'))
-        self.tree.heading('Notes', text='Notes', command=lambda: self.sort_by_column('Notes'))
-        
-        self.tree.column('Category', width=100, anchor='center')
-        self.tree.column('Monthly Target', width=150, anchor='center')
-        self.tree.column('Notes', width=300)
-        
-        self.tree.pack(fill='both', expand=True)
-        
-        self.tree.bind("<Delete>", lambda e: self.delete_budget()) # Enable delete key to remove items
-        
+        # 1. Expense Side (Left)
+        expense_frame = ttk.LabelFrame(main_container, text="Expense Budgets")
+        expense_frame.pack(side='left', fill='both', expand=True, padx=(0, 5))
+        self.expense_tree = self.create_budget_tree(expense_frame)
+        self.sort_state[self.expense_tree] = {'column': None, 'reverse': False}
+        # Footer for Expense Totals
+        self.expense_total_lbl = ttk.Label(expense_frame, text="Total: $0 / $0", font=('TkDefaultFont', 9, 'bold'))
+        self.expense_total_lbl.pack(pady=5)
+        self.total_labels[self.expense_tree] = self.expense_total_lbl
+
+        # 2. Income Side (Right)
+        income_frame = ttk.LabelFrame(main_container, text="Income Targets")
+        income_frame.pack(side='left', fill='both', expand=True, padx=(5, 0))
+        self.income_tree = self.create_budget_tree(income_frame)
+        self.sort_state[self.income_tree] = {'column': None, 'reverse': False}
+        # Footer for Income Totals
+        self.income_total_lbl = ttk.Label(income_frame, text="Total: $0 / $0", font=('TkDefaultFont', 9, 'bold'))
+        self.income_total_lbl.pack(pady=5)
+        self.total_labels[self.income_tree] = self.income_total_lbl
+
+        # Shared Buttons
         button_frame = ttk.Frame(self)
         button_frame.pack(pady=10)
-        
-        ttk.Button(button_frame, text="Add Budget", style='Accent.TButton', command=self.add_budget).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Edit Budget", command=self.edit_budget).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Delete Budget", command=self.delete_budget).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Clear Selected", command=self.clear_budget).pack(side='left', padx=5)
 
-    def on_tab_opened(self): # Trigger refresh when switching to tab from another
+    def create_budget_tree(self, parent):
+        tree_container = ttk.Frame(parent)
+        tree_container.pack(fill='both', expand=True, padx=5, pady=5)
+
+        scrollbar = ttk.Scrollbar(tree_container)
+        scrollbar.pack(side='right', fill='y')
+        
+        tree = EditableTree(
+            tree_container, 
+            columns=('Category', 'Monthly Target', 'Implied', 'Notes'), 
+            editable_columns=['Monthly Target', 'Notes'],
+            get_validation_callback=self.provide_validation, 
+            show='headings', 
+            yscrollcommand=scrollbar.set
+        )
+        
+        # Pass the tree instance into the handler so it knows which tree was edited
+        tree.on_commit = lambda r, c, v: self.handle_db_update(tree, r, c, v)
+        
+        scrollbar.config(command=tree.yview)
+        
+        # Configure headings with sorting and widths
+        cols = {'Category': 100, 'Monthly Target': 120, 'Implied': 120, 'Notes': 250}
+        for col, width in cols.items():
+            text = 'Implied Annual' if col == 'Implied' else col
+            # Configure the Header (heading)
+            h_anchor = 'w' if col == 'Notes' else 'center'
+            tree.heading(col, text=text, anchor=h_anchor,
+                         command=lambda c=col, t=tree: self.sort_by_column(t, c))
+            # Configure the Data (column)
+            d_anchor = 'w' if col == 'Notes' else 'center'
+            tree.column(col, width=width, anchor=d_anchor)
+        
+        tree.pack(fill='both', expand=True)
+        return tree
+
+    def on_tab_opened(self):
         self.refresh_budgets()
 
-    def sort_by_column(self, column):
-        if self.sort_column == column:
-            self.sort_reverse = not self.sort_reverse
+    def sort_by_column(self, tree, column):
+        state = self.sort_state[tree]
+        if state['column'] == column:
+            state['reverse'] = not state['reverse']
         else:
-            self.sort_column = column
-            self.sort_reverse = False
+            state['column'] = column
+            state['reverse'] = False
+        self.apply_current_sort(tree)
 
-        # Build a list of (value, item_id) tuples for sorting
-        items = [(self.tree.set(item, column), item) for item in self.tree.get_children('')]
+    def apply_current_sort(self, tree):
+        state = self.sort_state[tree]
+        column = state['column']
+        if not column: return
 
-        # Choose sorting strategy depending on column type
-        if column == 'Monthly Target':
-            # Parse formatted currency strings back to ints for numeric sort
-            items.sort(key=lambda x: int(x[0].replace('$', '').replace(',', '').replace('-', '-')), reverse=self.sort_reverse)
+        items = [(tree.set(item, column), item) for item in tree.get_children('')]
+
+        if column in ('Monthly Target', 'Implied'):
+            items.sort(
+                key=lambda x: int(str(x[0]).replace('$', '').replace(',', '').replace('-', '0') or 0), 
+                reverse=state['reverse']
+            )
         else:
-            # Case-insensitive string sort for other columns
-            items.sort(key=lambda x: x[0].lower(), reverse=self.sort_reverse)
+            items.sort(key=lambda x: str(x[0]).lower(), reverse=state['reverse'])
 
-        # Reorder the tree items according to sorted order
         for index, (val, item) in enumerate(items):
-            self.tree.move(item, '', index)
+            tree.move(item, '', index)
     
     def refresh_budgets(self):
-        # Clear existing rows
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        self._populate_tree(self.expense_tree, 'expense')
+        self._populate_tree(self.income_tree, 'income')
 
-        # Load budget targets from the database and populate the tree
-        budgets = self.db.get_budget_targets()
+    def _populate_tree(self, tree, cat_type):
+        for item in tree.get_children():
+            tree.delete(item)
+        
+        budgets = self.db.get_all_category_budgets(cat_type)
+        total_monthly = 0
 
-        for budget in budgets:
+        for b in budgets:
+            target = b['monthly_target']
+            total_monthly += target
+
             display_values = [
-                self.db.get_category_name_by_id(budget['category_id']),
-                f"${budget['monthly_target']:,}",
-                budget['notes'] or ''
+                b['category_name'],
+                f"${target:,}",
+                f"${target * 12:,}", 
+                b['notes'] or ''
             ]
-            # Store budget id in the item's tags for later lookup
-            self.tree.insert('', 'end', values=display_values, tags=(budget['id'],))
+            tree.insert('', 'end', values=display_values, tags=(b['category_id'], b['budget_id']))
+        # Update the summary text for this specific section
+        total_annual = total_monthly * 12
+        label = self.total_labels[tree]
+        label.config(text=f"Total: ${total_monthly:,} (Monthly) / ${total_annual:,} (Annual)")
+
+        self.apply_current_sort(tree)
     
-    def add_budget(self):
-        # Open dialog to create a new budget target; refresh after save
-        BudgetDialog(self, self.db, callback=self.refresh_budgets)
-    
-    def delete_budget(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Warning", "Please select budget target(s) to delete")
+    def clear_budget(self):
+        # Check both trees for selections
+        selections = [(self.expense_tree, self.expense_tree.selection()), 
+                      (self.income_tree, self.income_tree.selection())]
+        
+        to_delete = []
+        for tree, items in selections:
+            for item in items:
+                # budget_id is index 1 of the tags tuple
+                tags = tree.item(item)['tags']
+                budget_id = tags[1] if len(tags) > 1 else None
+                if budget_id and str(budget_id) != 'None':
+                    to_delete.append(budget_id)
+
+        if not to_delete:
+            messagebox.showwarning("Warning", "Please select existing budget target(s) to clear")
             return
 
-        count = len(selection)
-        message = f"Delete {count} budget targets?" if count > 1 else "Delete this budget target?"
-
-        if messagebox.askyesno("Confirm", message):
-            for item in selection:
-                budget_id = self.tree.item(item)['tags'][0]
-                self.db.delete_budget_target(budget_id)
+        if messagebox.askyesno("Confirm", f"Clear {len(to_delete)} budget targets?"):
+            for b_id in to_delete:
+                self.db.delete_budget_target(int(b_id))
             self.refresh_budgets()
-    
-    def edit_budget(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Warning", "Please select a budget to edit")
-            return
-        
-        if len(selection) > 1:
-            messagebox.showwarning("Error", "Only one budget can be edited at a time")
-            return
-        
-        budget_id = self.tree.item(selection[0])['tags'][0]
-        budgets = self.db.get_budget_targets()
-        budget = next((b for b in budgets if b['id'] == budget_id), None)
-        
-        if budget:
-            # Open dialog pre-filled with the selected budget for editing
-            BudgetDialog(self, self.db, budget=budget, callback=self.refresh_budgets)
 
     def provide_validation(self, column_name):
         if column_name == 'Monthly Target':
             return (validate_money_string, 'False', 'False')
         return None
     
-    def handle_db_update(self, row_id, column_name, new_value):
-        # Get db ID from tags
-        budget_id = self.tree.item(row_id)['tags'][0]
-        self.update_budget_field(budget_id, column_name, new_value)
-
-    def update_budget_field(self, budget_id, field_name, new_value):
-        budgets = self.db.get_budget_targets()
-        budget = next((b for b in budgets if b['id'] == budget_id), None)
-        if not budget:
+    def handle_db_update(self, tree, row_id, column_name, new_value):
+        if not tree.exists(row_id):
             return
-
+        
+        tags = tree.item(row_id)['tags']
+        category_id, budget_id = tags[0], tags[1]
+        current_values = tree.item(row_id)['values']
+        
         try:
-            # Update the in-memory dict then persist
-            if field_name == 'Monthly Target':
-                if not new_value:
-                    messagebox.showerror("Error", "Monthly target cannot be empty")
-                    return
-                budget['monthly_target'] = new_value
-            elif field_name == 'Notes':
-                budget['notes'] = new_value
-
-            self.db.update_budget_target(
-                budget_id=budget_id,
-                category_id=budget['category_id'],
-                monthly_target=budget['monthly_target'],
-                notes=budget['notes']
-            )
-            # Refresh view to show updated values
-            self.refresh_budgets()
-        except (ValueError):
-            messagebox.showerror("Error", "Invalid value entered")
-
-
-class BudgetDialog:
-    def __init__(self, parent, db: DatabaseManager, budget=None, callback=None):
-        self.db = db
-        self.budget = budget
-        self.callback = callback
-        
-        self.dialog = tk.Toplevel(parent)
-        self.dialog.withdraw()
-        # Toplevel dialog used for adding or editing a budget target
-        self.dialog.title("Edit Budget" if budget else "Add Budget")
-        self.dialog.geometry("400x230")
-        self.dialog.transient(parent)
-        self.dialog.grab_set() # Make window modal
-        
-        vcmd_positive_whole_dollars = (self.dialog.register(validate_money_string),"%P",False,False) # Digit validation registration
-        
-        ttk.Label(self.dialog, text="Category:").grid(row=0, column=0, padx=10, pady=10, sticky='w')
-        self.category_var = tk.StringVar(value=self.db.get_category_name_by_id(budget['category_id']) if budget else '')
-        
-        if budget:
-            ttk.Label(self.dialog, text=self.db.get_category_name_by_id(budget['category_id'])).grid(row=0, column=1, padx=10, pady=10, sticky='w')
-        else:
-            categories = [cat['name'] for cat in self.db.get_categories() if cat['type'] == 'expense']
-            # Remove category from dropdown if it already has an associated budget
-            budgetted = [b['category_name'] for b in self.db.get_budget_targets()]
-            filtered = [b for b in categories if b not in budgetted]
-            category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, values=filtered, state="readonly")
-            category_combo.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
-            if filtered: # Always default to first option in list
-                category_combo.current(0)
-            else: # If out of options, disable the combobox
-                category_combo.config(state='disabled')
-        
-        # Input for the numeric monthly target amount
-        ttk.Label(self.dialog, text="Monthly Target ($):").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        self.target_var = tk.StringVar(value=str(budget['monthly_target']) if budget else '')
-        ttk.Entry(self.dialog, validate='all', validatecommand=vcmd_positive_whole_dollars, 
-                textvariable=self.target_var).grid(row=1, column=1, padx=10, pady=10, sticky='ew')
-        
-        ttk.Label(self.dialog, text="Notes:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
-        self.notes_var = tk.StringVar(value=budget['notes'] if budget and budget['notes'] else '')
-        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=2, column=1, padx=10, pady=10, sticky='ew')
-        
-        button_frame = ttk.Frame(self.dialog)
-        button_frame.grid(row=3, column=0, columnspan=2, pady=20)
-        
-        ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
-        
-        self.dialog.columnconfigure(1, weight=1)
-
-        self.dialog.update_idletasks()
-        center_window(self.dialog)
-        self.dialog.deiconify()
-
-    def on_closing(self):
-        self.dialog.grab_release()
-        self.dialog.destroy()
-
-    def save(self):
-        try:
-            target = int(self.target_var.get())
-            
-            if self.budget:
-                self.db.update_budget_target(
-                    budget_id=self.budget['id'],
-                    category_id=self.db.get_category_id_by_name(self.category_var.get()),
-                    monthly_target=target,
-                    notes=self.notes_var.get()
-                )
+            if column_name == 'Monthly Target':
+                clean_val = str(new_value).replace('$', '').replace(',', '')
+                target = int(clean_val) if clean_val else 0
+                notes = current_values[3]
             else:
-                # Creating a new budget requires selecting a category
-                if not self.category_var.get():
-                    messagebox.showerror("Error", "Please select a category")
-                    return
+                target = int(str(current_values[1]).replace('$', '').replace(',', ''))
+                notes = new_value
 
-                # Insert new budget target into the database
-                self.db.add_budget_target(
-                    category_id=self.db.get_category_id_by_name(self.category_var.get()),
-                    monthly_target=target,
-                    notes=self.notes_var.get()
-                )
+            if budget_id is None or str(budget_id) == 'None':
+                if target > 0 or notes:
+                    self.db.add_budget_target(category_id, target, notes)
+            else:
+                self.db.update_budget_target(int(budget_id), category_id, target, notes)
             
-            if self.callback:
-                # Notify caller to refresh displayed data
-                self.callback()
-            
-            self.dialog.destroy()
+            self.refresh_budgets()
+
         except ValueError:
-            messagebox.showerror("Error", "Invalid target amount")
+            messagebox.showerror("Error", "Please enter a valid number")
+            self.refresh_budgets()

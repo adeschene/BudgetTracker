@@ -112,8 +112,9 @@ class DatabaseManager:
             )
         ''')
 
-        # Ensure default categories exist and run lightweight migrations
-        self._insert_default_categories(cursor)
+        # Ensure default categories exist and run lightweight migrations if no custom cats exist
+        if not self.get_categories():
+            self._insert_default_categories(cursor)
 
         conn.commit()
         conn.close()
@@ -548,6 +549,27 @@ class DatabaseManager:
         ''', (category_id, monthly_target, notes))
         conn.commit()
         conn.close()
+
+    def get_all_category_budgets(self, cat_type: str = 'expense') -> List[Dict]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        # Filter by the category type ('income' or 'expense')
+        cursor.execute('''
+            SELECT 
+                c.id AS category_id, 
+                c.name AS category_name, 
+                b.id AS budget_id, 
+                COALESCE(b.monthly_target, 0) AS monthly_target, 
+                b.notes 
+            FROM categories c
+            LEFT JOIN budget_targets b ON c.id = b.category_id
+            WHERE c.type = ?
+            ORDER BY c.name
+        ''', (cat_type,))
+        columns = [desc[0] for desc in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        conn.close()
+        return results
 
     def get_budget_targets(self) -> List[Dict]:
         conn = self.get_connection()
