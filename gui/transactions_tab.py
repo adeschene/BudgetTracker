@@ -188,6 +188,8 @@ class TransactionsTab(ttk.Frame):
         ttk.Label(count_container, text=' Transactions', style='Count.TLabel').pack(side='left')
 
     def on_tab_opened(self): # Trigger refresh when switching to tab from another
+        # Update category list in filters combobox, assuming they may have been changed
+        self.update_category_list()
         self.refresh_transactions()
 
     # Enable date pickers when using custom timeframe
