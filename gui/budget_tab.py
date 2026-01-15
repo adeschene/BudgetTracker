@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from database.db_manager import DatabaseManager
 from utils.editable_tree import EditableTree
-from utils.helpers import center_window, validate_money_string
+from utils.helpers import validate_money_string, BDGT_CLRS
 
 class BudgetTab(ttk.Frame):
     def __init__(self, parent, db: DatabaseManager, **kwargs):
@@ -19,14 +19,15 @@ class BudgetTab(ttk.Frame):
         info_frame = ttk.Frame(self)
         info_frame.pack(fill='x', padx=10, pady=(10, 5))
         
+        # Usage tips
         ttk.Label(info_frame, 
-                  text="Set monthly targets for Income and Expense categories.",
-                  font=('Roboto', 10, 'bold')).pack(side='left', anchor='w')
+                  text="Tips: Double-click any 'Monthly Target' or 'Notes' cell to edit its value. Click on headers to sort data. Use the Del key to clear budget(s).",
+                  foreground="gray", font=('Roboto', 9, 'bold')).pack(side='left', anchor='w', padx=10)
         
-        # Double-click edit instruction
-        ttk.Label(info_frame, 
-                  text="Tips: Double-click any 'Monthly Target' or 'Notes' cell to edit its value. Click on headers to sort data.",
-                  foreground="gray").pack(side='left', anchor='w', padx=(30,0))
+        # Implied savings display
+        self.savings_total = 0
+        self.savings_total_lbl = ttk.Label(info_frame, text="Implied Savings: $0 / $0", foreground=BDGT_CLRS['savings'], font=('Roboto', 10, 'bold'))
+        self.savings_total_lbl.pack(side='right', anchor='e', pady=5)
         
         # Horizontal container for the two trees
         main_container = ttk.Frame(self)
@@ -38,9 +39,11 @@ class BudgetTab(ttk.Frame):
         self.expense_tree = self.create_budget_tree(expense_frame)
         self.sort_state[self.expense_tree] = {'column': None, 'reverse': False}
         # Footer for Expense Totals
-        self.expense_total_lbl = ttk.Label(expense_frame, text="Total: $0 / $0", font=('TkDefaultFont', 9, 'bold'))
+        self.expense_total_lbl = ttk.Label(expense_frame, text="Total: $0 / $0", foreground=BDGT_CLRS['expense'], font=('Roboto', 9, 'bold'))
         self.expense_total_lbl.pack(pady=5)
         self.total_labels[self.expense_tree] = self.expense_total_lbl
+        
+        self.expense_tree.bind("<Delete>", lambda e: self.clear_budget()) # Enable delete key to remove items
 
         # 2. Income Side (Right)
         income_frame = ttk.LabelFrame(main_container, text="Income Targets")
@@ -48,14 +51,11 @@ class BudgetTab(ttk.Frame):
         self.income_tree = self.create_budget_tree(income_frame)
         self.sort_state[self.income_tree] = {'column': None, 'reverse': False}
         # Footer for Income Totals
-        self.income_total_lbl = ttk.Label(income_frame, text="Total: $0 / $0", font=('TkDefaultFont', 9, 'bold'))
+        self.income_total_lbl = ttk.Label(income_frame, text="Total: $0 / $0", foreground=BDGT_CLRS['income'], font=('Roboto', 9, 'bold'))
         self.income_total_lbl.pack(pady=5)
         self.total_labels[self.income_tree] = self.income_total_lbl
-
-        # Shared Buttons
-        button_frame = ttk.Frame(self)
-        button_frame.pack(pady=10)
-        ttk.Button(button_frame, text="Clear Selected", command=self.clear_budget).pack(side='left', padx=5)
+        
+        self.income_tree.bind("<Delete>", lambda e: self.clear_budget()) # Enable delete key to remove items
 
     def create_budget_tree(self, parent):
         tree_container = ttk.Frame(parent)
@@ -124,6 +124,7 @@ class BudgetTab(ttk.Frame):
             tree.move(item, '', index)
     
     def refresh_budgets(self):
+        self.savings_total = 0 # Reset savings total before adding up tree values
         self._populate_tree(self.expense_tree, 'expense')
         self._populate_tree(self.income_tree, 'income')
 
@@ -133,10 +134,12 @@ class BudgetTab(ttk.Frame):
         
         budgets = self.db.get_all_category_budgets(cat_type)
         total_monthly = 0
-
+        
         for b in budgets:
             target = b['monthly_target']
             total_monthly += target
+            # Update savings total
+            self.savings_total = self.savings_total + target if cat_type == 'income' else self.savings_total - target
 
             display_values = [
                 b['category_name'],
@@ -145,10 +148,14 @@ class BudgetTab(ttk.Frame):
                 b['notes'] or ''
             ]
             tree.insert('', 'end', values=display_values, tags=(b['category_id'], b['budget_id']))
-        # Update the summary text for this specific section
+        # Update the summary text labels
         total_annual = total_monthly * 12
         label = self.total_labels[tree]
         label.config(text=f"Total: ${total_monthly:,} (Monthly) / ${total_annual:,} (Annual)")
+        # Update savings label
+        self.savings_total_lbl.config(text=f"Implied Savings: ${self.savings_total:,} (Monthly) / ${self.savings_total*12:,} (Annual)")
+        # Update savings label color depending on if budget is more or less than income
+        self.savings_total_lbl.config(foreground=BDGT_CLRS['expense']) if self.savings_total < 0 else self.savings_total_lbl.config(foreground=BDGT_CLRS['savings'])
 
         self.apply_current_sort(tree)
     
