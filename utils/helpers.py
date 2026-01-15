@@ -156,3 +156,10 @@ REPORT_CLRS = {
     'expense'    : '#EB5353',
     'line'       : '#1674b4',
 }
+
+# Budget tab color definitions
+BDGT_CLRS = {
+    'income'     : '#36B56F',
+    'expense'    : '#EB5353',
+    'savings'    : '#1674b4',
+}
