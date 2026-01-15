@@ -123,14 +123,8 @@ class ReportsTab(ttk.Frame):
                 start = last_month_end.replace(day=1)
                 end = today
             case 'Last Three Months':
-                this_month = today.month
-                this_year = today.year
-                match this_month:
-                    case 2: start_month = 12
-                    case 1: start_month = 11
-                    case _: start_month = this_month - 2
-                start_year = this_year - 1 if start_month == 12 or 11 else this_year
-                start = today.replace(year=start_year, month=start_month, day=1)
+                start_date_obj = today.replace(day=1) - relativedelta(months=2)
+                start = start_date_obj
                 end = today
             case 'This Year':
                 start = today.replace(month=1, day=1)
@@ -159,13 +153,17 @@ class ReportsTab(ttk.Frame):
 
         # All time handling for income/expenses/budget sections
         if self.period_var.get() == 'All Time':
-            start_date = transactions[-1]['date']
-            end_date = transactions[0]['date']
+            if not transactions:
+                # Fallback: Default to the first day of the current month
+                start_date = datetime.now().replace(day=1).strftime('%Y-%m-%d')
+                end_date = datetime.now().strftime('%Y-%m-%d')
+            else:
+                start_date = transactions[-1]['date']
+                end_date = transactions[0]['date']
         
         # Calculate difference in months for conditional logic (Spending)
         diff = relativedelta(datetime.strptime(end_date, '%Y-%m-%d'), datetime.strptime(start_date, '%Y-%m-%d'))
-        months_diff = diff.years * 12 + diff.months
-        total_months = months_diff + 1
+        total_months = (diff.years * 12) + diff.months + 1
 
         period_label = "" if total_months == 1 else f" ({total_months} Months)"
         
@@ -210,11 +208,26 @@ class ReportsTab(ttk.Frame):
         
         <div class="section-title">INCOME & EXPENSES{period_label}</div>
         <table>
-            <tr><td>Total Income:</td><td class="income">${total_income:,.2f}</td></tr>
-            <tr><td>Total Expenses:</td><td class="expense">${total_expenses:,.2f}</td></tr>
-            <tr style="background: {REPORT_CLRS['emphasis']}"><td><strong>Net Income:</strong></td><td class="net"><strong>${net_income:,.2f}</strong></td></tr>
+            <tr><td>Total Income:</td><td class="income">${total_income:,.0f}</td></tr>
+            <tr><td>Total Expenses:</td><td class="expense">${total_expenses:,.0f}</td></tr>
+            <tr style="background: {REPORT_CLRS['emphasis']}"><td><strong>Net Income:</strong></td><td class="net"><strong>${net_income:,.0f}</strong></td></tr>
         </table>
         """
+        
+        # --- Income by Category ---
+        income_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='income')
+
+        if income_by_category:
+            html_output += f"<div class='section-title'>INCOME BY CATEGORY{period_label}</div>"
+            html_output += "<table><tr><th>Category</th><th>Amount</th><th>Percent</th></tr>"
+            sorted_categories = sorted(income_by_category.items(), key=lambda x: x[1], reverse=True)
+            total_exp_cents = sum(income_by_category.values())
+            
+            for category, amount_cents in sorted_categories:
+                amount = Decimal(amount_cents) / 100
+                percentage = (Decimal(amount_cents) / total_exp_cents) * 100 if total_exp_cents > 0 else 0
+                html_output += f"<tr><td>{category}</td><td>${amount:,.0f}</td><td>{percentage:.1f}%</td></tr>"
+            html_output += "</table>"
         
         # --- Spending by Category ---
         spending_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='expense')
@@ -228,111 +241,132 @@ class ReportsTab(ttk.Frame):
             for category, amount_cents in sorted_categories:
                 amount = Decimal(amount_cents) / 100
                 percentage = (Decimal(amount_cents) / total_exp_cents) * 100 if total_exp_cents > 0 else 0
-                html_output += f"<tr><td>{category}</td><td>${amount:,.2f}</td><td>{percentage:.1f}%</td></tr>"
+                html_output += f"<tr><td>{category}</td><td>${amount:,.0f}</td><td>{percentage:.1f}%</td></tr>"
             html_output += "</table>"
 
         # --- Budget vs Actual ---
         budget_targets = self.db.get_budget_targets()
 
         if budget_targets:
+            expense_categories = [c['name'] for c in self.db.get_categories(cat_type='expense')]
+            income_categories = [c['name'] for c in self.db.get_categories(cat_type='income')]
+
             html_output += f"<div class='section-title'>BUDGET VS ACTUAL{period_label}</div>"
+            # Income table
+            html_output += f"<div class='section-title'>Income{period_label}</div>"
             html_output += "<table>"
-            html_output += f"<tr><th>Category</th><th>Budget{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
+            html_output += f"<tr><th>Category</th><th>Target{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
+
             for budget in budget_targets:
                 category = self.db.get_category_name_by_id(budget['category_id'])
-                budget_amount = budget['monthly_target'] if total_months == 1 else budget['monthly_target'] * total_months
-                actual_amount = Decimal(spending_by_category.get(category, 0))/100
-                difference = budget_amount - actual_amount
-                
-                status_class = "status-under" if difference >= 0 else "status-over"
-                status_text = "✓ Under" if difference >= 0 else "✗ Over"
-                
-                html_output += f"""
-                <tr>
-                    <td>{category}</td>
-                    <td>${budget_amount:,.2f}</td>
-                    <td>${actual_amount:,.2f}</td>
-                    <td>${difference:,.2f}</td>
-                    <td class="{status_class}">{status_text}</td>
-                </tr>
-                """
+                if category in income_categories:
+                    budget_amount = budget['monthly_target'] * total_months
+                    actual_amount = Decimal(spending_by_category.get(category, 0))/100
+                    difference = budget_amount - actual_amount
+                    
+                    status_class = "status-under" if difference < 0 else "status-over"
+                    status_text = "✓ Over" if difference < 0 else "✗ Under"
+                    
+                    html_output += f"""
+                    <tr>
+                        <td>{category}</td>
+                        <td>${budget_amount:,.0f}</td>
+                        <td>${actual_amount:,.0f}</td>
+                        <td>${difference:,.0f}</td>
+                        <td class="{status_class}">{status_text}</td>
+                    </tr>
+                    """
             html_output += "</table>"
-        
-        # Breakdown income by category for reporting and charts
-        income_by_category = self.db.get_category_totals_by_type(start_date, end_date, type='income')
+            # Expenses Table
+            html_output += f"<div class='section-title'>Expenses{period_label}</div>"
+            html_output += "<table>"
+            html_output += f"<tr><th>Category</th><th>Budget{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
 
-        if income_by_category:
-            
-            sorted_income = sorted(income_by_category.items(), key=lambda x: x[1], reverse=True)
-            
-            for category, amount in sorted_income:
-                percentage = (Decimal(amount) / total_income) if total_income > 0 else 0
+            for budget in budget_targets:
+                category = self.db.get_category_name_by_id(budget['category_id'])
+                if category in expense_categories:
+                    budget_amount = budget['monthly_target'] * total_months
+                    actual_amount = Decimal(spending_by_category.get(category, 0))/100
+                    difference = budget_amount - actual_amount
+                    
+                    status_class = "status-under" if difference >= 0 else "status-over"
+                    status_text = "✓ Under" if difference >= 0 else "✗ Over"
+                    
+                    html_output += f"""
+                    <tr>
+                        <td>{category}</td>
+                        <td>${budget_amount:,.0f}</td>
+                        <td>${actual_amount:,.0f}</td>
+                        <td>${difference:,.0f}</td>
+                        <td class="{status_class}">{status_text}</td>
+                    </tr>
+                    """
+            html_output += "</table>"
         
         # --- NET WORTH SECTION ---
 
         # Change start/end dates based on net worth entries
         if self.period_var.get() == 'All Time':
             net_worth_entries = self.db.get_net_worth_entries() # Ordered by date > ascending
-            start_date = net_worth_entries[0]['date']
-            end_date = net_worth_entries[-1]['date']
-            print(start_date, end_date)
+            if net_worth_entries: # Skip if no net worth entries
+                start_date = net_worth_entries[0]['date']
+                end_date = net_worth_entries[-1]['date']
             
         net_worth_entries = self.db.get_net_worth_entries(start_date, end_date) # Ordered by date > ascending
 
-        if not net_worth_entries:
-            return
+        if net_worth_entries:
 
-        # Calculate difference in months for conditional logic (Net worth section)
-        diff = relativedelta(datetime.strptime(end_date, '%Y-%m-%d'), datetime.strptime(start_date, '%Y-%m-%d'))
-        months_diff = diff.years * 12 + diff.months
-        total_months = months_diff + 1
+            # Calculate difference in months for conditional logic (Net worth section)
+            diff = relativedelta(datetime.strptime(end_date, '%Y-%m-%d'), datetime.strptime(start_date, '%Y-%m-%d'))
+            months_diff = diff.years * 12 + diff.months
+            total_months = months_diff + 1
 
-        period_label = "" if total_months == 1 else f" ({total_months} Months)"
-        
-        html_output += f'<div class="section-title">NET WORTH{period_label}</div>'
-
-        chart_base64_url = None
-
-        # Group entries into months
-        monthly_data = self.group_by_month(net_worth_entries)
-        sorted_months = sorted(monthly_data.keys())
-
-        if months_diff >= 6: # Create trend chart if looking at span of at least 6 months
-            chart_base64_url = self.generate_net_worth_chart(monthly_data, sorted_months)
+            period_label = "" if total_months == 1 else f" ({total_months} Months)"
             
-        # Grab the First and Latest month snapshots
-        first_month_key = sorted_months[0]
-        latest_month_key = sorted_months[-1]
+            html_output += f'<div class="section-title">NET WORTH{period_label}</div>'
 
-        # Calculate totals for the First Month (Opening)
-        opening_nw = sum(e['value'] for e in monthly_data[first_month_key])
-        
-        # Calculate totals for the Latest Month (Closing)
-        latest_entries = monthly_data[latest_month_key]
-        grouped_accounts = defaultdict(list)
-        total_assets = 0
-        total_liabilities = 0
+            chart_base64_url = None
 
-        for account in latest_entries:
-            atype = account.get('asset_type') or 'Other'
-            value = account.get('value', 0)
-            account_name = account.get('asset_name', 'Unknown Account')
+            # Group entries into months
+            monthly_data = self.group_by_month(net_worth_entries)
+            sorted_months = sorted(monthly_data.keys())
+
+            if months_diff >= 6: # Create trend chart if looking at span of at least 6 months
+                chart_base64_url = self.generate_net_worth_chart(monthly_data, sorted_months)
+                
+            # Grab the First and Latest month snapshots
+            first_month_key = sorted_months[0]
+            latest_month_key = sorted_months[-1]
+
+            # Calculate totals for the First Month (Opening)
+            opening_nw = sum(e['value'] for e in monthly_data[first_month_key])
             
-            grouped_accounts[atype].append({'name': account_name, 'value': value})
+            # Calculate totals for the Latest Month (Closing)
+            latest_entries = monthly_data[latest_month_key]
+            grouped_accounts = defaultdict(list)
+            total_assets = 0
+            total_liabilities = 0
 
-            if value >= 0:
-                total_assets += value
-            else:
-                total_liabilities += abs(value)
-            
-        total_net_worth = total_assets - total_liabilities
+            for account in latest_entries:
+                atype = account.get('asset_type') or 'Other'
+                value = account.get('value', 0)
+                account_name = account.get('asset_name', 'Unknown Account')
+                
+                grouped_accounts[atype].append({'name': account_name, 'value': value})
 
-        # This represents the growth from the start of the period to the end.
-        change_val = total_net_worth - opening_nw
+                if value >= 0:
+                    total_assets += value
+                else:
+                    total_liabilities += abs(value)
+                
+            total_net_worth = total_assets - total_liabilities
 
-        html_output += self.generate_net_worth_html(
-            grouped_accounts, total_assets, total_liabilities, total_net_worth, change_val, chart_base64_url
-        )
+            # This represents the growth from the start of the period to the end.
+            change_val = total_net_worth - opening_nw
+
+            html_output += self.generate_net_worth_html(
+                grouped_accounts, total_assets, total_liabilities, total_net_worth, change_val, chart_base64_url
+            )
         
         # Close HTML body and tags
         html_output += "</body></html>"
@@ -350,6 +384,8 @@ class ReportsTab(ttk.Frame):
         return months
     
     def generate_net_worth_chart(self, monthly_data, sorted_months):
+        if not sorted_months:
+            return
         dates = [datetime.strptime(m, '%Y-%m') for m in sorted_months]
         values = []
         for month_key in sorted_months:
