@@ -94,7 +94,7 @@ class VisualizationsTab(ttk.Frame):
         self.inner_notebook.add(net_tab, text='   Net Worth   ')
         net_worth_frame = ttk.Frame(net_tab)
         net_worth_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure1 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure1 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax1 = self.figure1.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas1 = FigureCanvasTkAgg(self.figure1, net_worth_frame)
         self.canvas1.get_tk_widget().pack(fill='both', expand=True)
@@ -105,7 +105,7 @@ class VisualizationsTab(ttk.Frame):
         self.inner_notebook.add(mixed_tab, text='  Money In/Out  ')
         mixed_frame = ttk.Frame(mixed_tab)
         mixed_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure2 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure2 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax2 = self.figure2.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas2 = FigureCanvasTkAgg(self.figure2, mixed_frame)
         self.canvas2.get_tk_widget().pack(fill='both', expand=True)
@@ -116,7 +116,7 @@ class VisualizationsTab(ttk.Frame):
         self.inner_notebook.add(income_tab, text='     Income     ')
         income_frame = ttk.Frame(income_tab)
         income_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure3 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure3 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax3 = self.figure3.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas3 = FigureCanvasTkAgg(self.figure3, income_frame)
         self.canvas3.get_tk_widget().pack(fill='both', expand=True)
@@ -127,7 +127,7 @@ class VisualizationsTab(ttk.Frame):
         self.inner_notebook.add(expenses_tab, text='    Expenses    ')
         expenses_time_frame = ttk.Frame(expenses_tab)
         expenses_time_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure4 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure4 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax4 = self.figure4.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas4 = FigureCanvasTkAgg(self.figure4, expenses_time_frame)
         self.canvas4.get_tk_widget().pack(fill='both', expand=True)
@@ -138,7 +138,7 @@ class VisualizationsTab(ttk.Frame):
         self.inner_notebook.add(savings_tab, text='    Savings    ')
         savings_frame = ttk.Frame(savings_tab)
         savings_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure5 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure5 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax5 = self.figure5.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas5 = FigureCanvasTkAgg(self.figure5, savings_frame)
         self.canvas5.get_tk_widget().pack(fill='both', expand=True)
@@ -149,7 +149,7 @@ class VisualizationsTab(ttk.Frame):
         self.inner_notebook.add(expense_bd_tab, text='Expense Breakdown')
         expense_frame = ttk.Frame(expense_bd_tab)
         expense_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure6 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure6 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax6 = self.figure6.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas6 = FigureCanvasTkAgg(self.figure6, expense_frame)
         self.canvas6.get_tk_widget().pack(fill='both', expand=True)
@@ -160,7 +160,7 @@ class VisualizationsTab(ttk.Frame):
         self.inner_notebook.add(income_bd_tab, text='Income Breakdown')
         income_pie_frame = ttk.Frame(income_bd_tab)
         income_pie_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure7 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure7 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax7 = self.figure7.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas7 = FigureCanvasTkAgg(self.figure7, income_pie_frame)
         self.canvas7.get_tk_widget().pack(fill='both', expand=True)
@@ -183,7 +183,7 @@ class VisualizationsTab(ttk.Frame):
 
         cat_frame = ttk.Frame(cat_bd_tab)
         cat_frame.pack(fill='both', expand=True, padx=5, pady=(0,5))
-        self.figure8 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure8 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax8 = self.figure8.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas8 = FigureCanvasTkAgg(self.figure8, cat_frame)
         self.canvas8.get_tk_widget().pack(fill='both', expand=True)
@@ -258,7 +258,7 @@ class VisualizationsTab(ttk.Frame):
 
         kw_frame = ttk.Frame(kw_bd_tab)
         kw_frame.pack(fill='both', expand=True, padx=5, pady=5)
-        self.figure9 = Figure(figsize=(10, 4), dpi=100, tight_layout=True, facecolor=VIS_CLRS['normal_bg'])
+        self.figure9 = Figure(figsize=(10, 4), dpi=100, constrained_layout=True, facecolor=VIS_CLRS['normal_bg'])
         self.ax9 = self.figure9.add_subplot(111, facecolor=VIS_CLRS['chart_bg'])
         self.canvas9 = FigureCanvasTkAgg(self.figure9, kw_frame)
         self.canvas9.get_tk_widget().pack(fill='both', expand=True)
@@ -476,6 +476,7 @@ class VisualizationsTab(ttk.Frame):
             bars_a = self.ax1.bar([i - width for i in x], assets, width=width, color=VIS_CLRS['income'], label='Assets', edgecolor='whitesmoke', alpha=0.8)
             bars_l = self.ax1.bar(x, liabilities, width=width, color=VIS_CLRS['expense'], label='Liabilities', edgecolor='whitesmoke', alpha=0.8)
             bars_n = self.ax1.bar([i + width for i in x], net, width=width, color=VIS_CLRS['net'], label='Net Worth', edgecolor='whitesmoke', alpha=0.8)
+            self.ax1.margins(y=0.12)  # 12% vertical margin
             
             # Compute averages and draw dashed lines for each (liabilities average will be negative)
             avg_a = sum(assets) / len(assets) if assets else 0.0
@@ -509,7 +510,8 @@ class VisualizationsTab(ttk.Frame):
             self.ax1.yaxis.label.set_color(VIS_CLRS['normal_text'])
 
             # Annotate bar values
-            padding = 6 # Additional space between bars and $ labels
+            padding = float(max(max(max(assets), abs(min(liabilities)), max(net)) * Decimal(0.02), 1))
+            print(padding)
 
             for bar in bars_a:
                 hgt = bar.get_height()
@@ -562,6 +564,7 @@ class VisualizationsTab(ttk.Frame):
 
         # Plot bars for income, expenses, and savings
         bars = self.ax2.bar(range(len(values)), values, width=width, color=colors, edgecolor=VIS_CLRS['normal_text'], alpha=0.8)
+        self.ax2.margins(y=0.15) # 15% vertical margin
 
         # Origin line
         self.ax2.axhline(y=0, color=VIS_CLRS['normal_text'], linestyle='-', linewidth=1)
@@ -585,8 +588,13 @@ class VisualizationsTab(ttk.Frame):
         self.ax2.xaxis.label.set_color(VIS_CLRS['normal_text'])
         self.ax2.yaxis.label.set_color(VIS_CLRS['normal_text'])
 
+        # Set y limits
+        ymin, ymax = self.ax2.get_ylim()
+        y_range = ymax - ymin
+        self.ax2.set_ylim(ymin - y_range * 0.05, ymax + y_range * 0.1)
+
         # Annotate bar values
-        padding = 80 # Additional space between bars and $ labels
+        padding = max(max(values) * Decimal(0.03), 50)  # 3% of max value or 50, whichever is larger
 
         for bar in bars:
             hgt = bar.get_height()
@@ -623,6 +631,8 @@ class VisualizationsTab(ttk.Frame):
         
         # Formatting/Creating bars
         bars = self.ax3.bar(range(len(months)), values, color=VIS_CLRS['income'], alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
+        self.ax3.margins(y=0.12)  # 12% vertical margin
+
         avg = sum(values) / len(values) if values else 0.0
 
         # Average line
@@ -678,8 +688,10 @@ class VisualizationsTab(ttk.Frame):
         values = [Decimal(monthly.get(m, 0.0)) for m in months]
 
         bars = self.ax4.bar(range(len(months)), values, color=VIS_CLRS['expense'], alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
+        self.ax4.margins(y=0.12)  # 12% vertical margin
+
         avg = sum(values) / len(values) if values else 0.0
-        self.ax4.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average')
+        self.ax4.axhline(y=avg, color=VIS_CLRS['normal_text'], linestyle='--', linewidth=1, label='Average') # Average line
 
         try: # Add budget line (sum of all budgets) if budgets exists for this category
             budgets = self.db.get_budget_targets()
@@ -742,6 +754,8 @@ class VisualizationsTab(ttk.Frame):
 
         values = [(Decimal(income_monthly.get(m, 0.0)) - Decimal(expense_monthly.get(m, 0.0))) for m in months]
         bars = self.ax5.bar(range(len(months)), values, color=[VIS_CLRS['income'] if v>=0 else VIS_CLRS['expense'] for v in values], alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
+        self.ax5.margins(y=0.15) # 15% vertical margin
+
         avg = sum(values) / len(values) if values else 0.0
 
         # Origin line
@@ -769,7 +783,7 @@ class VisualizationsTab(ttk.Frame):
         self.ax5.yaxis.label.set_color(VIS_CLRS['normal_text'])
 
         # Annotate bar values
-        padding = 10 # Additional space between bars and $ labels
+        padding = max(max([abs(v) for v in values]) * Decimal(0.02), 8) if values else 8
         for bar in bars:
             hgt = bar.get_height()
             y_pos = hgt + padding if hgt > 0 else hgt - padding
@@ -801,6 +815,8 @@ class VisualizationsTab(ttk.Frame):
 
         values = [Decimal(expenses.get(c, 0.0))/100 for c in sorted_cats]
         bars = self.ax6.bar(sorted_cats, values, color=VIS_CLRS['expense'], alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
+        self.ax6.margins(y=0.12)  # 12% vertical margin
+
         avg = sum(list(filter(None, values))) / len(list(filter(None, values))) if values else 0.0
 
         # Average line
@@ -853,6 +869,8 @@ class VisualizationsTab(ttk.Frame):
 
         values = [Decimal(income.get(c, 0.0))/100 for c in sorted_cats]
         bars = self.ax7.bar(sorted_cats, values, color=VIS_CLRS['income'], alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
+        self.ax7.margins(y=0.12)  # 12% vertical margin
+
         avg = sum(list(filter(None, values))) / len(list(filter(None, values))) if values else 0.0
 
         # Average line
@@ -924,6 +942,8 @@ class VisualizationsTab(ttk.Frame):
 
         # Use a neutral color for category drilldown bars
         bars = self.ax8.bar(range(len(months)), values, color=VIS_CLRS['neutral'], alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
+        self.ax8.margins(y=0.12)  # 12% vertical margin
+
         avg = sum(values) / len(values) if values else 0.0
 
         # Add budget line if budget exists for this category
@@ -1010,6 +1030,8 @@ class VisualizationsTab(ttk.Frame):
         colors = [VIS_CLRS['income'] if v >= 0 else VIS_CLRS['expense'] for v in values]
 
         bars = self.ax9.bar(range(len(months)), values, color=colors, alpha=0.7, edgecolor=VIS_CLRS['normal_text'])
+        self.ax9.margins(y=0.12)  # 12% vertical margin
+
         avg = sum(values) / len(values) if values else 0.0
 
         # Average line
@@ -1038,9 +1060,10 @@ class VisualizationsTab(ttk.Frame):
         self.ax9.yaxis.label.set_color(VIS_CLRS['normal_text'])
 
         # Annotate bar values
-        padding = 5 # Additional space between bars and $ labels
+        padding = max(max([abs(v) for v in values]) * Decimal(0.02), 1) if values else 1
+        print(padding)
         for bar in bars:
-            hgt = bar.get_height()
+            hgt = Decimal(bar.get_height())
             y_pos = hgt + padding if hgt > 0 else hgt - padding
             if hgt != 0: # Place label according to value, don't label zeroes
                 self.ax9.text(bar.get_x() + bar.get_width()/2., y_pos, f'${hgt:,.0f}', ha='center', va='bottom' if hgt > 0 else 'top', fontsize=8, color=VIS_CLRS['normal_text'])
