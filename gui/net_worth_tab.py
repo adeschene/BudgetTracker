@@ -525,8 +525,10 @@ class ApplyTemplateDialog:
         button_frame = ttk.Frame(self.dialog)
         button_frame.pack(pady=10)
 
-        ttk.Button(button_frame, text="Apply All", style='Accent.TButton', command=self.apply, width=12).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=12).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Apply", style='Accent.TButton', command=self.apply, width=12).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.destroy_dialog, width=12).pack(side='left', padx=5)
+
+        self.dialog.protocol("WM_DELETE_WINDOW", self.destroy_dialog)
 
         self.dialog.update_idletasks()
         center_window(self.dialog)
@@ -541,22 +543,32 @@ class ApplyTemplateDialog:
         else:
             self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
+    def destroy_dialog(self):
+        self.dialog.unbind_all("<MouseWheel>")
+        self.dialog.destroy()
+
     def apply(self):
         try:
             template_values = {}
             for template_id, value_var in self.value_vars.items():
-                value = int(value_var.get())
-                template_values[template_id] = value
+                value_str = value_var.get().strip()
+                if value_str:
+                    value = int(value_str)
+                    template_values[template_id] = value
+
+            if not template_values:
+                messagebox.showwarning("Warning", "No values entered. Please enter at least one value to apply templates.")
+                return
 
             self.db.apply_templates_to_month(self.year, self.month, template_values)
 
             if self.callback:
                 self.callback()
 
-            self.dialog.destroy()
+            self.destroy_dialog()
             messagebox.showinfo("Success", f"Templates applied to {datetime(self.year, self.month, 1).strftime('%B %Y')}!")
         except ValueError:
-            messagebox.showerror("Error", "Please enter valid values for all assets")
+            messagebox.showerror("Error", "Please enter valid values for the assets you wish to apply")
 
 class TemplateManagerDialog:
     def __init__(self, parent, db: DatabaseManager, asset_types):
