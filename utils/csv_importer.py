@@ -161,6 +161,12 @@ class CSVImporter:
         # Parse CSV into normalized transaction dicts using template mapping
         transactions = self.parse_csv(file_path, date_col, desc_col, amount_col, debit_col, credit_col, desc2_col, delimiter, has_header, skip_rows)
 
+        # Apply sign swapping if enabled in template
+        invert_amounts = template.get('invert_amounts', 0)
+        if invert_amounts:
+            for trans in transactions:
+                trans['amount'] = -trans['amount']
+
         count = 0
         # Apply description rules and categorization, then persist each transaction
         for trans in transactions:
@@ -307,6 +313,7 @@ class ImportDialog:
                 'description2_column': None,
                 'description_delimiter': ' - ',
                 'skip_rows': 0,
+                'invert_amounts': 0,
                 'notes': 'Auto-generated template'
             }
         else:

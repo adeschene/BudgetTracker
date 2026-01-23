@@ -93,10 +93,18 @@ class DatabaseManager:
                 debit_column TEXT,
                 credit_column TEXT,
                 skip_rows INTEGER DEFAULT 0,
+                invert_amounts INTEGER DEFAULT 0,
                 notes TEXT,
                 FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
             )
         ''')
+
+        # Migration: Add invert_amounts column if it doesn't exist
+        try:
+            cursor.execute("ALTER TABLE import_templates ADD COLUMN invert_amounts INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            # Column already exists, ignore
+            pass
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS description_rules (
@@ -615,13 +623,14 @@ class DatabaseManager:
     def add_import_template(self, template_name: str, account_id: int, date_column: str,
                            description_column: str, amount_column: str = None, skip_rows: int = 0, notes: str = None,
                            debit_column: str = None, credit_column: str = None,
-                           description2_column: str = None, description_delimiter: str = ' - '):
+                           description2_column: str = None, description_delimiter: str = ' - ',
+                           invert_amounts: int = 0):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO import_templates (template_name, account_id, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (template_name, account_id, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, notes))
+            INSERT INTO import_templates (template_name, account_id, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, invert_amounts, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (template_name, account_id, date_column, description_column, description2_column, description_delimiter, amount_column, debit_column, credit_column, skip_rows, invert_amounts, notes))
         template_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -674,18 +683,18 @@ class DatabaseManager:
                               date_column: str, description_column: str, amount_column: str = None,
                               skip_rows: int = 0, notes: str = None, debit_column: str = None, 
                               credit_column: str = None, description2_column: str = None, 
-                              description_delimiter: str = ' - '):
+                              description_delimiter: str = ' - ', invert_amounts: int = 0):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE import_templates
             SET template_name = ?, account_id = ?, date_column = ?, description_column = ?, 
                 description2_column = ?, description_delimiter = ?, amount_column = ?, 
-                debit_column = ?, credit_column = ?, skip_rows = ?, notes = ?
+                debit_column = ?, credit_column = ?, skip_rows = ?, invert_amounts = ?, notes = ?
             WHERE id = ?
         ''', (template_name, account_id, date_column, description_column, 
             description2_column, description_delimiter, amount_column, 
-            debit_column, credit_column, skip_rows, notes, template_id))
+            debit_column, credit_column, skip_rows, invert_amounts, notes, template_id))
         conn.commit()
         conn.close()
 

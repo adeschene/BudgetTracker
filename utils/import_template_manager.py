@@ -227,6 +227,7 @@ class ImportTemplateManager:
                 debit_column=template['debit_column'],
                 credit_column=template['credit_column'],
                 skip_rows=template['skip_rows'],
+                invert_amounts=template['invert_amounts'],
                 notes=template['notes']
             )
             # Refresh view to show updated values
@@ -430,7 +431,7 @@ class TemplateDialog:
         self.dialog = tk.Toplevel(parent)
         self.dialog.withdraw()
         self.dialog.title("Edit Template" if template else "Add Template")
-        self.dialog.geometry("500x700")
+        self.dialog.geometry("500x730")
         self.dialog.transient(parent)
         self.dialog.grab_set() # Make window modal
 
@@ -497,12 +498,15 @@ class TemplateDialog:
         ttk.Spinbox(skip_frame, from_=0, to=100, textvariable=self.skip_rows_var, width=4).pack(side='left')
         tk.Label(skip_frame, text="(rows to skip before header row)", fg='gray').pack(side='left', padx=5)
 
-        ttk.Label(self.dialog, text="Notes:").grid(row=11, column=0, padx=10, pady=10, sticky='w')
+        self.invert_amounts_var = tk.IntVar(value=template['invert_amounts'] if template and 'invert_amounts' in template else 0)
+        ttk.Checkbutton(self.dialog, text="Invert transaction signs (for credit card statements)", variable=self.invert_amounts_var).grid(row=11, column=0, columnspan=2, padx=(20,10), pady=5, sticky='w')
+
+        ttk.Label(self.dialog, text="Notes:").grid(row=12, column=0, padx=10, pady=10, sticky='w')
         self.notes_var = tk.StringVar(value=template['notes'] if template and template['notes'] else '')
-        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=11, column=1, padx=10, pady=10, sticky='ew')
+        ttk.Entry(self.dialog, textvariable=self.notes_var).grid(row=12, column=1, padx=10, pady=10, sticky='ew')
 
         button_frame = ttk.Frame(self.dialog)
-        button_frame.grid(row=12, column=0, columnspan=2, pady=20)
+        button_frame.grid(row=13, column=0, columnspan=2, pady=20)
 
         ttk.Button(button_frame, text="Save", style='Accent.TButton', command=self.save, width=10).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.dialog.destroy, width=10).pack(side='left', padx=5)
@@ -566,6 +570,7 @@ class TemplateDialog:
                 debit_column=debit_col,
                 credit_column=credit_col,
                 skip_rows=self.skip_rows_var.get(),
+                invert_amounts=self.invert_amounts_var.get(),
                 notes=self.notes_var.get()
             )
         else:
@@ -583,6 +588,7 @@ class TemplateDialog:
                 debit_column=debit_col,
                 credit_column=credit_col,
                 skip_rows=self.skip_rows_var.get(),
+                invert_amounts=self.invert_amounts_var.get(),
                 notes=self.notes_var.get()
             )
 
