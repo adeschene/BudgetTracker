@@ -596,7 +596,7 @@ class VisualizationsTab(ttk.Frame):
         padding = max(max(values) * Decimal(0.03), 50)  # 3% of max value or 50, whichever is larger
 
         for bar in bars:
-            hgt = bar.get_height()
+            hgt = Decimal(bar.get_height())
             y_pos = hgt + padding if hgt > 0 else hgt - padding
             if hgt != 0: # Value sign varies, place label according to value, but don't label zeroes regardless
                 self.ax2.text(bar.get_x() + bar.get_width()/2., y_pos, f'${hgt:,.0f}', ha='center', va='bottom' if hgt > 0 else 'top', fontsize=8, color=VIS_CLRS['normal_text'])
@@ -784,7 +784,7 @@ class VisualizationsTab(ttk.Frame):
         # Annotate bar values
         padding = max(max([abs(v) for v in values]) * Decimal(0.02), 8) if values else 8
         for bar in bars:
-            hgt = bar.get_height()
+            hgt = Decimal(bar.get_height())
             y_pos = hgt + padding if hgt > 0 else hgt - padding
             if hgt != 0: # Place label according to value, don't label zeroes
                 self.ax5.text(bar.get_x() + bar.get_width()/2., y_pos, f'${hgt:,.0f}', ha='center', va='bottom' if hgt > 0 else 'top', fontsize=8, color=VIS_CLRS['normal_text'])
