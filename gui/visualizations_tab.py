@@ -511,7 +511,6 @@ class VisualizationsTab(ttk.Frame):
 
             # Annotate bar values
             padding = float(max(max(max(assets), abs(min(liabilities)), max(net)) * Decimal(0.02), 1))
-            print(padding)
 
             for bar in bars_a:
                 hgt = bar.get_height()
@@ -1061,7 +1060,6 @@ class VisualizationsTab(ttk.Frame):
 
         # Annotate bar values
         padding = max(max([abs(v) for v in values]) * Decimal(0.02), 1) if values else 1
-        print(padding)
         for bar in bars:
             hgt = Decimal(bar.get_height())
             y_pos = hgt + padding if hgt > 0 else hgt - padding
