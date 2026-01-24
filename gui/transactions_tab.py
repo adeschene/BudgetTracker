@@ -300,6 +300,7 @@ class TransactionsTab(ttk.Frame):
                 self.db.get_account_name_by_id(trans['account_id']) or '',
                 trans['notes'] or ''
             ), tags=(trans['id'],))
+        self.apply_current_sort()
     
     def import_csv(self):
         file_path = filedialog.askopenfilename(
@@ -356,7 +357,28 @@ class TransactionsTab(ttk.Frame):
             # Parse formatted currency strings back to floats for numeric sort
             items.sort(key=lambda x: Decimal(x[0].replace('$', '').replace(',', '').replace('-', '-')), reverse=self.sort_reverse)
         elif column == 'Date':
-            items.sort(key=lambda x: x[0], reverse=self.sort_reverse)
+            items.sort(key=lambda x: datetime.strptime(x[0], "%m-%d-%Y"), reverse=self.sort_reverse)
+        else:
+            # Case-insensitive string sort for other columns
+            items.sort(key=lambda x: x[0].lower(), reverse=self.sort_reverse)
+
+        # Reorder the tree items according to sorted order
+        for index, (val, item) in enumerate(items):
+            self.tree.move(item, '', index)
+    
+    def apply_current_sort(self):
+        if not self.sort_column:
+            return
+
+        # Build a list of (value, item_id) tuples for sorting
+        items = [(self.tree.set(item, self.sort_column), item) for item in self.tree.get_children('')]
+
+        # Choose sorting strategy depending on column type
+        if self.sort_column == 'Amount':
+            # Parse formatted currency strings back to floats for numeric sort
+            items.sort(key=lambda x: Decimal(x[0].replace('$', '').replace(',', '').replace('-', '-')), reverse=self.sort_reverse)
+        elif self.sort_column == 'Date':
+            items.sort(key=lambda x: datetime.strptime(x[0], "%m-%d-%Y"), reverse=self.sort_reverse)
         else:
             # Case-insensitive string sort for other columns
             items.sort(key=lambda x: x[0].lower(), reverse=self.sort_reverse)
@@ -507,14 +529,14 @@ class TransactionDialog:
         tk.Label(self.dialog, text='Please enter negative values for expenses\n(purchases, withdrawals, etc.)', fg='gray').grid(row=3, column=1, padx=5, sticky='ew')
         
         ttk.Label(self.dialog, text="Category:").grid(row=4, column=0, padx=10, pady=10, sticky='w')
-        self.category_var = tk.StringVar(value=transaction['category'] if transaction else '')
+        self.category_var = tk.StringVar(value=self.db.get_category_name_by_id(transaction['category_id']) if transaction else '')
         category_combo = ttk.Combobox(self.dialog, textvariable=self.category_var, state='readonly')
         categories = self.db.get_categories()
         category_combo['values'] = [cat['name'] for cat in categories]
         category_combo.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
         
         ttk.Label(self.dialog, text="Account:").grid(row=5, column=0, padx=10, pady=10, sticky='w')
-        self.account_var = tk.StringVar(value=transaction['account'] if transaction else '')
+        self.account_var = tk.StringVar(value=self.db.get_account_name_by_id(transaction['account_id']) if transaction else '')
         account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var, state='readonly')
         accounts = self.db.get_accounts()
         account_combo['values'] = [acc['name'] for acc in accounts]
