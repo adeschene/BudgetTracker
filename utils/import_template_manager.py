@@ -440,11 +440,10 @@ class TemplateDialog:
         ttk.Entry(self.dialog, textvariable=self.name_var).grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
         ttk.Label(self.dialog, text="Account:").grid(row=1, column=0, padx=10, pady=10, sticky='w')
-        self.account_var = tk.StringVar(value=template['account_name'] if template else '')
+        self.account_var = tk.StringVar(value=self.db.get_account_name_by_id(template['account_id']) if template else '')
         accounts = [acc['name'] for acc in self.db.get_accounts()]
         account_combo = ttk.Combobox(self.dialog, textvariable=self.account_var, values=accounts, state='readonly')
         account_combo.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
-        account_combo.current(0) # Set to first option
 
         ttk.Label(self.dialog, text="Date Column:").grid(row=2, column=0, padx=10, pady=10, sticky='w')
         self.date_col_var = tk.StringVar(value=template['date_column'] if template else 'Date')
