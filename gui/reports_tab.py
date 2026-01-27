@@ -248,20 +248,24 @@ class ReportsTab(ttk.Frame):
         budget_targets = self.db.get_budget_targets()
 
         if budget_targets:
+            html_output += f"<div class='section-title'>BUDGET VS ACTUAL{period_label}</div>"
+
             expense_categories = [c['name'] for c in self.db.get_categories(cat_type='expense')]
             income_categories = [c['name'] for c in self.db.get_categories(cat_type='income')]
 
-            html_output += f"<div class='section-title'>BUDGET VS ACTUAL{period_label}</div>"
-            # Income table
-            html_output += f"<div class='section-title'>Income{period_label}</div>"
-            html_output += "<table>"
-            html_output += f"<tr><th>Category</th><th>Target{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
+            income_targets = [b for b in budget_targets if self.db.get_category_name_by_id(b['category_id']) in income_categories]
+            expense_targets = [b for b in budget_targets if self.db.get_category_name_by_id(b['category_id']) in expense_categories]
 
-            for budget in budget_targets:
-                category = self.db.get_category_name_by_id(budget['category_id'])
-                if category in income_categories:
+            if income_targets:
+                # Income table
+                html_output += f"<div class='section-title'>Income{period_label}</div>"
+                html_output += "<table>"
+                html_output += f"<tr><th>Category</th><th>Target{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
+
+                for budget in income_targets:
+                    category = self.db.get_category_name_by_id(budget['category_id'])
                     budget_amount = budget['monthly_target'] * total_months
-                    actual_amount = Decimal(spending_by_category.get(category, 0))/100
+                    actual_amount = Decimal(income_by_category.get(category, 0))/100
                     difference = budget_amount - actual_amount
                     
                     status_class = "status-under" if difference < 0 else "status-over"
@@ -276,15 +280,15 @@ class ReportsTab(ttk.Frame):
                         <td class="{status_class}">{status_text}</td>
                     </tr>
                     """
-            html_output += "</table>"
-            # Expenses Table
-            html_output += f"<div class='section-title'>Expenses{period_label}</div>"
-            html_output += "<table>"
-            html_output += f"<tr><th>Category</th><th>Budget{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
+                html_output += "</table>"
+            if expense_targets:
+                # Expenses Table
+                html_output += f"<div class='section-title'>Expenses{period_label}</div>"
+                html_output += "<table>"
+                html_output += f"<tr><th>Category</th><th>Budget{period_label}</th><th>Actual</th><th>Difference</th><th>Status</th></tr>"
 
-            for budget in budget_targets:
-                category = self.db.get_category_name_by_id(budget['category_id'])
-                if category in expense_categories:
+                for budget in expense_targets:
+                    category = self.db.get_category_name_by_id(budget['category_id'])
                     budget_amount = budget['monthly_target'] * total_months
                     actual_amount = Decimal(spending_by_category.get(category, 0))/100
                     difference = budget_amount - actual_amount
@@ -301,7 +305,7 @@ class ReportsTab(ttk.Frame):
                         <td class="{status_class}">{status_text}</td>
                     </tr>
                     """
-            html_output += "</table>"
+                html_output += "</table>"
         
         # --- NET WORTH SECTION ---
 
