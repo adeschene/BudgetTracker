@@ -7,9 +7,10 @@ from utils.csv_exporter import CSVExporter
 from utils.helpers import center_window
 
 class SettingsWindow:
-    def __init__(self, parent, db):
+    def __init__(self, parent, db, main_window=None):
         self.db = db
         self.parent = parent
+        self.main_window = main_window or parent
         self.csv_exporter = CSVExporter(self.db) # CSV export helper
         
         self.window = tk.Toplevel(parent)
@@ -37,7 +38,7 @@ class SettingsWindow:
     
     def manage_categories(self):
         self.window.destroy()
-        CategoryManager(self.parent, self.db)
+        CategoryManager(self.parent, self.db, callback=self.main_window.refresh_dependent_tabs)
     
     def manage_import_templates(self):
         self.window.destroy()

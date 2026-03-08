@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from calendar import monthrange
+from dateutil.relativedelta import relativedelta
 from tkcalendar import DateEntry
 from database.db_manager import DatabaseManager
 from utils.editable_tree import EditableTree
@@ -13,8 +14,9 @@ class NetWorthTab(ttk.Frame):
         self.db = db
 
         now = datetime.now()
-        self.current_month = now.month
-        self.current_year = now.year
+        prev_month = now - relativedelta(months=1)
+        self.current_month = prev_month.month # Default to previous month since most users will likely be entering data for the month they just finished 
+        self.current_year = prev_month.year # rather than the current month which is still in progress
 
         self.asset_types = ['Cash', 'Checking', 'Savings', 'Investment', 'Real Estate', 'Vehicle', 'Other Asset', 'Credit Card', 'Loan', 'Other Liability']
 
@@ -38,7 +40,7 @@ class NetWorthTab(ttk.Frame):
 
         ttk.Button(centered_container, text="▶", width=3, style='Big.Accent.TButton', command=self.next_month).pack(side='left', padx=2)
 
-        ttk.Button(centered_container, text="⭮", width=3, style='Big.TButton', command=self.go_to_current_month).pack(side='left', padx=(10,0))
+        ttk.Button(centered_container, text="⭮", width=3, style='Big.TButton', command=self.go_to_previous_month).pack(side='left', padx=(10,0))
 
         self.update_month_label()
 
@@ -127,10 +129,11 @@ class NetWorthTab(ttk.Frame):
         self.update_month_label()
         self.refresh_data()
 
-    def go_to_current_month(self):
+    def go_to_previous_month(self):
         now = datetime.now()
-        self.current_month = now.month
-        self.current_year = now.year
+        prev_month = now - relativedelta(months=1)
+        self.current_month = prev_month.month
+        self.current_year = prev_month.year
         self.update_month_label()
         self.refresh_data()
 

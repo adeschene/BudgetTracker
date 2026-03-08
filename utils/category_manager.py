@@ -5,8 +5,9 @@ from utils.editable_tree import EditableTree
 from utils.helpers import center_window
 
 class CategoryManager:
-    def __init__(self, parent, db):
+    def __init__(self, parent, db, callback=None):
         self.db = db
+        self.callback = callback
         
         self.window = tk.Toplevel(parent)
         self.window.withdraw()
@@ -56,10 +57,15 @@ class CategoryManager:
         for cat in categories:
             self.tree.insert('', 'end', values=(cat['name'], cat['type'].title(), cat['keywords']), tags=(cat['id'],))
     
+    def _on_category_change(self):
+        self.refresh_categories()
+        if self.callback:
+            self.callback()
+    
     def add_category(self):
         categories = self.db.get_categories()
         # Modal stack handling (reacquires set after dialog is destroyed)
-        dialog_window = CategoryDialog(self.window, self.db, categories=categories, callback=self.refresh_categories)
+        dialog_window = CategoryDialog(self.window, self.db, categories=categories, callback=self._on_category_change)
         self.window.wait_window(dialog_window.dialog)
         if self.window.winfo_exists():
             self.window.grab_set()
@@ -79,7 +85,7 @@ class CategoryManager:
         category = next((c for c in categories if c['id'] == category_id), None)
 
         if category:  # Modal stack handling (reacquires set after dialog is destroyed)
-            dialog_window = CategoryDialog(self.window, self.db, categories=categories, category=category, callback=self.refresh_categories)
+            dialog_window = CategoryDialog(self.window, self.db, categories=categories, category=category, callback=self._on_category_change)
             self.window.wait_window(dialog_window.dialog)
             if self.window.winfo_exists():
                 self.window.grab_set()
@@ -100,6 +106,8 @@ class CategoryManager:
                 category_id = self.tree.item(item)['tags'][0]
                 self.db.delete_category(category_id)
             self.refresh_categories()
+            if self.callback:
+                self.callback()
 
     def get_dd_values(self, column_name):
         # Provides values for inline combobox editing
@@ -143,6 +151,8 @@ class CategoryManager:
             )
             # Refresh view to show updated values
             self.refresh_categories()
+            if self.callback:
+                self.callback()
         except (ValueError):
             messagebox.showerror("Error", "Invalid value entered")
 

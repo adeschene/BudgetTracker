@@ -209,6 +209,7 @@ class TransactionsTab(ttk.Frame):
         categories = self.db.get_categories()
         category_names = [''] + [cat['name'] for cat in categories]
         self.category_combo['values'] = category_names
+        self.category_combo.set('') # Reset selection to blank when category list is updated
 
     # Report timeframe picker logic
     def get_date_range(self):

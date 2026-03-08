@@ -87,7 +87,14 @@ class MainWindow:
         self.help_button.pack(side="left", padx=2)
 
     def open_settings(self):
-        SettingsWindow(self.root, self.db)
+        SettingsWindow(self.root, self.db, main_window=self)
 
     def open_help(self):
         HelpWindow(self.root)
+
+    def refresh_dependent_tabs(self):
+        # Refresh tabs that depend on categories
+        self.transactions_tab.update_category_list()
+        self.transactions_tab.refresh_transactions()
+        self.visualizations_tab._update_category_list()
+        self.budget_tab.refresh_budgets()
