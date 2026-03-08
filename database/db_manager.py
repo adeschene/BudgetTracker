@@ -411,7 +411,7 @@ class DatabaseManager:
                 cursor.execute('''
                     INSERT INTO net_worth_entries (date, asset_name, asset_type, value, notes)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (start_date, template['asset_name'], template['asset_type'],
+                ''', (end_date, template['asset_name'], template['asset_type'],
                       template_values[template['id']], template['notes']))
 
         conn.commit()
