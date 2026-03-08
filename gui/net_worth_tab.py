@@ -357,7 +357,9 @@ class NetWorthDialog:
         if entry:
             default_date = entry['date']
         elif default_month and default_year:
-            default_date = f"{default_year}-{default_month:02d}-01"
+            # default to the last day of the specified month rather than the first
+            last_day = monthrange(default_year, default_month)[1]
+            default_date = f"{default_year}-{default_month:02d}-{last_day:02d}"
         else:
             default_date = datetime.now().strftime('%Y-%m-%d')
 
