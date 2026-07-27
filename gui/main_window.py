@@ -9,6 +9,7 @@ from gui.visualizations_tab import VisualizationsTab
 from gui.reports_tab import ReportsTab
 from utils.settings_menu import SettingsWindow
 from utils.help_menu import HelpWindow
+from utils.paths import project_path
 
 class MainWindow:
     def __init__(self, root):
@@ -71,7 +72,7 @@ class MainWindow:
         self.button_container.grid(row=0, column=2, sticky='ne', padx=5, pady=5)
 
         # Settings button with cogwheel icon
-        full_settings_img = Image.open(r'assets\cogwheel.png')
+        full_settings_img = Image.open(project_path('assets', 'cogwheel.png'))
         resized_settings_img = full_settings_img.resize((20, 20), Image.LANCZOS)
         settings_icon = ImageTk.PhotoImage(resized_settings_img)
         self.settings_button = ttk.Button(self.button_container, image=settings_icon, style="Nopadding.TButton", command=self.open_settings)
@@ -79,7 +80,7 @@ class MainWindow:
         self.settings_button.pack(side="left", padx=2)
 
         # Help button with question mark icon
-        full_help_img = Image.open(r'assets\help.png')
+        full_help_img = Image.open(project_path('assets', 'help.png'))
         resized_help_img = full_help_img.resize((20, 20), Image.LANCZOS)
         help_icon = ImageTk.PhotoImage(resized_help_img)
         self.help_button = ttk.Button(self.button_container, image=help_icon, style="Nopadding.TButton", command=self.open_help)

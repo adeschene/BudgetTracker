@@ -2,12 +2,13 @@ import tkinter as tk
 from tkinter import ttk
 
 from gui.main_window import MainWindow
+from utils.paths import project_path
 
 def main():
     root = tk.Tk()
     
     # Import the tcl file
-    root.tk.call('source', 'assets/forest-dark.tcl')
+    root.tk.call('source', project_path('assets', 'forest-dark.tcl').as_posix())
     # Set the theme with the theme_use method
     style = ttk.Style(root)
     style.theme_use('forest-dark')

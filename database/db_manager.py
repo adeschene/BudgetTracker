@@ -2,9 +2,13 @@ import sqlite3
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 
+from utils.paths import project_path
+
 class DatabaseManager:
-    def __init__(self, db_path: str = "budget_tracker.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        # Default to the db in the project root, not the working directory, so
+        # launching from elsewhere doesn't silently create an empty database
+        self.db_path = db_path if db_path is not None else str(project_path("budget_tracker.db"))
         self.init_database()
     
     def get_connection(self):
