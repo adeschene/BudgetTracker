@@ -53,10 +53,12 @@ A Windows desktop application for tracking and visualizing personal finances. Bu
 
 ### Starting the Application
 
-From inside the project directory, run:
+Run:
 ```
 python main.py
 ```
+
+Paths are resolved relative to the project root, so the app can be launched from any working directory.
 
 The application will open with a tabbed interface containing:
 - **Transactions**: Import, manage, and filter transactions
@@ -228,6 +230,7 @@ BudgetTracker/
 │   ├── help_menu.py       # Help and documentation
 │   ├── editable_tree.py   # Custom editable Treeview widget
 │   ├── helpers.py         # Utility functions and helpers
+│   ├── paths.py           # Project-root path resolution
 │   └── __init__.py
 └── assets/
     └── forest-dark.tcl    # Dark theme configuration
